@@ -30,12 +30,6 @@ Be conversational and approachable in your responses while remaining terse and t
     "$@"
 }
 
-pcode() {
-  pi \
-    -e "$HOME/.pi/ext/lib/bash-renderer.ts" \
-    "$@"
-}
-
 pexplain() {
   pi \
     --system-prompt 'You are a codebase analyst. Your job is to thoroughly review the current repository or directory and provide a detailed, well-structured report in response to the user'\''s query.
@@ -50,5 +44,14 @@ Be thorough but organized. Use headings and bullet points. Cite specific files a
     --tools read,grep,find,ls \
     --no-skills \
     --no-prompt-templates \
+    "$@"
+}
+
+pweb() {
+  pi \
+    --system-prompt 'You are a web research assistant. Search the internet for information, facts, or documentation using the available web search tools.' \
+    --append-system-prompt "" \
+    --tools read,bash,edit,write \
+    -e "$HOME/.pi/ext/minimal.ts" \
     "$@"
 }
