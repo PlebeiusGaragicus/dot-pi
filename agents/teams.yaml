@@ -14,3 +14,8 @@ newsroom:
   - newsroom-researcher
   - newsroom-fact-checker
   - newsroom-copy-editor
+
+retro:
+  - retro-editor
+  - retro-session-analyst
+  - retro-output-reviewer

@@ -1,71 +1,34 @@
 ---
-description: Review the latest agent team run and suggest system improvements
+description: Diagnose an agent team run — parse sessions, review output, produce a lean retro report
 ---
-Run a retrospective on the most recent agent team output. $@
+Run a retrospective on an agent team run. $@
 
-## Step 1: Find the latest run
+## Finding the Run
 
-Use bash to find the most recent workspace run:
+First, locate the workspace and session files to analyze.
 
-```
-ls -t ~/dot-pi/workspaces/newsroom/ | head -1
-```
+If the user specified a workspace path above, use it. Otherwise, find the most recent run:
 
-Read all output files from that run directory: desk drafts, research files, the final report, and any sub-agent session files in the sessions/ subdirectory.
+Dispatch **retro-session-analyst** with this preliminary task:
+> Run `ls -lt ~/dot-pi/workspaces/*/` to find the most recent workspace directory. Then run `ls -lt ~/dot-pi/sessions/` to find session JSONL files. Return the workspace path and the most likely matching session JSONL filename (match by date).
 
-## Step 2: Assess output quality
+## Phase 1 — Analysis
 
-Evaluate the final report and desk drafts on these dimensions:
+Once you have the workspace and session paths, dispatch both analysts:
 
-- **Coverage:** Were the most important stories of the period captured? Any major gaps?
-- **Sourcing:** How many stories cite primary sources vs only secondary reporting? Are citations valid?
-- **Depth:** Were stories adequately investigated or just surface-level summaries?
-- **Accuracy:** Any claims without attribution? Contradictions between sections?
-- **Format:** Is the output well-structured, consistent, and readable?
+**Dispatch retro-session-analyst:**
+> Analyze the agent run at workspace [WORKSPACE]. The main session JSONL is at [SESSION_PATH]. Sub-agent sessions are in [WORKSPACE]/sessions/. Run your full toolkit: survey, timeline, errors, loops, dispatch chain, token usage. Write your analysis to [WORKSPACE]/retro-session-analysis.md. Pay special attention to: [USER'S OBSERVATIONS IF ANY].
 
-## Step 3: Analyze agent behavior
+**Dispatch retro-output-reviewer:**
+> Review the output files in [WORKSPACE]. List all files, assess completeness and quality, check for missing or empty outputs. Write your review to [WORKSPACE]/retro-output-review.md.
 
-If session files exist in the workspace sessions/ directory, read them to understand what each agent actually did:
+## Phase 2 — Diagnosis
 
-- What search queries did desk agents run? Were they effective?
-- How many SearXNG calls were made? Was there wasted effort (duplicate queries, irrelevant results)?
-- Did agents write to disk as they went, or accumulate everything in context?
-- Were researchers spawned? Did their output get incorporated well?
-- How much context did each agent consume? (Look for usage fields in the session data)
+After both analysts return their summaries, synthesize a final retrospective:
 
-## Step 4: Identify improvements
+1. Start with the user's observations (the text after `/retro`)
+2. Combine with the session analyst's pathology findings
+3. Add the output reviewer's completeness assessment
+4. Write `retro.md` to the workspace with severity-ranked findings
 
-Based on your analysis, suggest specific, actionable changes to:
-
-- **Agent prompts** — wording changes to agents/*.md that would improve output quality
-- **Search strategy** — better approaches to query construction, category usage, pagination
-- **Workflow** — changes to the dispatch sequence, agent roles, or handoff process
-- **Context management** — ways to reduce context waste and keep agents focused
-- **Coverage gaps** — topics or source types the agents should be instructed to check
-
-## Step 5: Write the retrospective
-
-Write your findings to the workspace run directory as `retro.md`:
-
-```
-# Retrospective — [DATE]
-
-## Quality Assessment
-[Ratings and notes per dimension]
-
-## What Worked
-[Specific things that went well]
-
-## What Didn't
-[Specific failures or weaknesses]
-
-## Recommended Changes
-[Numbered list of concrete modifications to agent prompts, workflow, or configuration]
-
-## Metrics
-- Stories covered: N
-- Primary sources cited: N
-- Search queries run: N
-- Researchers spawned: N
-- Context usage: [notes]
-```
+The retro report should be lean enough to paste into a frontier model session for implementing fixes. Diagnosis only — do not prescribe solutions.

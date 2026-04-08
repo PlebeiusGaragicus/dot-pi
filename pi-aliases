@@ -103,3 +103,14 @@ pteam2() {
     --theme "$HOME/dot-pi/themes" \
     "$@"
 }
+
+pretro() {
+  export AGENT_TEAM="retro"
+  pi \
+    --session-dir "$PI_SESSIONS" \
+    -e "$HOME/dot-pi/extensions/orchestration/agent-team-2.ts" \
+    -e "$HOME/dot-pi/extensions/ui/theme-cycler.ts" \
+    --theme "$HOME/dot-pi/themes" \
+    --prompt-template "$HOME/dot-pi/prompts" \
+    "$@"
+}

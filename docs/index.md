@@ -1,9 +1,8 @@
 # dot-pi
 
-> dot files for your pi coding agent
+> Dotfiles for your pi coding agent
 
 ---
-
 
 Dotfiles for the [pi coding agent](https://github.com/nichochar/pi-mono). Clone, source the aliases, and you have a full agent toolkit: single-agent commands, multi-agent teams, web research, prompt templates, skills, themes, and more.
 
@@ -15,8 +14,6 @@ cp ~/dot-pi/example.env ~/dot-pi/.env   # add your API key
 echo '[ -f ~/dot-pi/pi-aliases ] && source ~/dot-pi/pi-aliases' >> ~/.zshrc
 source ~/.zshrc
 ```
-
-See [INSTALL](INSTALL) for full setup details.
 
 ## Commands
 
@@ -35,17 +32,17 @@ All commands accept `"$@"` pass-through, so you can append any pi flags or an in
 ## Directory Structure
 
 ```
-agents/          Agent definitions (.md with frontmatter)
+agents/            Agent definitions (.md with frontmatter)
 agents/teams.yaml  Team compositions — which agents work together
-docs/            Documentation — architecture, team explainers, limitations
-extensions/      Pi extensions (TypeScript) — orchestration, UI, notifications
-prompts/         Prompt templates — available as /commands in interactive sessions
-scripts/         Shell scripts for headless/scheduled runs
-sessions/        Session archives (.jsonl) — full transcripts of all alias runs
-skills/          Skill files — teach agents how to use specific tools (SearXNG, nak, etc.)
-themes/          Color themes for the pi TUI
-workspaces/      Agent team outputs — drafts, research, reports, per-run session logs
-reference/       Reference repos (gitignored) — pi-mono source, pi-recipes examples
+docs/              Documentation — architecture, team explainers, limitations
+extensions/        Pi extensions (TypeScript) — orchestration, UI, notifications
+prompts/           Prompt templates — available as /commands in interactive sessions
+scripts/           Shell scripts for headless/scheduled runs
+sessions/          Session archives (.jsonl) — full transcripts of all alias runs
+skills/            Skill files — teach agents how to use specific tools (SearXNG, nak, etc.)
+themes/            Color themes for the pi TUI
+workspaces/        Agent team outputs — drafts, research, reports, per-run session logs
+reference/         Reference repos (gitignored) — pi-mono source, pi-recipes examples
 ```
 
 ## Agent Teams
@@ -71,7 +68,10 @@ The team orchestrator (`agent-team-2.ts`) gives the primary agent a `dispatch_ag
 
 Set `AGENT_TEAM=name` to auto-select a team on startup (used by `pnews`, `pretro`).
 
-See [docs/](docs/) for detailed documentation on each team and the overall architecture.
+See the [Architecture](architecture.md) page for how orchestration works, and the team pages for detailed explainers:
+
+- [Newsroom](newsroom.md) — five-phase editorial workflow for automated news briefings
+- [Retro](retro.md) — session log analysis and run diagnostics
 
 ## Adding Your Own
 

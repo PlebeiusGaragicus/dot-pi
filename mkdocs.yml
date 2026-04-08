@@ -1,0 +1,46 @@
+site_name: dot-pi
+site_description: Self-improving agent dotfiles for the pi coding agent
+site_url: https://PlebeiusGaragicus.github.io/dot-pi/
+repo_url: https://github.com/PlebeiusGaragicus/dot-pi
+repo_name: dot-pi
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.instant
+    - navigation.sections
+    - content.code.copy
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - admonition
+  - pymdownx.details
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Agent Teams:
+    - Newsroom: newsroom.md
+    - Retro: retro.md
