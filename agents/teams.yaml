@@ -1,0 +1,21 @@
+tiny:
+ - scout
+ - reviewer
+
+full:
+  - scout
+  - planner
+  - builder
+  - reviewer
+  - documenter
+  - red-team
+
+plan-build:
+  - planner
+  - builder
+  - reviewer
+
+info:
+  - scout
+  - documenter
+  - reviewer

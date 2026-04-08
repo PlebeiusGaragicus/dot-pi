@@ -49,11 +49,33 @@ Be thorough but organized. Use headings and bullet points. Cite specific files a
 
 pweb() {
   pi \
-    --system-prompt 'You are a web research assistant. Before your first search, read the searxng skill file to learn the exact curl commands. Always use the bash tool with curl to query http://localhost:8080/search — never try to call a tool named searxng.' \
+    --system-prompt 'You are a web research assistant.
+
+Before your first search, read the searxng skill file to learn the exact curl commands.
+Always use the bash tool with curl to query http://localhost:8080/search — never try to call a tool named searxng.
+Always cite your sources and provide direct quotes when appropriate.
+Always answer questions fully and comprehensively - multiple searches may be required.
+' \
     --append-system-prompt "" \
     --tools read,bash \
     --skill "$HOME/dot-pi/skills/searxng" \
     --no-skills \
     -e "$HOME/dot-pi/extensions/minimal.ts" \
+    "$@"
+}
+
+pteam() {
+  pi \
+    -e "$HOME/dot-pi/extensions/orchestration/agent-team.ts" \
+    -e "$HOME/dot-pi/extensions/ui/theme-cycler.ts" \
+    --theme "$HOME/dot-pi/themes" \
+    "$@"
+}
+
+pteam2() {
+  pi \
+    -e "$HOME/dot-pi/extensions/orchestration/agent-team-2.ts" \
+    -e "$HOME/dot-pi/extensions/ui/theme-cycler.ts" \
+    --theme "$HOME/dot-pi/themes" \
     "$@"
 }
