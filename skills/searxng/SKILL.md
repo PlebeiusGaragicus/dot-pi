@@ -1,119 +1,57 @@
 ---
 name: searxng
-description: "Search the internet via a local SearXNG instance. Returns JSON results with titles, URLs, and snippets — no API key required."
+description: "Read this skill file to learn the curl commands for searching the web. Use the bash tool to run curl against http://localhost:8080/search — there is no searxng tool, only bash+curl."
 ---
 
-# SearXNG Skill
+# SearXNG Web Search
 
-Query a locally-running [SearXNG](https://github.com/searxng/searxng) instance for internet search results. Returns structured JSON with titles, URLs, and text snippets. No authentication required.
+Search the internet using the `bash` tool to run `curl` against a local SearXNG instance at `http://localhost:8080`.
 
-## Prerequisites
+## How to Search
 
-- **Docker** — `brew install --cask docker` (launch Docker Desktop at least once)
-- **jq** — `brew install jq`
-
-## Installation
+Use the `bash` tool to run this command (replace YOUR_QUERY with a URL-encoded search query):
 
 ```bash
-# Pull the image
-docker pull searxng/searxng
-
-# Create settings directory
-mkdir -p ~/searxng
-```
-
-Write `~/searxng/settings.yml`:
-
-```yaml
-use_default_settings: true
-
-server:
-  secret_key: "CHANGE_ME"   # generate: openssl rand -hex 32
-  limiter: false              # disable rate limiting for agent use
-
-search:
-  formats:
-    - html
-    - json
-```
-
-Generate a real secret key:
-
-```bash
-SECRET=$(openssl rand -hex 32)
-sed -i '' "s/CHANGE_ME/$SECRET/" ~/searxng/settings.yml
-```
-
-Start the container:
-
-```bash
-docker run -d -p 8080:8080 --name searxng --restart always \
-  -v ~/searxng/settings.yml:/etc/searxng/settings.yml:ro \
-  searxng/searxng
-```
-
-## Usage
-
-```bash
-curl -s "http://localhost:8080/search?q=python+asyncio&format=json" \
+curl -s "http://localhost:8080/search?q=YOUR_QUERY&format=json" \
   | jq '.results[:5] | .[] | {title, url, content}'
 ```
 
-Just URLs:
+To get just URLs:
 
 ```bash
-curl -s "http://localhost:8080/search?q=rust+borrow+checker&format=json" \
+curl -s "http://localhost:8080/search?q=YOUR_QUERY&format=json" \
   | jq -r '.results[:5] | .[].url'
 ```
 
-## Endpoint Reference
+Spaces in the query should be encoded as `+` (e.g. `iran+trump+war`).
 
-| Field        | Value                                              |
-|--------------|----------------------------------------------------|
-| **URL**      | `http://localhost:8080/search`                     |
-| **Method**   | GET                                                |
-| **Required** | `q` (query), `format=json`                         |
-| **Optional** | `categories`, `engines`, `language`, `pageno`      |
+## Response Format
 
-Response shape:
+Each result object contains:
 
-```json
-{
-  "query": "...",
-  "results": [
-    {
-      "title": "...",
-      "url": "https://...",
-      "content": "snippet text...",
-      "engine": "google",
-      "score": 1.0
-    }
-  ]
-}
-```
+| Field     | Description              |
+|-----------|--------------------------|
+| `title`   | Page title               |
+| `url`     | Full URL                 |
+| `content` | Text snippet             |
+| `engine`  | Search engine source     |
+| `score`   | Relevance score          |
 
-Useful fields per result: `title`, `url`, `content`, `engine`, `score`.
+## Optional Parameters
 
-## Container Management
+Append these to the query string as needed:
 
-```bash
-docker start searxng
-docker stop searxng
-docker restart searxng       # after settings changes
-docker logs -f searxng
-docker rm -f searxng          # remove entirely
-```
+- `categories` — e.g. `news`, `images`, `videos`, `science`
+- `engines` — e.g. `google`, `duckduckgo`, `wikipedia`
+- `language` — e.g. `en`, `de`, `fr`
+- `pageno` — page number for pagination (starts at 1)
 
-Update:
+Example with categories: `curl -s "http://localhost:8080/search?q=bitcoin&format=json&categories=news"`
 
-```bash
-docker rm -f searxng
-docker pull searxng/searxng
-# re-run the docker run command above
-```
+## If SearXNG Is Not Running
 
-## Notes
+If `curl` returns "connection refused" or similar, the Docker container needs to be started or installed. Read `install.md` in this skill directory for full setup instructions.
 
-- The `json` format must be listed in `settings.yml` or the API rejects `format=json` requests.
-- `limiter: false` prevents bot-detection rate limiting from blocking agent queries.
-- Default port is 8080; change both the `-p` flag and query URL if you need a different port.
+## If Queries Return Errors
+
+If the search returns unexpected errors or empty results, read `troubleshoot.md` in this skill directory for diagnosis steps.

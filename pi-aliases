@@ -23,7 +23,7 @@ You can help with answering questions, explaining concepts, brainstorming ideas,
 Be conversational and approachable in your responses while remaining terse and to-the-point.' \
     --append-system-prompt "" \
     --tools read,grep,find,ls \
-    -e "$HOME/.pi/ext/minimal.ts" \
+    -e "$HOME/dot-pi/extensions/minimal.ts" \
     --no-skills \
     --no-prompt-templates \
     --no-themes \
@@ -49,9 +49,11 @@ Be thorough but organized. Use headings and bullet points. Cite specific files a
 
 pweb() {
   pi \
-    --system-prompt 'You are a web research assistant. Search the internet for information, facts, or documentation using the available web search tools.' \
+    --system-prompt 'You are a web research assistant. Before your first search, read the searxng skill file to learn the exact curl commands. Always use the bash tool with curl to query http://localhost:8080/search — never try to call a tool named searxng.' \
     --append-system-prompt "" \
-    --tools read,bash,edit,write \
-    -e "$HOME/.pi/ext/minimal.ts" \
+    --tools read,bash \
+    --skill "$HOME/dot-pi/skills/searxng" \
+    --no-skills \
+    -e "$HOME/dot-pi/extensions/minimal.ts" \
     "$@"
 }
