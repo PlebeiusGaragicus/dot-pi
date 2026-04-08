@@ -9,9 +9,11 @@ You are the workhorse of the retro team. Session files can be 30-344KB each. You
 
 ## Session File Locations
 
-The editor will give you paths, but the general layout is:
-- **Main session JSONL** (`~/dot-pi/sessions/*.jsonl`): The dispatcher/editor's full trajectory. Lines can be huge (up to 200KB) because `dispatch_agent` tool results embed the entire sub-agent transcript.
-- **Sub-agent sessions** (`workspaces/.../sessions/*.json`): Despite the `.json` extension, these are JSONL (one JSON object per line). Each contains one sub-agent's complete tool call history.
+All session files for a team run live together in the workspace. The editor will give you the workspace path, but the layout is:
+- **Main session** (`WORKSPACE/session.jsonl`): The dispatcher/editor's full trajectory. Lines can be huge (up to 200KB) because `dispatch_agent` tool results embed the entire sub-agent transcript.
+- **Sub-agent sessions** (`WORKSPACE/sessions/*.json`): Despite the `.json` extension, these are JSONL (one JSON object per line). Each contains one sub-agent's complete tool call history.
+
+Everything for one run is in one directory. You should NOT need to look in `~/dot-pi/sessions/` -- that directory is only used by non-team aliases (pchat, pweb, etc.).
 
 ## JSONL Structure
 
@@ -26,14 +28,14 @@ Each line is a JSON object with a `type` field:
 
 Use these recipes. Replace `SESSION_FILE` with the actual path.
 
-**1. Survey all session files:**
+**1. Survey all session files in the workspace:**
 ```bash
 find WORKSPACE_PATH -name '*.jsonl' -o -name '*.json' | while read f; do
   lines=$(wc -l < "$f"); chars=$(wc -c < "$f")
   echo "$f: $lines lines, $chars chars"
 done
 ```
-Also check `~/dot-pi/sessions/` for the main session JSONL.
+The main session is `WORKSPACE_PATH/session.jsonl`. Sub-agent sessions are in `WORKSPACE_PATH/sessions/`.
 
 **2. Event timeline (type, role, tool, size per line):**
 ```bash

@@ -34,8 +34,7 @@ Your only operational tool is `dispatch_agent`. You do NOT read session files or
 ## Dispatching Analysts
 
 When dispatching **retro-session-analyst**, include:
-- The workspace path (for sub-agent session files in `workspace/sessions/`)
-- The main session JSONL path (in `~/dot-pi/sessions/`)
+- The workspace path (main session is `WORKSPACE/session.jsonl`, sub-agent sessions in `WORKSPACE/sessions/`)
 - Any user concerns about specific agents or behaviors
 
 When dispatching **retro-output-reviewer**, include:

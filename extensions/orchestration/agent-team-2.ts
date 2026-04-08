@@ -29,6 +29,7 @@ interface AgentDef {
 	name: string;
 	description: string;
 	tools: string;
+	model: string;
 	systemPrompt: string;
 	file: string;
 }
@@ -93,6 +94,7 @@ function parseAgentFile(filePath: string): AgentDef | null {
 			name: frontmatter.name,
 			description: frontmatter.description || "",
 			tools: frontmatter.tools || "read,grep,find,ls",
+			model: frontmatter.model || "",
 			systemPrompt: match[2].trim(),
 			file: filePath,
 		};
@@ -223,9 +225,8 @@ export default function (pi: ExtensionAPI) {
 
 		const startTime = Date.now();
 
-		const model = ctx.model
-			? `${ctx.model.provider}/${ctx.model.id}`
-			: "openrouter/google/gemini-3-flash-preview";
+		const model = state.def.model
+			|| (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "openrouter/google/gemini-3-flash-preview");
 
 		const agentKey = state.def.name.toLowerCase().replace(/\s+/g, "-");
 		const agentSessionFile = join(sessionDir, `${agentKey}.json`);
@@ -589,6 +590,11 @@ export default function (pi: ExtensionAPI) {
 
 		const teamMembers = Array.from(agentStates.values()).map(s => displayName(s.def.name)).join(", ");
 
+		const workspace = process.env.AGENT_WORKSPACE;
+		const workspaceBlock = workspace
+			? `\n## Workspace\n\nAll agent output for this run goes to:\n\`\`\`\n${workspace}\n\`\`\`\n`
+			: "";
+
 		return {
 			systemPrompt: `You are a dispatcher agent. You coordinate specialist agents to accomplish tasks.
 You do NOT have direct access to the codebase. You MUST delegate all work through
@@ -597,7 +603,7 @@ agents using the dispatch_agent tool.
 ## Active Team: ${activeTeamName}
 Members: ${teamMembers}
 You can ONLY dispatch to agents listed below. Do not attempt to dispatch to agents outside this team.
-
+${workspaceBlock}
 ## How to Work
 - Analyze the user's request and break it into clear sub-tasks
 - Choose the right agent(s) for each sub-task

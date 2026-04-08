@@ -70,13 +70,13 @@ Always answer questions fully and comprehensively - multiple searches may be req
 }
 
 pnews() {
-  local DATE=$(date +%Y-%m-%d)
-  local WORKSPACE="$HOME/dot-pi/workspaces/newsroom/$DATE"
-  mkdir -p "$WORKSPACE/stories" "$WORKSPACE/research" "$WORKSPACE/sources" "$WORKSPACE/sessions"
+  local RUN_ID=$(date +%Y-%m-%d_%H%M)
+  local WORKSPACE="$HOME/dot-pi/workspaces/newsroom/$RUN_ID"
+  mkdir -p "$WORKSPACE/stories" "$WORKSPACE/research" "$WORKSPACE/sources" "$WORKSPACE/sources/images" "$WORKSPACE/sessions"
   export AGENT_TEAM="newsroom"
   export AGENT_WORKSPACE="$WORKSPACE"
   pi \
-    --session-dir "$PI_SESSIONS" \
+    --session "$WORKSPACE/session.jsonl" \
     -e "$HOME/dot-pi/extensions/orchestration/agent-team-2.ts" \
     -e "$HOME/dot-pi/extensions/ui/theme-cycler.ts" \
     --theme "$HOME/dot-pi/themes" \

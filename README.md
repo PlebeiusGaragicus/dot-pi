@@ -1,22 +1,21 @@
 # dot-pi
 
-> dot files for your pi coding agent
+> Dotfiles for your pi coding agent — a self-improving agentic system
 
 ---
 
+Dotfiles for the [pi coding agent](https://github.com/nichochar/pi-mono). Clone, source the aliases, and you have a full agent toolkit: single-agent commands, multi-agent teams, web research, prompt templates, skills, themes, and self-diagnostic tooling.
 
-Dotfiles for the [pi coding agent](https://github.com/nichochar/pi-mono). Clone, source the aliases, and you have a full agent toolkit: single-agent commands, multi-agent teams, web research, prompt templates, skills, themes, and more.
+The system is designed around a **self-improvement loop**: agent teams produce output, the retro team diagnoses what went wrong, and a human takes the diagnosis to a frontier model to implement fixes. See [docs/architecture.md](docs/architecture.md) for how this works.
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/you/dot-pi ~/dot-pi
+git clone https://github.com/PlebeiusGaragicus/dot-pi ~/dot-pi
 cp ~/dot-pi/example.env ~/dot-pi/.env   # add your API key
 echo '[ -f ~/dot-pi/pi-aliases ] && source ~/dot-pi/pi-aliases' >> ~/.zshrc
 source ~/.zshrc
 ```
-
-See [INSTALL](INSTALL) for full setup details.
 
 ## Commands
 
@@ -25,7 +24,7 @@ See [INSTALL](INSTALL) for full setup details.
 | `pchat`    | Conversational chatbot (read-only tools)               |
 | `pexplain` | Codebase analyst — explores and reports on a project   |
 | `pweb`     | Web research assistant via local SearXNG               |
-| `pnews`    | Newsroom agent team — produces a daily news briefing   |
+| `pnews`    | Newsroom agent team — produces a news briefing         |
 | `pretro`   | Retro team — diagnoses agent runs from session logs    |
 | `pteam`    | Generic agent team orchestrator (grid dashboard)       |
 | `pteam2`   | Generic agent team orchestrator (inline output)        |
@@ -35,17 +34,17 @@ All commands accept `"$@"` pass-through, so you can append any pi flags or an in
 ## Directory Structure
 
 ```
-agents/          Agent definitions (.md with frontmatter)
+agents/            Agent definitions (.md with frontmatter)
 agents/teams.yaml  Team compositions — which agents work together
-docs/            Documentation — architecture, team explainers, limitations
-extensions/      Pi extensions (TypeScript) — orchestration, UI, notifications
-prompts/         Prompt templates — available as /commands in interactive sessions
-scripts/         Shell scripts for headless/scheduled runs
-sessions/        Session archives (.jsonl) — full transcripts of all alias runs
-skills/          Skill files — teach agents how to use specific tools (SearXNG, nak, etc.)
-themes/          Color themes for the pi TUI
-workspaces/      Agent team outputs — drafts, research, reports, per-run session logs
-reference/       Reference repos (gitignored) — pi-mono source, pi-recipes examples
+docs/              Documentation — architecture, team explainers, design rationale
+extensions/        Pi extensions (TypeScript) — orchestration, UI
+prompts/           Prompt templates — available as /commands in interactive sessions
+scripts/           Shell scripts for headless/scheduled runs
+sessions/          Session archives (.jsonl) — transcripts of non-team alias runs
+skills/            Skill files — teach agents how to use specific tools
+themes/            Color themes for the pi TUI
+workspaces/        Agent team outputs — per-team, per-run, with co-located sessions
+reference/         Reference repos (gitignored) — pi-mono source, pi-recipes examples
 ```
 
 ## Agent Teams
@@ -67,17 +66,23 @@ retro:
   - retro-output-reviewer
 ```
 
-The team orchestrator (`agent-team-2.ts`) gives the primary agent a `dispatch_agent` tool to coordinate the team. Sub-agents run as separate pi processes with their own tools and context.
+The team orchestrator (`agent-team-2.ts`) gives the first agent a `dispatch_agent` tool to coordinate the team. Sub-agents run as separate pi processes with their own tools and context. The `AGENT_WORKSPACE` env var is injected into the dispatcher's system prompt so it knows where agents should write output.
 
 Set `AGENT_TEAM=name` to auto-select a team on startup (used by `pnews`, `pretro`).
 
-See [docs/](docs/) for detailed documentation on each team and the overall architecture.
+## Documentation
+
+Full documentation is in [docs/](docs/) and deployed to [GitHub Pages](https://PlebeiusGaragicus.github.io/dot-pi/):
+
+- [Architecture](docs/architecture.md) — how orchestration works, session format, alias mechanics, limitations
+- [Newsroom](docs/newsroom.md) — five-phase editorial workflow for automated news briefings
+- [Retro](docs/retro.md) — session log analysis, JSONL parsing toolkit, pathology catalog
 
 ## Adding Your Own
 
 **Agent:** Create `agents/your-agent.md` with frontmatter (`name`, `description`, `tools`) and a system prompt body.
 
-**Team:** Add a new entry to `agents/teams.yaml` listing your agent names.
+**Team:** Add a new entry to `agents/teams.yaml` listing your agent names. The first agent becomes the dispatcher.
 
 **Extension:** Add a `.ts` file to `extensions/` and load it with `-e` in your alias.
 
@@ -92,5 +97,5 @@ See [docs/](docs/) for detailed documentation on each team and the overall archi
 These live in `reference/` (gitignored) and provide source code and examples:
 
 - **pi-mono** — pi coding agent source. Useful for understanding the extension API, tool system, and session format.
-- **pi-recipes** — example extensions, agents, teams, prompts, and workflows. Good starting point for building your own.
+- **pi-recipes** — example extensions, agents, teams, prompts, and workflows.
 - **feynman** — advanced prompt templates and research workflows.

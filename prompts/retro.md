@@ -5,19 +5,17 @@ Run a retrospective on an agent team run. $@
 
 ## Finding the Run
 
-First, locate the workspace and session files to analyze.
+If the user specified a workspace path above, use it. Otherwise, find the most recent run by dispatching **retro-session-analyst** with this preliminary task:
+> Run `ls -dt ~/dot-pi/workspaces/*/*/` to find the most recent workspace directory. Return the path.
 
-If the user specified a workspace path above, use it. Otherwise, find the most recent run:
-
-Dispatch **retro-session-analyst** with this preliminary task:
-> Run `ls -lt ~/dot-pi/workspaces/*/` to find the most recent workspace directory. Then run `ls -lt ~/dot-pi/sessions/` to find session JSONL files. Return the workspace path and the most likely matching session JSONL filename (match by date).
+The main session file is always `WORKSPACE/session.jsonl`. Sub-agent sessions are in `WORKSPACE/sessions/`.
 
 ## Phase 1 — Analysis
 
-Once you have the workspace and session paths, dispatch both analysts:
+Dispatch both analysts with the workspace path:
 
 **Dispatch retro-session-analyst:**
-> Analyze the agent run at workspace [WORKSPACE]. The main session JSONL is at [SESSION_PATH]. Sub-agent sessions are in [WORKSPACE]/sessions/. Run your full toolkit: survey, timeline, errors, loops, dispatch chain, token usage. Write your analysis to [WORKSPACE]/retro-session-analysis.md. Pay special attention to: [USER'S OBSERVATIONS IF ANY].
+> Analyze the agent run at workspace [WORKSPACE]. The main session is [WORKSPACE]/session.jsonl. Sub-agent sessions are in [WORKSPACE]/sessions/. Run your full toolkit: survey, timeline, errors, loops, dispatch chain, token usage. Write your analysis to [WORKSPACE]/retro-session-analysis.md. Pay special attention to: [USER'S OBSERVATIONS IF ANY].
 
 **Dispatch retro-output-reviewer:**
 > Review the output files in [WORKSPACE]. List all files, assess completeness and quality, check for missing or empty outputs. Write your review to [WORKSPACE]/retro-output-review.md.
