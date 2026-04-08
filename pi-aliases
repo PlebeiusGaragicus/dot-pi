@@ -72,7 +72,7 @@ Always answer questions fully and comprehensively - multiple searches may be req
 pnews() {
   local DATE=$(date +%Y-%m-%d)
   local WORKSPACE="$HOME/dot-pi/workspaces/newsroom/$DATE"
-  mkdir -p "$WORKSPACE/research" "$WORKSPACE/sessions"
+  mkdir -p "$WORKSPACE/stories" "$WORKSPACE/research" "$WORKSPACE/sources" "$WORKSPACE/sessions"
   export AGENT_TEAM="newsroom"
   export AGENT_WORKSPACE="$WORKSPACE"
   pi \

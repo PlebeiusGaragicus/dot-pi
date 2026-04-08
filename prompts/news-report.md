@@ -3,29 +3,39 @@ description: Produce a daily news briefing via the newsroom agent team
 ---
 Produce today's news briefing. $@
 
-First, use bash to determine today's date and set up the workspace:
+The workspace is available in your system prompt. Use `dispatch_agent` to run all five phases.
 
-```
-DATE=$(date +%Y-%m-%d)
-WORKSPACE="$HOME/dot-pi/workspaces/newsroom/$DATE"
-mkdir -p "$WORKSPACE/research" "$WORKSPACE/sessions"
-```
+## Phase 1 — Reconnaissance
 
-Then dispatch your team following this plan:
+Dispatch **desk-geopolitics** with:
+> SCAN MODE. Today is [DATE]. Scan your beat for significant stories from the last 96 hours. Write your ranked candidate list to [WORKSPACE]/wire-geopolitics.md. Return the list.
 
-## Step 1: Dispatch both desks
+Dispatch **desk-scitech** with:
+> SCAN MODE. Today is [DATE]. Scan your beat for significant stories from the last 96 hours. Write your ranked candidate list to [WORKSPACE]/wire-scitech.md. Return the list.
 
-**Dispatch desk-geopolitics** with this task:
-Run `date +%Y-%m-%d` to get today's date. The workspace is ~/dot-pi/workspaces/newsroom/$DATE/. Scan the news landscape for significant geopolitics stories from the last 96 hours — US foreign policy, military intervention, sanctions, diplomacy, trade conflicts, alliances. Skim broadly with headline-only searches first, pick the most important stories, then go deeper on each. Hunt for primary sources. Write your draft to ~/dot-pi/workspaces/newsroom/$DATE/desk-geopolitics-draft.md. If any story needs deep investigation, spawn a researcher and have them write to ~/dot-pi/workspaces/newsroom/$DATE/research/.
+## Phase 2 — Editorial Selection
 
-**Dispatch desk-scitech** with this task:
-Run `date +%Y-%m-%d` to get today's date. The workspace is ~/dot-pi/workspaces/newsroom/$DATE/. Scan the news landscape for significant science and technology stories from the last 96 hours — ML/AI, robotics, space, US manufacturing, semiconductors, energy. Skim broadly with headline-only searches first, pick the most important stories, then go deeper on each. Hunt for primary sources. Write your draft to ~/dot-pi/workspaces/newsroom/$DATE/desk-scitech-draft.md. If any story needs deep investigation, spawn a researcher and have them write to ~/dot-pi/workspaces/newsroom/$DATE/research/.
+Review the wire scan results from both desks. Pick 5-8 stories total. For each, write a one-sentence assignment specifying the angle and expected sourcing. Flag any stories that need a researcher deep dive.
 
-## Step 2: Review
+## Phase 3 — Deep Reporting
 
-Review the output from both desks. Are there major gaps? Weak sourcing? Missing angles? If so, dispatch follow-ups.
+Dispatch **desk-geopolitics** with:
+> INVESTIGATE MODE. Workspace: [WORKSPACE]. Cover these stories: [your assignments]. Write each story to [WORKSPACE]/stories/[slug].md. Save raw sources to [WORKSPACE]/sources/.
 
-## Step 3: Copy-edit
+Dispatch **desk-scitech** with the same structure for its assigned stories.
 
-Dispatch newsroom-copy-editor with this task:
-Read the desk drafts from ~/dot-pi/workspaces/newsroom/$DATE/ (run `date +%Y-%m-%d` to get the date). Review for citation accuracy, duplicate stories, formatting consistency, and unsupported claims. Produce the final polished report at ~/dot-pi/workspaces/newsroom/$DATE/newsreport-$DATE.md.
+If you flagged stories for deep investigation, dispatch **newsroom-researcher** with the topic, specific questions, and output path [WORKSPACE]/research/[slug].md.
+
+Review the summaries. Dispatch follow-ups if sourcing is weak.
+
+## Phase 4 — Verification
+
+Dispatch **newsroom-fact-checker** with:
+> Read all story files in [WORKSPACE]/stories/. Verify claims, check source URLs, cross-reference key assertions. Write your report to [WORKSPACE]/fact-check.md.
+
+If critical issues are flagged, dispatch the relevant desk to fix the story.
+
+## Phase 5 — Final Edit
+
+Dispatch **newsroom-copy-editor** with:
+> Read stories from [WORKSPACE]/stories/ and the fact-check report at [WORKSPACE]/fact-check.md. Assemble the final report at [WORKSPACE]/newsreport-[DATE].md.

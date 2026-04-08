@@ -5,7 +5,7 @@ source "$HOME/dot-pi/.env"
 
 DATE=$(date +%Y-%m-%d)
 WORKSPACE="$HOME/dot-pi/workspaces/newsroom/$DATE"
-mkdir -p "$WORKSPACE/research" "$WORKSPACE/sessions"
+mkdir -p "$WORKSPACE/stories" "$WORKSPACE/research" "$WORKSPACE/sources" "$WORKSPACE/sessions"
 
 export AGENT_TEAM="newsroom"
 export AGENT_WORKSPACE="$WORKSPACE"
@@ -21,16 +21,26 @@ pi \
   --no-prompt-templates \
   "Today is $DATE. Workspace: $WORKSPACE
 
-Produce today's news briefing by dispatching your team.
+Produce today's news briefing by running all five phases.
 
-Step 1 — Dispatch both desks:
+Phase 1 — Reconnaissance:
+Dispatch desk-geopolitics: SCAN MODE. Today is $DATE. Scan your beat for significant stories from the last 96 hours. Write your ranked candidate list to $WORKSPACE/wire-geopolitics.md. Return the list.
+Dispatch desk-scitech: SCAN MODE. Today is $DATE. Scan your beat for significant stories from the last 96 hours. Write your ranked candidate list to $WORKSPACE/wire-scitech.md. Return the list.
 
-Dispatch desk-geopolitics: Today is $DATE. Workspace: $WORKSPACE. Scan the news landscape for significant geopolitics stories from the last 96 hours — US foreign policy, military intervention, sanctions, diplomacy, trade conflicts, alliances. Skim broadly with headline-only searches first, pick the most important stories, then go deeper. Hunt for primary sources. Write your draft to $WORKSPACE/desk-geopolitics-draft.md. If any story needs deep investigation, spawn a researcher and have them write to $WORKSPACE/research/.
+Phase 2 — Editorial Selection:
+Review the wire scans from both desks. Pick 5-8 stories total. For each, write a one-sentence assignment with the angle and expected sourcing. Flag any stories needing a researcher deep dive.
 
-Dispatch desk-scitech: Today is $DATE. Workspace: $WORKSPACE. Scan the news landscape for significant science and technology stories from the last 96 hours — ML/AI, robotics, space, US manufacturing, semiconductors, energy. Skim broadly with headline-only searches first, pick the most important stories, then go deeper. Hunt for primary sources. Write your draft to $WORKSPACE/desk-scitech-draft.md. If any story needs deep investigation, spawn a researcher and have them write to $WORKSPACE/research/.
+Phase 3 — Deep Reporting:
+Dispatch desk-geopolitics: INVESTIGATE MODE. Workspace: $WORKSPACE. Cover the stories you assigned. Write each to $WORKSPACE/stories/[slug].md. Save raw sources to $WORKSPACE/sources/.
+Dispatch desk-scitech: INVESTIGATE MODE. Workspace: $WORKSPACE. Cover the stories you assigned. Write each to $WORKSPACE/stories/[slug].md. Save raw sources to $WORKSPACE/sources/.
+If any stories need deep investigation, dispatch newsroom-researcher with the topic, questions, and output path $WORKSPACE/research/[slug].md.
+Review summaries. Dispatch follow-ups if sourcing is weak.
 
-Step 2 — After both desks finish, review their output. Check for gaps, missing stories, or weak sourcing. Dispatch follow-ups if needed.
+Phase 4 — Verification:
+Dispatch newsroom-fact-checker: Read all story files in $WORKSPACE/stories/. Verify claims, check source URLs, cross-reference key assertions. Write your report to $WORKSPACE/fact-check.md.
+If critical issues are flagged, dispatch the relevant desk to fix the story.
 
-Step 3 — Assemble a combined draft, then dispatch newsroom-copy-editor to produce the final report at $WORKSPACE/newsreport-$DATE.md."
+Phase 5 — Final Edit:
+Dispatch newsroom-copy-editor: Read stories from $WORKSPACE/stories/ and the fact-check report at $WORKSPACE/fact-check.md. Assemble the final polished report at $WORKSPACE/newsreport-$DATE.md."
 
 echo "[newsroom] $(date '+%H:%M:%S') Done. Report: $WORKSPACE/newsreport-$DATE.md"
