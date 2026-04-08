@@ -1,6 +1,7 @@
 ---
 name: searxng
 description: "Read this skill file to learn the curl commands for searching the web. Use the bash tool to run curl against http://localhost:8080/search — there is no searxng tool, only bash+curl."
+allowed-tools: Bash
 ---
 
 # SearXNG Web Search
