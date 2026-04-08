@@ -1,3 +1,86 @@
 # dot-pi
 
-> dot files for you pi coding agent
+> dot files for your pi coding agent
+
+---
+
+
+Dotfiles for the [pi coding agent](https://github.com/nichochar/pi-mono). Clone, source the aliases, and you have a full agent toolkit: single-agent commands, multi-agent teams, web research, prompt templates, skills, themes, and more.
+
+## Quick Start
+
+```bash
+git clone https://github.com/you/dot-pi ~/dot-pi
+cp ~/dot-pi/example.env ~/dot-pi/.env   # add your API key
+echo '[ -f ~/dot-pi/pi-aliases ] && source ~/dot-pi/pi-aliases' >> ~/.zshrc
+source ~/.zshrc
+```
+
+See [INSTALL](INSTALL) for full setup details.
+
+## Commands
+
+| Command    | What it does                                           |
+|------------|--------------------------------------------------------|
+| `pchat`    | Conversational chatbot (read-only tools)               |
+| `pexplain` | Codebase analyst — explores and reports on a project   |
+| `pweb`     | Web research assistant via local SearXNG               |
+| `pnews`    | Newsroom agent team — produces a daily news briefing   |
+| `pteam`    | Generic agent team orchestrator (grid dashboard)       |
+| `pteam2`   | Generic agent team orchestrator (inline output)        |
+
+All commands accept `"$@"` pass-through, so you can append any pi flags or an initial prompt.
+
+## Directory Structure
+
+```
+agents/          Agent definitions (.md with frontmatter)
+agents/teams.yaml  Team compositions — which agents work together
+extensions/      Pi extensions (TypeScript) — orchestration, UI, notifications
+prompts/         Prompt templates — available as /commands in interactive sessions
+scripts/         Shell scripts for headless/scheduled runs
+sessions/        Session archives (.jsonl) — full transcripts of all alias runs
+skills/          Skill files — teach agents how to use specific tools (SearXNG, nak, etc.)
+themes/          Color themes for the pi TUI
+workspaces/      Agent team outputs — drafts, research, reports, per-run session logs
+reference/       Reference repos (gitignored) — pi-mono source, pi-recipes examples
+```
+
+## Agent Teams
+
+Teams are defined in `agents/teams.yaml`. Each team is a list of agent names that map to `.md` files in `agents/`.
+
+```yaml
+newsroom:
+  - newsroom-editor
+  - desk-geopolitics
+  - desk-scitech
+  - newsroom-researcher
+  - newsroom-copy-editor
+```
+
+The team orchestrator (`agent-team-2.ts`) gives the primary agent a `dispatch_agent` tool to coordinate the team. Sub-agents run as separate pi processes with their own tools and context.
+
+Set `AGENT_TEAM=name` to auto-select a team on startup (used by `pnews`).
+
+## Adding Your Own
+
+**Agent:** Create `agents/your-agent.md` with frontmatter (`name`, `description`, `tools`) and a system prompt body.
+
+**Team:** Add a new entry to `agents/teams.yaml` listing your agent names.
+
+**Extension:** Add a `.ts` file to `extensions/` and load it with `-e` in your alias.
+
+**Skill:** Create a directory under `skills/` with a `SKILL.md` and optional `install.md`.
+
+**Prompt template:** Create a `.md` file in `prompts/` with a `description` in frontmatter. It becomes a `/command` in interactive sessions.
+
+**Theme:** Add a `.json` file to `themes/`.
+
+## Reference Repos
+
+These live in `reference/` (gitignored) and provide source code and examples:
+
+- **pi-mono** — pi coding agent source. Useful for understanding the extension API, tool system, and session format.
+- **pi-recipes** — example extensions, agents, teams, prompts, and workflows. Good starting point for building your own.
+- **feynman** — advanced prompt templates and research workflows.

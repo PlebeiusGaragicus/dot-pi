@@ -1,21 +1,15 @@
-tiny:
+review:
  - scout
  - reviewer
 
-full:
-  - scout
+update-documentation:
   - planner
-  - builder
-  - reviewer
-  - documenter
-  - red-team
-
-plan-build:
-  - planner
-  - builder
-  - reviewer
-
-info:
-  - scout
   - documenter
   - reviewer
+
+newsroom:
+  - newsroom-editor
+  - desk-geopolitics
+  - desk-scitech
+  - newsroom-researcher
+  - newsroom-copy-editor

@@ -1,3 +1,5 @@
 .env
 reference/
 .DS_Store
+sessions/
+workspaces/

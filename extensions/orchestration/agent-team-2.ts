@@ -141,7 +141,12 @@ export default function (pi: ExtensionAPI) {
 	let contextWindow = 0;
 
 	function loadAgents(cwd: string) {
-		sessionDir = join(cwd, ".pi", "agent-sessions");
+		const workspace = process.env.AGENT_WORKSPACE;
+		if (workspace) {
+			sessionDir = join(workspace, "sessions");
+		} else {
+			sessionDir = join(cwd, ".pi", "agent-sessions");
+		}
 		if (!existsSync(sessionDir)) {
 			mkdirSync(sessionDir, { recursive: true });
 		}
@@ -633,7 +638,9 @@ ${agentCatalog}`,
 
 		const teamNames = Object.keys(teams);
 		if (teamNames.length > 0) {
-			activateTeam(teamNames[0]);
+			const envTeam = process.env.AGENT_TEAM;
+			const startTeam = envTeam && teamNames.includes(envTeam) ? envTeam : teamNames[0];
+			activateTeam(startTeam);
 		}
 
 		pi.setActiveTools(["dispatch_agent"]);
