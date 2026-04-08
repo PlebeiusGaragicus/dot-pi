@@ -1,10 +1,7 @@
-# ── pi shell setup ──────────────────────────────────────────────────────────
-# Source this from ~/.zshrc or ~/.bashrc:
-#   [ -f ~/.pi/shell.sh ] && source ~/.pi/shell.sh
+#! /bin/bash
 
-export EDITOR="${EDITOR:-code --wait}"
-export PATH="$HOME/bin:$PATH"
-source "$HOME/.env"
+# API key for PlebChat models
+source .env
 
 # default tools: (if no flag): read,bash,edit,write
 
