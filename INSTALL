@@ -1,0 +1,13 @@
+Add ./pi-aliases.sh to .zshrc or .bashrc
+
+```sh
+[ -f ~/dot-pi/pi-aliases ] && source ~/dot-pi/pi-aliases
+```
+
+Add the following to .env
+
+```sh
+PLEBCHAT_API_KEY=
+```
+
+Place ./models.json into ~/.pi/agent/models.json

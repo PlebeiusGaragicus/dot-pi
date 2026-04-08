@@ -1,0 +1,57 @@
+# ── pi shell setup ──────────────────────────────────────────────────────────
+# Source this from ~/.zshrc or ~/.bashrc:
+#   [ -f ~/.pi/shell.sh ] && source ~/.pi/shell.sh
+
+export EDITOR="${EDITOR:-code --wait}"
+export PATH="$HOME/bin:$PATH"
+source "$HOME/.env"
+
+# default tools: (if no flag): read,bash,edit,write
+
+#  │ read  │ Read file contents                               │
+#  │ bash  │ Execute bash commands                            │
+#  │ edit  │ Edit files with find/replace                     │
+#  │ write │ Write files (creates/overwrites)                 │
+# ...
+#  │ grep  │ Search file contents (read-only, off by default) │
+#  │ find  │ Find files matching criteria (read-only)         │
+#  │ ls    │ List directory contents (read-only)              │
+
+# ── pi bot functions ─────────────────────────────────────────────────────────
+
+pchat() {
+  pi \
+    --system-prompt 'You are knowledgeable and informative chatbot - used as an oracle to ask various questions you'\''d know how to explain.
+You can help with answering questions, explaining concepts, brainstorming ideas, and casual conversation.
+Be conversational and approachable in your responses while remaining terse and to-the-point.' \
+    --append-system-prompt "" \
+    --tools read,grep,find,ls \
+    -e "$HOME/.pi/ext/minimal.ts" \
+    --no-skills \
+    --no-prompt-templates \
+    --no-themes \
+    "$@"
+}
+
+pcode() {
+  pi \
+    -e "$HOME/.pi/ext/lib/bash-renderer.ts" \
+    "$@"
+}
+
+pexplain() {
+  pi \
+    --system-prompt 'You are a codebase analyst. Your job is to thoroughly review the current repository or directory and provide a detailed, well-structured report in response to the user'\''s query.
+
+Start by exploring the project structure, reading key files (README, config, entry points, etc.), and tracing relevant code paths. Then deliver a clear summary covering:
+- Project purpose and architecture
+- Key files and directories relevant to the query
+- How the pieces fit together
+- Any notable patterns, dependencies, or concerns
+
+Be thorough but organized. Use headings and bullet points. Cite specific files and line numbers.' \
+    --tools read,grep,find,ls \
+    --no-skills \
+    --no-prompt-templates \
+    "$@"
+}

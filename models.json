@@ -1,0 +1,17 @@
+{
+  "providers": {
+    "plebchat": {
+      "baseUrl": "https://api.plebchat.me/",
+      "api": "anthropic-messages",
+      "apiKey": "PLEBCHAT_API_KEY",
+      "models": [
+        {
+          "id": "qwen/qwen3-coder-next",
+          "name": "Qwen3 Coder Next",
+          "input": ["text"]
+        }
+      ]
+    }
+  }
+}
+
