@@ -94,19 +94,24 @@ with open('SESSION_FILE') as f:
         if d.get('type')=='message' and d['message'].get('role')=='assistant':
             for c in (d['message'].get('content',[]) or []):
                 if isinstance(c,dict) and c.get('type')=='toolCall':
-                    calls.append((i, c.get('name',''), str(c.get('arguments',{}))[:80]))
+                    calls.append((i, c.get('name',''), str(c.get('arguments',{}))[:200]))
 streak = 1
+found = False
 for j in range(1, len(calls)):
     if calls[j][1:] == calls[j-1][1:]:
         streak += 1
         if streak >= 3:
-            print(f'LOOP: {calls[j][1]} repeated {streak}x around lines {calls[j-streak+1][0]}-{calls[j][0]}')
+            found = True
+            print(f'POSSIBLE LOOP: {calls[j][1]} repeated {streak}x around lines {calls[j-streak+1][0]}-{calls[j][0]}')
+            print(f'  args: {calls[j][2]}')
+            print(f'  NOTE: Verify manually -- similar args do not always indicate a true loop.')
     else:
         streak = 1
-if not any(True for j in range(1,len(calls)) if calls[j][1:]==calls[j-1][1:]):
+if not found:
     print('No loops detected.')
 "
 ```
+NOTE: Argument comparison uses 200 chars (not 80). Similar arguments may be legitimate retries with different content. Always verify by reading the actual lines before confirming a loop. Report unverified detections as INFO, not WARNING.
 
 **5. Extract dispatch chain (main session only):**
 ```bash
@@ -144,6 +149,67 @@ with open('SESSION_FILE') as f:
 "
 ```
 
+**7. Dispatch-to-output coverage (main session — checks slugs dispatched vs files written):**
+```bash
+python3 -c "
+import json, os, re
+dispatched_slugs = set()
+with open('SESSION_FILE') as f:
+    for i, line in enumerate(f):
+        d = json.loads(line.strip())
+        if d.get('type')=='message' and d['message'].get('role')=='assistant':
+            for c in (d['message'].get('content',[]) or []):
+                if isinstance(c,dict) and c.get('type')=='toolCall' and c.get('name')=='dispatch_agent':
+                    task = str(c.get('arguments',{}).get('task',''))
+                    if 'INVESTIGATE' in task.upper():
+                        for slug in re.findall(r'[a-z0-9](?:[a-z0-9-]{2,}[a-z0-9])', task.lower()):
+                            if slug not in ('investigate', 'mode', 'workspace', 'stories', 'sources'):
+                                dispatched_slugs.add(slug)
+stories_dir = os.path.join(os.path.dirname('SESSION_FILE'), 'stories')
+written = set()
+if os.path.isdir(stories_dir):
+    for f in os.listdir(stories_dir):
+        if f.endswith('.md'):
+            written.add(f.replace('.md',''))
+print('Dispatched slugs:', sorted(dispatched_slugs) if dispatched_slugs else 'none found')
+print('Written stories:', sorted(written) if written else 'none')
+missing = dispatched_slugs - written
+if missing:
+    print(f'MISSING STORIES: {sorted(missing)}')
+else:
+    print('All dispatched slugs have output files.')
+"
+```
+
+**8. Phase completion detection (main session):**
+```bash
+python3 -c "
+import json, re
+phases = []
+with open('SESSION_FILE') as f:
+    for i, line in enumerate(f):
+        d = json.loads(line.strip())
+        if d.get('type')=='message' and d['message'].get('role')=='assistant':
+            for c in (d['message'].get('content',[]) or []):
+                if isinstance(c,dict) and c.get('type')=='text':
+                    text = c.get('text','')
+                    for m in re.finditer(r'[Pp]hase\s+(\d+)', text):
+                        p = int(m.group(1))
+                        if p not in phases:
+                            phases.append(p)
+if phases:
+    print(f'Phases executed: {phases}')
+    expected = max(phases)
+    if len(phases) < expected:
+        print(f'INFO: Run completed {len(phases)} of {expected} expected phases.')
+        print(f'  Missing phases: {sorted(set(range(1,expected+1)) - set(phases))}')
+    else:
+        print(f'All {expected} phases completed.')
+else:
+    print('No phase markers detected in session.')
+"
+```
+
 ## Your Workflow
 
 1. **Survey.** Run recipe 1 to find all session files and their sizes.
@@ -152,8 +218,10 @@ with open('SESSION_FILE') as f:
 4. **Loops.** Run recipe 4 on each file to detect repeated tool calls.
 5. **Dispatches.** Run recipe 5 on the main session to trace the dispatch chain.
 6. **Tokens.** Run recipe 6 on each file to get usage stats.
-7. **Deep reads.** If any line looks suspicious (very large, error-adjacent), read it directly to understand what happened.
-8. **Write your analysis.** Write `retro-session-analysis.md` to the workspace path given by the editor.
+7. **Coverage.** Run recipe 7 on the main session to check dispatched slugs against output files.
+8. **Phases.** Run recipe 8 on the main session to detect phase completion.
+9. **Deep reads.** If any line looks suspicious (very large, error-adjacent), read it directly to understand what happened.
+10. **Write your analysis.** Write `session-analysis.md` to the **retro workspace** path given by the editor. Write ONLY the file the editor specifies. Do not create additional files.
 
 ## What to Diagnose
 
@@ -196,5 +264,18 @@ with open('SESSION_FILE') as f:
 ## Timeline Anomalies
 [Anything unusual about timing, ordering, or gaps]
 ```
+
+## Cancellation Handling
+
+User cancellation (incomplete dispatch chains with a clean exit, no crash) is **normal during testing**. When you detect an incomplete run:
+
+- Flag it as **INFO** with "Run terminated after Phase N of M" — not as a critical issue.
+- Do NOT flag expected-but-not-yet-produced files as "missing" when the run was cancelled before the phase that would produce them.
+- If the session ends cleanly with no crash trace, assume intentional cancellation.
+
+## Rules
+
+- Write ONLY the file the editor specifies. Do not create additional files.
+- This retro system is generic — it reviews any agent team, not just newsroom. Do not assume specific team structure or file layout.
 
 **Return to editor:** A ~30-line summary: run overview stats, the dispatch chain in 1 line per dispatch, and a severity-ranked list of pathologies found. The editor reads the full analysis from disk if needed.

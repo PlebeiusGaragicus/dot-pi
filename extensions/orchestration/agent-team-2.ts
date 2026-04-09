@@ -30,6 +30,7 @@ interface AgentDef {
 	description: string;
 	tools: string;
 	model: string;
+	role: string;
 	systemPrompt: string;
 	file: string;
 }
@@ -95,6 +96,7 @@ function parseAgentFile(filePath: string): AgentDef | null {
 			description: frontmatter.description || "",
 			tools: frontmatter.tools || "read,grep,find,ls",
 			model: frontmatter.model || "",
+			role: frontmatter.role || "",
 			systemPrompt: match[2].trim(),
 			file: filePath,
 		};
@@ -230,17 +232,24 @@ export default function (pi: ExtensionAPI) {
 
 		const agentKey = state.def.name.toLowerCase().replace(/\s+/g, "-");
 		const agentSessionFile = join(sessionDir, `${agentKey}.json`);
+		const isLead = state.def.role === "lead";
 
 		const args = [
 			"--mode", "json",
 			"-p",
-			"--no-extensions",
 			"--model", model,
 			"--tools", state.def.tools,
 			"--thinking", "off",
 			"--append-system-prompt", state.def.systemPrompt,
 			"--session", agentSessionFile,
 		];
+
+		if (isLead) {
+			const extPath = resolve(join(homedir(), "dot-pi", "extensions", "orchestration", "agent-team-2.ts"));
+			args.push("-e", extPath);
+		} else {
+			args.push("--no-extensions");
+		}
 
 		if (state.sessionFile) {
 			args.push("-c");
@@ -303,9 +312,14 @@ export default function (pi: ExtensionAPI) {
 		}
 
 		return new Promise((resolve) => {
+			const childEnv = { ...process.env };
+			if (isLead) {
+				childEnv.AGENT_ROLE = "lead";
+			}
+
 			const proc = spawn("pi", args, {
 				stdio: ["ignore", "pipe", "pipe"],
-				env: { ...process.env },
+				env: childEnv,
 			});
 
 			let buffer = "";
@@ -584,8 +598,13 @@ export default function (pi: ExtensionAPI) {
 	// ── System Prompt Override ───────────────────
 
 	pi.on("before_agent_start", async (_event, _ctx) => {
+		const agentRole = process.env.AGENT_ROLE || "orchestrator";
+
 		const agentCatalog = Array.from(agentStates.values())
-			.map(s => `### ${displayName(s.def.name)}\n**Dispatch as:** \`${s.def.name}\`\n${s.def.description}\n**Tools:** ${s.def.tools}`)
+			.map(s => {
+				const roleTag = s.def.role === "lead" ? " (lead)" : "";
+				return `### ${displayName(s.def.name)}${roleTag}\n**Dispatch as:** \`${s.def.name}\`\n${s.def.description}\n**Tools:** ${s.def.tools}`;
+			})
 			.join("\n\n");
 
 		const teamMembers = Array.from(agentStates.values()).map(s => displayName(s.def.name)).join(", ");
@@ -595,6 +614,27 @@ export default function (pi: ExtensionAPI) {
 			? `\n## Workspace\n\nAll agent output for this run goes to:\n\`\`\`\n${workspace}\n\`\`\`\n`
 			: "";
 
+		const retroTarget = process.env.RETRO_TARGET;
+		const retroTargetBlock = retroTarget
+			? `\n## Retro Target\n\nThe workspace to analyze:\n\`\`\`\n${retroTarget}\n\`\`\`\n`
+			: "";
+
+		if (agentRole === "lead") {
+			return {
+				systemPrompt: `${_ctx.systemPrompt || ""}
+
+## Agents Available for Dispatch
+
+You have \`dispatch_agent\` available alongside your regular tools. Use it to delegate sub-tasks to specialist agents when isolation or specialization is needed. You can also do work directly with your own tools.
+
+**Team:** ${activeTeamName}
+${workspaceBlock}
+**Do not dispatch yourself.**
+
+${agentCatalog}`,
+			};
+		}
+
 		return {
 			systemPrompt: `You are a dispatcher agent. You coordinate specialist agents to accomplish tasks.
 You do NOT have direct access to the codebase. You MUST delegate all work through
@@ -603,7 +643,7 @@ agents using the dispatch_agent tool.
 ## Active Team: ${activeTeamName}
 Members: ${teamMembers}
 You can ONLY dispatch to agents listed below. Do not attempt to dispatch to agents outside this team.
-${workspaceBlock}
+${workspaceBlock}${retroTargetBlock}
 ## How to Work
 - Analyze the user's request and break it into clear sub-tasks
 - Choose the right agent(s) for each sub-task
@@ -649,7 +689,10 @@ ${agentCatalog}`,
 			activateTeam(startTeam);
 		}
 
-		pi.setActiveTools(["dispatch_agent"]);
+		const agentRole = process.env.AGENT_ROLE || "orchestrator";
+		if (agentRole === "orchestrator") {
+			pi.setActiveTools(["dispatch_agent"]);
+		}
 
 		_ctx.ui.setStatus("agent-team", `Team: ${activeTeamName} (${agentStates.size})`);
 		const members = Array.from(agentStates.values()).map(s => displayName(s.def.name)).join(", ");

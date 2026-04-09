@@ -2,23 +2,38 @@
 
 The newsroom team produces automated news briefings by orchestrating specialist agents through a six-phase editorial workflow. It models the hierarchy of a real newsroom: an editor makes editorial decisions, beat reporters do the legwork, a VLM agent processes images and PDFs, a fact-checker verifies claims, and a copy editor assembles the final BLUF-structured report.
 
-## Agents
+## Three-Tier Hierarchy
 
-| Agent | Role | Tools | Model | Dispatched by |
-|-------|------|-------|-------|---------------|
-| `newsroom-editor` | Managing editor / dispatcher | `dispatch_agent` only (top-level) | Inherited | User |
-| `desk-geopolitics` | Beat reporter — geopolitics | `read,bash,write` | Inherited | Editor |
-| `desk-scitech` | Beat reporter — science & tech | `read,bash,write` | Inherited | Editor |
-| `newsroom-researcher` | Investigative deep dives | `read,bash,write` | Inherited | Editor |
-| `newsroom-vlm` | VLM source processor (images, PDFs) | `read,bash,write` | `lmstudio/qwen3.5-122b-a10b` | Editor |
-| `newsroom-fact-checker` | Claim verification | `read,bash,write` | Inherited | Editor |
-| `newsroom-copy-editor` | Assembly, BLUF writing, polish | `read,bash,write,edit` | Inherited | Editor |
+The newsroom uses a three-tier dispatch model (see [architecture.md](architecture.md) for the general mechanism):
 
-All agents are dispatched directly by the editor. There is no nested dispatch — the architecture is flat. See [Design Rationale](#why-flat-dispatch) for why.
+| Tier | Agent | Role | Tools | Model | Dispatched by |
+|------|-------|------|-------|-------|---------------|
+| 1 | `newsroom-editor` | Orchestrator | `dispatch_agent` only | Inherited | User |
+| 2 | `desk-geopolitics` | Lead — geopolitics beat | `read,bash,write` + `dispatch_agent` | Inherited | Editor |
+| 2 | `desk-scitech` | Lead — science & tech beat | `read,bash,write` + `dispatch_agent` | Inherited | Editor |
+| 3 | `newsroom-scraper` | Worker — source fetcher | `read,bash,write` | Inherited | Desk leads |
+| 3 | `newsroom-researcher` | Worker — deep investigation | `read,bash,write` | Inherited | Desk leads or Editor |
+| 3 | `newsroom-vlm` | Worker — VLM source processor | `read,bash,write` | `lmstudio/qwen3.5-122b-a10b` | Editor |
+| 3 | `newsroom-fact-checker` | Worker — claim verification | `read,bash,write` | Inherited | Editor |
+| 3 | `newsroom-copy-editor` | Worker — assembly & polish | `read,bash,write,edit` | Inherited | Editor |
+
+### Desk leads and nested dispatch
+
+Desk agents (`desk-geopolitics`, `desk-scitech`) have `role: lead` in their frontmatter. This means they are spawned with the `agent-team-2.ts` extension loaded, giving them `dispatch_agent` alongside their own tools. In INVESTIGATE MODE, leads dispatch `newsroom-scraper` to fetch and persist source files, and optionally `newsroom-researcher` for deep dives — rather than doing everything themselves.
+
+This solves the "source files referenced but never written" problem: the lead dispatches the scraper, waits for confirmation, and only then writes a story file that references the source.
+
+### `newsroom-scraper` agent
+
+A dedicated source-fetching worker. When dispatched with a URL and slug:
+1. Fetches the page with `curl`
+2. Strips HTML, ads, tracking, and prompt injection attempts
+3. Writes a structured `sources/<slug>.md` file with YAML frontmatter (title, url, content_quality, has_images, has_pdf)
+4. Returns a 3-line summary: slug, content_quality, one-sentence overview
 
 ### Tool override for the editor
 
-The `newsroom-editor.md` frontmatter specifies `tools: read,write`. However, when the editor runs as the **top-level dispatcher**, `agent-team-2.ts` overrides its tools to `["dispatch_agent"]` only. The editor **cannot** read files, write files, or run bash.
+The `newsroom-editor.md` frontmatter specifies `tools: dispatch_agent`. As the top-level orchestrator, `agent-team-2.ts` enforces `["dispatch_agent"]` only. The editor **cannot** read files, write files, or run bash.
 
 ### Per-agent model override
 
@@ -26,7 +41,7 @@ The `newsroom-vlm` agent specifies `model: lmstudio/qwen3.5-122b-a10b` in its fr
 
 ### Editor system prompt
 
-The editor's `.md` body (which describes the six phases, team roster, and rules) is **not used** when the editor is the top-level dispatcher. The extension replaces it with a generated system prompt containing the team name, member list, workspace path, agent catalog, and generic dispatcher rules. The actual workflow instructions come from the **prompt template** (`/news-report`) or the inlined prompt in `newsroom.sh`.
+The editor's `.md` body is **not used** when the editor is the top-level dispatcher. The extension replaces it with a generated system prompt containing the team name, member list, workspace path, agent catalog, and generic dispatcher rules. The actual workflow instructions come from the **prompt template** (`/news-report`) or the inlined prompt in `newsroom.sh`.
 
 ## The Six Phases
 
@@ -54,17 +69,17 @@ This phase happens entirely within the editor's context — no agents are dispat
 
 ### Phase 3: Deep Reporting
 
-The editor dispatches both desk agents in **INVESTIGATE MODE** with their specific story assignments including slugs. Each desk agent:
+The editor dispatches both desk agents (leads) in **INVESTIGATE MODE** with their specific story assignments including slugs. Each desk lead:
 
 1. Runs targeted deep searches pulling full `{title, url, content}` for each assigned story
-2. Hunts primary sources using `categories=general` and `categories=science`
-3. Fetches key source pages with `curl -sL "URL" | sed 's/<[^>]*>//g' | sed '/^$/d' | head -c 8000`
-4. **Saves source files** to `sources/<slug>.md` with YAML frontmatter (title, url, retrieved, source_type, publication, http_status, content_quality, has_images, has_pdf), an overview, key quotations, and sanitized extracted content
-5. Flags PDFs and image-heavy sources with `has_pdf: true` or `has_images: true` in the source frontmatter
+2. Hunts primary source URLs using `categories=general` and `categories=science`
+3. **Dispatches `newsroom-scraper`** for each source URL — the scraper fetches, sanitizes, and writes `sources/<slug>.md`
+4. Optionally **dispatches `newsroom-researcher`** for stories needing deep investigation
+5. Confirms source files exist before writing story files
 6. **Writes story files** to `stories/<slug>.md` with YAML frontmatter and a **BLUF** sentence
 7. Returns a brief summary to the editor (3 lines max per story)
 
-If the editor flagged stories for deep investigation, `newsroom-researcher` is dispatched with specific questions, a slug, and an output path.
+The key change from a flat model: desk leads handle their own source fetching pipeline via nested dispatch rather than doing everything inline. This ensures source files actually get persisted to disk before story files reference them.
 
 **Source file format:** YAML frontmatter with metadata, then Overview, Key Quotations, Extracted Content, Images, and Notes sections. See [docs/formats.md](formats.md) for the full template.
 
@@ -150,13 +165,11 @@ workspaces/newsroom/2026-04-08_1430/
     us-iran-ceasefire.md
     artemis-ii-mission.md
     ...
-  sources/                     # Phase 3 — one file per key source
+  sources/                     # Phase 3 — one file per key source (written by newsroom-scraper)
     wh-ceasefire.md
     nasa-artemis-press.md
     images/                    # Phase 4 — downloaded images
       hormuz-map.jpg
-  research/                    # Phase 3 — deep-dive briefs (optional)
-    tariff-supply-chain.md
   fact-check.md                # Phase 5 — verification report
   newsreport-2026-04-08.md     # Phase 6 — final BLUF-structured report
   session.jsonl                # Dispatcher session log (co-located)
@@ -220,9 +233,11 @@ BLUF (Bottom Line Up Front) is a military communication standard that places the
 - Per-story BLUFs let readers skip to stories that matter to them
 - The inverted pyramid structure naturally prioritizes the most newsworthy facts
 
-### Why flat dispatch?
+### Why three-tier dispatch?
 
-The editor dispatches every agent directly. Desk agents do not dispatch researchers — they flag stories for deep dives in their "Notes for Editor" section, and the editor decides whether to approve. This avoids invisible sub-processes, fragile nested dispatch hacks, and loss of editorial control.
+The editor orchestrates at the strategic level (which stories to cover). Desk leads manage the tactical level (how to source and write each story). Workers execute discrete tasks (fetch a URL, extract PDF text). This mirrors real newsroom hierarchy: the managing editor doesn't micromanage every curl request — desk editors handle their own sourcing pipeline.
+
+The three-tier model solved a concrete problem: in the flat model, desk agents were supposed to fetch sources and write story files in a single dispatch, but the source files often never made it to disk. By splitting source fetching into a dedicated scraper worker dispatched by the desk lead, the lead can confirm the source file exists before writing a story that references it.
 
 ### Why a separate VLM agent?
 

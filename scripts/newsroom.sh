@@ -6,7 +6,7 @@ source "$HOME/dot-pi/.env"
 RUN_ID=$(date +%Y-%m-%d_%H%M)
 DATE=$(date +%Y-%m-%d)
 WORKSPACE="$HOME/dot-pi/workspaces/newsroom/$RUN_ID"
-mkdir -p "$WORKSPACE/stories" "$WORKSPACE/research" "$WORKSPACE/sources" "$WORKSPACE/sources/images" "$WORKSPACE/sessions"
+mkdir -p "$WORKSPACE/stories" "$WORKSPACE/sources" "$WORKSPACE/sources/images" "$WORKSPACE/sessions"
 
 export AGENT_TEAM="newsroom"
 export AGENT_WORKSPACE="$WORKSPACE"

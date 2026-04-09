@@ -12,6 +12,26 @@ The retro team is generic — it works on any agent team's output, not just the 
 | `retro-session-analyst` | JSONL parser, trajectory tracer | `read,bash,write` | Editor |
 | `retro-output-reviewer` | Workspace output assessor | `read,bash,write` | Editor |
 
+## Two-Workspace Model
+
+The retro team operates across two workspaces:
+
+- **Target workspace** — the workspace being analyzed (e.g., `workspaces/newsroom/2026-04-08_1446/`). Analysts READ session files and output files from here.
+- **Retro workspace** — the retro team's own timestamped directory (e.g., `workspaces/retro/2026-04-08_1520/`). All analysis output is WRITTEN here.
+
+This separation keeps the target workspace clean — no retro artifacts pollute the original run's output.
+
+```
+workspaces/retro/2026-04-08_1520/
+  session.jsonl          # retro editor's own session
+  sessions/              # retro sub-agent sessions
+  retro.md               # final synthesized diagnosis
+  session-analysis.md    # from retro-session-analyst
+  output-review.md       # from retro-output-reviewer
+```
+
+The target workspace path is passed to the dispatcher via the `RETRO_TARGET` environment variable, which `agent-team-2.ts` injects into the system prompt as a `## Retro Target` block. The retro workspace path comes from `AGENT_WORKSPACE`, injected as the `## Workspace` block.
+
 ## How It Works
 
 ### Phase 1: Analysis (parallel)
@@ -20,7 +40,9 @@ The editor dispatches both analysts simultaneously:
 
 **Session analyst** reads every session file (main JSONL + sub-agent sessions), runs a battery of Python parsing scripts embedded in its prompt, and produces a structured trajectory report. This is the heavy-lifting agent — session files can be 30-344KB each with individual lines up to 200KB (because `dispatch_agent` tool results embed entire sub-agent transcripts).
 
-**Output reviewer** reads all markdown files in the workspace and assesses whether the team produced what it was supposed to: are expected files present, is content substantive, is structure consistent?
+**Output reviewer** reads all markdown files in the target workspace and assesses whether the team produced what it was supposed to: are expected files present, is content substantive, is structure consistent?
+
+Both analysts write their reports to the **retro workspace**, not the target workspace.
 
 ### Phase 2: Diagnosis
 
@@ -29,28 +51,67 @@ The editor combines:
 2. The session analyst's pathology findings
 3. The output reviewer's completeness assessment
 
-And writes `retro.md` to the workspace — a lean, severity-ranked diagnosis designed to be pasteable into a frontier model session.
+And writes `retro.md` to the retro workspace — a lean, severity-ranked diagnosis designed to be pasteable into a frontier model session.
 
 ## Running
 
+### Interactive — by team name
+
 ```bash
-pretro
-# Then in the pi session:
+pretro newsroom
+# retro editor already knows the target — just type:
 /retro The editor seemed to dispatch itself. Geo desk only covered Iran.
 ```
 
-Or with an explicit workspace:
+The team name (`newsroom`) is resolved to the latest timestamped run under `workspaces/newsroom/`.
+
+### Interactive — by full path
+
+```bash
+pretro ~/dot-pi/workspaces/newsroom/2026-04-08_1446
+/retro Agent looped on search queries
+```
+
+### Interactive — auto-discover latest
 
 ```bash
 pretro
-/retro ~/dot-pi/workspaces/newsroom/2026-04-08_1430 Agent looped on search queries
+/retro
 ```
 
-The text after `/retro` becomes the user's observations. If a workspace path is provided, the retro team uses it directly. Otherwise, the session analyst is dispatched to find the most recent workspace via `ls -dt ~/dot-pi/workspaces/*/`.
+With no argument, `pretro` finds the most recent workspace across all teams (excluding retro's own workspaces).
 
-### Session location for the retro team itself
+### Headless — by team name
 
-The `pretro` alias uses `--session-dir "$PI_SESSIONS"` (the flat `~/dot-pi/sessions/` directory), not a workspace-based session. This is intentional — retro doesn't produce its own workspace. It reads another team's workspace and writes its analysis files there.
+```bash
+bash ~/dot-pi/scripts/retro.sh newsroom
+```
+
+### Headless — by full path
+
+```bash
+bash ~/dot-pi/scripts/retro.sh ~/dot-pi/workspaces/newsroom/2026-04-08_1446
+```
+
+### Headless — auto-discover
+
+```bash
+bash ~/dot-pi/scripts/retro.sh
+```
+
+### Chaining newsroom + retro
+
+```bash
+bash ~/dot-pi/scripts/newsroom.sh && bash ~/dot-pi/scripts/retro.sh newsroom
+```
+
+### Target resolution logic
+
+Both `pretro` and `scripts/retro.sh` share the same resolution logic:
+
+1. If the argument is a directory that exists, use it as-is (full path)
+2. If a directory exists at `~/dot-pi/workspaces/$ARG/`, treat it as a team name and pick the latest timestamped subdirectory
+3. If no argument, find the latest workspace across all teams (excluding `workspaces/retro/`)
 
 ## Session File Format
 
@@ -179,12 +240,26 @@ Aggregates input/output/cache token counts across all assistant messages in a se
 |-----------|-------------|--------------|
 | Tool-not-found | Agent tried a tool it doesn't have | Error finder: "Tool X not found" |
 | Self-dispatch | Agent dispatching itself as a workaround | Dispatch chain: agent dispatching its own name |
-| Loops | Same tool call repeated 3+ times | Loop detector |
+| Loops | Same tool call repeated 3+ times | Loop detector (200-char arg comparison, requires verification) |
 | Context bloat | Tool result > 50KB ingested into context | Event timeline: line char count |
-| Prompt non-compliance | Agent ignoring specific instructions | Manual inspection of tool call arguments (e.g., `time_range=day` when told 96 hours) |
+| Prompt non-compliance | Agent ignoring specific instructions | Manual inspection of tool call arguments |
 | Wasted work | Queries returning zero results | Event timeline: small tool results after search calls |
 | Agent confusion | Wrong agent dispatched, garbled task | Dispatch chain: task content mismatch with agent role |
 | Missing output | Expected file not written | Output reviewer: empty or absent files |
+| Incomplete run | Run terminated before all phases completed | Phase completion detector (recipe 8) |
+| Dispatch gaps | Story slug dispatched but no output file | Dispatch-to-output coverage (recipe 7) |
+| Frontmatter mismatch | Count fields don't match actual content | Output reviewer: frontmatter validation |
+| Broken references | Referenced source paths don't exist on disk | Output reviewer: cross-reference check |
+
+### Cancellation Handling
+
+User cancellation (stopping a run mid-execution) is **normal during testing**. The retro team handles this gracefully:
+
+- Incomplete runs are flagged as **INFO** ("Run terminated after Phase N of M"), not as critical issues.
+- Files that would have been produced by un-executed phases are **not** flagged as "missing."
+- Clean exits with no crash trace are assumed to be intentional cancellation.
+
+This prevents noisy false positives when the user is iterating on prompt design and stops runs early.
 
 ### Real examples from early runs
 
@@ -206,6 +281,10 @@ The session analyst focuses on **process** (what agents did). The output reviewe
 
 Separating them also allows parallel dispatch — both analysts can run simultaneously.
 
+### Why separate retro workspaces?
+
+Earlier iterations wrote retro analysis files into the target workspace. This polluted the original run's output with files like `retro.md` and `retro-session-analysis.md`, making it harder to assess what the original team actually produced. The two-workspace model keeps the original run pristine and makes retro runs independently addressable and archivable.
+
 ### Why Python one-liners instead of just grep?
 
 Session JSONL lines can be up to 200KB of nested JSON. `grep` finds text matches but can't parse structure — you can't distinguish a tool call error from an error string appearing in a news article about errors. The `python3 -c` recipes parse the JSON structure and extract specific fields.
@@ -225,3 +304,24 @@ But for structured analysis (dispatch chains, loop detection, token aggregation)
 ### Why `.json` extension for JSONL files?
 
 This is a quirk of `agent-team-2.ts`, which names sub-agent session files as `<agent-name>.json`. The files are actually JSONL (one JSON object per line). This matters because `json.load()` will fail on these files — they must be read line-by-line with `json.loads()` per line. The parsing toolkit handles this correctly. A future fix would be to rename them to `.jsonl`, but this requires updating the extension.
+
+## The Meta-Improvement Loop
+
+The retro team is one tier of a three-part self-improvement cycle:
+
+```
+1. Agent Team Run → produces output + session logs
+        |
+        v
+2. Retro Analysis → produces lean diagnosis (retro.md)
+        |
+        v
+3. Developer + Frontier Model → reads diagnosis, implements systemic fixes
+        |
+        v
+1. Agent Team Run (improved) → ...
+```
+
+The retro team handles step 2. It does NOT prescribe solutions — that is step 3's job. The retro report is designed to be compact enough to paste into a frontier model session alongside these docs for full-context implementation.
+
+The system's docs (`docs/`) are part of the loop. When the frontier model makes changes based on a retro report, the docs should be updated to reflect the new system state. This ensures the next retro run's analysts and the next frontier session both have accurate context.

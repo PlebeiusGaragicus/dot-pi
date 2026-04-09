@@ -72,7 +72,7 @@ Always answer questions fully and comprehensively - multiple searches may be req
 pnews() {
   local RUN_ID=$(date +%Y-%m-%d_%H%M)
   local WORKSPACE="$HOME/dot-pi/workspaces/newsroom/$RUN_ID"
-  mkdir -p "$WORKSPACE/stories" "$WORKSPACE/research" "$WORKSPACE/sources" "$WORKSPACE/sources/images" "$WORKSPACE/sessions"
+  mkdir -p "$WORKSPACE/stories" "$WORKSPACE/sources" "$WORKSPACE/sources/images" "$WORKSPACE/sessions"
   export AGENT_TEAM="newsroom"
   export AGENT_WORKSPACE="$WORKSPACE"
   pi \
@@ -105,9 +105,29 @@ pteam2() {
 }
 
 pretro() {
+  local RUN_ID=$(date +%Y-%m-%d_%H%M)
+  local RETRO_WORKSPACE="$HOME/dot-pi/workspaces/retro/$RUN_ID"
+  mkdir -p "$RETRO_WORKSPACE/sessions"
+
+  local TARGET=""
+  if [ -n "${1:-}" ]; then
+    if [ -d "$1" ]; then
+      TARGET="$1"
+    elif [ -d "$HOME/dot-pi/workspaces/$1" ]; then
+      TARGET="$(ls -dt "$HOME/dot-pi/workspaces/$1"/*/ 2>/dev/null | head -1)"
+    fi
+    shift
+  fi
+  if [ -z "$TARGET" ]; then
+    TARGET="$(ls -dt "$HOME/dot-pi/workspaces"/*/*/ 2>/dev/null | grep -v '/retro/' | head -1)"
+  fi
+
   export AGENT_TEAM="retro"
+  export AGENT_WORKSPACE="$RETRO_WORKSPACE"
+  export RETRO_TARGET="$TARGET"
+
   pi \
-    --session-dir "$PI_SESSIONS" \
+    --session "$RETRO_WORKSPACE/session.jsonl" \
     -e "$HOME/dot-pi/extensions/orchestration/agent-team-2.ts" \
     -e "$HOME/dot-pi/extensions/ui/theme-cycler.ts" \
     --theme "$HOME/dot-pi/themes" \

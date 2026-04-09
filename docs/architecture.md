@@ -82,11 +82,11 @@ These launch the `agent-team-2.ts` orchestration extension. The `AGENT_TEAM` env
 | Alias | Team | Session location | Workspace |
 |-------|------|------------------|-----------|
 | `pnews` | `newsroom` | `WORKSPACE/session.jsonl` | `~/dot-pi/workspaces/newsroom/$RUN_ID/` |
-| `pretro` | `retro` | `~/dot-pi/sessions/` (flat) | None (retro reads another team's workspace) |
+| `pretro` | `retro` | `WORKSPACE/session.jsonl` | `~/dot-pi/workspaces/retro/$RUN_ID/` |
 | `pteam` | User-selected | `~/dot-pi/sessions/` | None |
 | `pteam2` | User-selected | `~/dot-pi/sessions/` | None |
 
-Key difference: `pnews` uses `--session "$WORKSPACE/session.jsonl"` to co-locate the dispatcher's session with the workspace. `pretro` uses `--session-dir "$PI_SESSIONS"` because retro doesn't produce its own workspace — it analyzes another team's workspace.
+Key difference: `pnews` uses `--session "$WORKSPACE/session.jsonl"` to co-locate the dispatcher's session with the workspace. `pretro` also uses co-located sessions in its own workspace. Both `pnews` and `pretro` use `AGENT_WORKSPACE` — `pretro` additionally sets `RETRO_TARGET` to the workspace being analyzed.
 
 ### `pnews` alias in detail
 
@@ -94,7 +94,7 @@ Key difference: `pnews` uses `--session "$WORKSPACE/session.jsonl"` to co-locate
 pnews() {
   local RUN_ID=$(date +%Y-%m-%d_%H%M)
   local WORKSPACE="$HOME/dot-pi/workspaces/newsroom/$RUN_ID"
-  mkdir -p "$WORKSPACE/stories" "$WORKSPACE/research" "$WORKSPACE/sources" "$WORKSPACE/sessions"
+  mkdir -p "$WORKSPACE/stories" "$WORKSPACE/sources" "$WORKSPACE/sources/images" "$WORKSPACE/sessions"
   export AGENT_TEAM="newsroom"
   export AGENT_WORKSPACE="$WORKSPACE"
   pi \
@@ -110,7 +110,7 @@ pnews() {
 This function does several things:
 
 1. **Creates a timestamped workspace** (`YYYY-MM-DD_HHMM`) so multiple runs per day get separate directories.
-2. **Pre-creates subdirectories** (`stories/`, `research/`, `sources/`, `sessions/`) so agents can write immediately.
+2. **Pre-creates subdirectories** (`stories/`, `sources/`, `sources/images/`, `sessions/`) so agents can write immediately.
 3. **Exports `AGENT_TEAM`** — `agent-team-2.ts` reads this to auto-select the team on startup.
 4. **Exports `AGENT_WORKSPACE`** — `agent-team-2.ts` reads this for two purposes:
    - Setting the sub-agent session directory to `$WORKSPACE/sessions/`
@@ -131,7 +131,7 @@ Both run the newsroom team. They share the same workspace setup, env vars, and e
 | UI | Theme cycler, footer, status bar | No extensions beyond orchestration |
 | Use case | Human-in-the-loop, intervention | Cron jobs, scheduled unattended runs |
 
-The main duplication risk is the prompt text: `prompts/news-report.md` for interactive mode, and the inlined string in `newsroom.sh` for headless mode. Both describe the same five-phase workflow. Changes to the workflow must be reflected in both places.
+The main duplication risk is the prompt text: `prompts/news-report.md` for interactive mode, and the inlined string in `newsroom.sh` for headless mode. Both describe the same six-phase workflow. Changes to the workflow must be reflected in both places.
 
 ## How Agent Teams Work
 
@@ -152,6 +152,7 @@ You are a geopolitics desk reporter...
 - **`description`** — shown in the agent catalog injected into the dispatcher's system prompt.
 - **`tools`** — comma-separated list of pi tools the agent gets when dispatched as a sub-agent. **Important:** these tools only apply when the agent runs as a sub-agent. When the agent is the top-level dispatcher, `agent-team-2.ts` overrides its tools to `["dispatch_agent"]` only (see below).
 - **`model`** (optional) — a `provider/model-id` string that overrides the dispatcher's model for this agent. If omitted, the agent inherits the dispatcher's model. Used by `newsroom-vlm` to run on `lmstudio/qwen3.5-122b-a10b` (a vision-capable model) while other agents use the stronger text-only model.
+- **`role`** (optional) — one of `lead` or omitted (defaults to worker). Leads are spawned with the orchestration extension loaded, giving them `dispatch_agent` alongside their own tools. Workers get only their frontmatter tools. See **Three-Tier Dispatch Model** below.
 - **Body** — everything after the frontmatter becomes the agent's system prompt, passed via `--append-system-prompt`.
 
 ### Team Composition
@@ -160,12 +161,14 @@ Teams are defined in `agents/teams.yaml`:
 
 ```yaml
 newsroom:
-  - newsroom-editor
-  - desk-geopolitics
-  - desk-scitech
-  - newsroom-researcher
-  - newsroom-fact-checker
-  - newsroom-copy-editor
+  - newsroom-editor        # orchestrator (implicit: first in list)
+  - desk-geopolitics       # role: lead — can dispatch scraper/researcher
+  - desk-scitech           # role: lead — can dispatch scraper/researcher
+  - newsroom-scraper       # worker — fetches, cleans, writes source files
+  - newsroom-researcher    # worker — deep investigation
+  - newsroom-vlm           # worker — image/PDF processing (vision model)
+  - newsroom-fact-checker   # worker — verification
+  - newsroom-copy-editor   # worker — final assembly
 
 retro:
   - retro-editor
@@ -173,7 +176,7 @@ retro:
   - retro-output-reviewer
 ```
 
-The first agent in the list becomes the dispatcher (top-level agent). The rest are available as sub-agents via `dispatch_agent`.
+The first agent in the list becomes the dispatcher (orchestrator). Agents with `role: lead` in their frontmatter get dispatch capabilities alongside their own tools. All others are workers.
 
 ### The Orchestrator Extension (`agent-team-2.ts`)
 
@@ -221,46 +224,63 @@ Sub-agent sessions are written to `$WORKSPACE/sessions/<agent-name>.json`. Despi
 
 When an agent is dispatched multiple times (e.g., desk agent dispatched in scan mode, then again in investigate mode), subsequent dispatches use `-c` to continue the session, appending to the same `.json` file. This means the agent retains memory of its previous dispatch within the same run.
 
-### Dispatch Flow
+### Three-Tier Dispatch Model
+
+The system uses a three-tier hierarchy: **orchestrator → leads → workers**.
 
 ```
 User prompt (or /news-report template)
     |
     v
-Dispatcher (editor) — has ONLY dispatch_agent tool
-    |  - System prompt: generated by agent-team-2.ts
+Tier 1: Orchestrator (editor) — has ONLY dispatch_agent
+    |  - System prompt: generated by agent-team-2.ts (replaces .md body)
     |  - Knows: team members, workspace path, rules
     |  - Cannot: read files, run bash, write files
     |
-    |--- dispatch_agent("desk-geopolitics", "SCAN MODE. ...")
+    |--- dispatch_agent("desk-geopolitics", "INVESTIGATE MODE. ...")
     |       |
     |       v
-    |    pi -p --tools read,bash,write \
-    |          --append-system-prompt "You are a geopolitics desk reporter..." \
-    |          --session $WORKSPACE/sessions/desk-geopolitics.json \
-    |          "SCAN MODE. ..."
+    |    Tier 2: Lead — has frontmatter tools + dispatch_agent
+    |       |  - Spawned WITH agent-team-2.ts extension loaded
+    |       |  - System prompt: .md body KEPT, team roster appended
+    |       |  - Can: read, bash, write AND dispatch workers
+    |       |
+    |       |--- dispatch_agent("newsroom-scraper", "Fetch URL. ...")
+    |       |       |
+    |       |       v
+    |       |    Tier 3: Worker — frontmatter tools only
+    |       |       Spawned with --no-extensions
+    |       |       Fetches, sanitizes, writes source file
     |       |
     |       v
-    |    Sub-agent runs independently: searches, writes files, returns text
-    |       |
-    |       v
-    |    Text output truncated to 8KB, returned to dispatcher
-    |
-    |--- dispatch_agent("desk-scitech", "SCAN MODE. ...")
-    |       ...
+    |    Lead writes story file referencing confirmed sources
     |
     v
-Dispatcher reads summaries, makes decisions, dispatches next phase
+Orchestrator reviews summaries, dispatches next phase
 ```
+
+#### Role behaviors
+
+| Role | Tools | System prompt | Spawned with |
+|------|-------|---------------|-------------|
+| **Orchestrator** (first in team list) | `dispatch_agent` only | Replaced by extension | Extension (top-level process) |
+| **Lead** (`role: lead` in frontmatter) | Frontmatter tools + `dispatch_agent` | `.md` body preserved, team roster appended | `-e agent-team-2.ts`, `AGENT_ROLE=lead` |
+| **Worker** (default) | Frontmatter tools only | `.md` body via `--append-system-prompt` | `--no-extensions` |
+
+#### How role dispatch works in `agent-team-2.ts`
+
+- **Orchestrator:** `session_start` calls `pi.setActiveTools(["dispatch_agent"])`, stripping all other tools. `before_agent_start` replaces the system prompt.
+- **Lead:** Spawned with `-e agent-team-2.ts` instead of `--no-extensions`. The extension fires again inside the lead's process. `AGENT_ROLE=lead` is set in the environment, so `session_start` skips `setActiveTools` — the lead keeps its frontmatter tools AND gets `dispatch_agent` registered by the extension. `before_agent_start` appends the team roster to the lead's own system prompt rather than replacing it.
+- **Worker:** Spawned with `--no-extensions`. Gets only frontmatter tools. Cannot dispatch.
 
 ### Constraints
 
-- **One level of dispatch.** Sub-agents cannot dispatch other agents through the extension. `dispatch_agent` only exists for the top-level agent.
+- **Two levels of dispatch maximum.** Orchestrators dispatch leads and workers. Leads dispatch workers. Workers cannot dispatch.
 - **No parallel dispatch of the same agent.** An agent must finish before it can be dispatched again. Different agents can run concurrently if the model issues multiple tool calls in one turn.
 - **8KB return truncation.** Sub-agent text output returned to the dispatcher is capped at 8KB. Write full output to disk.
 - **No shared memory.** Agents communicate only through the file system. There is no message passing between sub-agents.
-- **Top-level agent has no filesystem tools.** The dispatcher cannot `read`, `write`, `bash`, or `edit`. It can only `dispatch_agent`. This is enforced by `pi.setActiveTools(["dispatch_agent"])` at startup. The frontmatter `tools` field on the dispatcher agent's `.md` file is ignored for the top-level role.
-- **System prompt replacement.** The extension's `before_agent_start` hook replaces the dispatcher's system prompt entirely. The `.md` body of the dispatcher agent is not used when it's the top-level agent — only when dispatched as a sub-agent.
+- **Orchestrator has no filesystem tools.** The orchestrator cannot `read`, `write`, `bash`, or `edit`. It can only `dispatch_agent`. This is enforced by `pi.setActiveTools(["dispatch_agent"])` at startup.
+- **System prompt handling differs by role.** For orchestrators, the extension replaces the system prompt entirely. For leads, the extension appends the team roster to the existing system prompt. For workers, the `.md` body is passed via `--append-system-prompt`.
 - **Per-agent model override.** Agents with a `model` field in their frontmatter use that model instead of inheriting the dispatcher's. Agents without the field inherit as before. This enables mixing model types (e.g., a vision model for media processing alongside a stronger text model for reporting).
 
 ## Session Format
@@ -354,8 +374,8 @@ The system is designed to run on locally-hosted or free-tier non-frontier models
 
 ### Orchestration constraints
 
-- **One level of dispatch.** Sub-agents cannot dispatch other agents. If a desk agent needs a researcher, it must flag the need in its output and let the editor dispatch the researcher separately.
-- **System prompt replacement.** The dispatcher's `.md` body is not used at the top level. All dispatcher instructions must come from the prompt template or the user's message.
+- **Two levels of dispatch.** The orchestrator dispatches leads and workers. Leads (with `role: lead`) can dispatch workers beneath them. Workers cannot dispatch. A desk lead needing source files dispatches `newsroom-scraper` directly rather than flagging the need for the orchestrator to handle.
+- **System prompt handling.** The orchestrator's `.md` body is replaced by the extension at top level. Lead agents keep their `.md` body and get the team roster appended. Worker agents get their `.md` body via `--append-system-prompt`.
 - **Session resume across dispatches.** When an agent is dispatched a second time, it resumes its session (`-c` flag). This means it has memory of the previous dispatch, which can be helpful (it knows what it scanned) or harmful (its context is larger and may overflow).
 
 ### Infrastructure requirements
