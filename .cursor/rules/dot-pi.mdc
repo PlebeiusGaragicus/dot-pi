@@ -1,0 +1,60 @@
+---
+description: dot-pi system context — self-improving agentic system built on the pi coding agent
+alwaysApply: true
+---
+
+# dot-pi
+
+Dotfiles for the pi coding agent. Multi-agent teams run on cheap/free models, a retro team diagnoses failures, and you (Cursor) implement fixes. You are step 3 of the self-improvement loop:
+
+1. Agent team runs (`pnews`, `pretro`) and produces output + session logs
+2. Retro team parses sessions and writes a lean diagnosis (`retro.md`)
+3. **You read the diagnosis and implement systemic fixes** (prompts, agents, extensions, docs)
+4. The improved system runs again
+
+## What to Read First
+
+- `docs/architecture.md` — system design, alias mechanics, session format, constraints (read for any structural change)
+- `docs/newsroom.md` — six-phase editorial workflow, three-tier hierarchy
+- `docs/retro.md` — JSONL parsing toolkit, pathology catalog, two-workspace model
+- `docs/formats.md` — canonical templates for all newsroom artifacts
+- The relevant `agents/*.md` file before modifying any agent prompt
+
+## Directory Map
+
+| Path | Purpose |
+|------|---------|
+| `agents/*.md` | Agent definitions (YAML frontmatter + system prompt body) |
+| `agents/teams.yaml` | Team compositions — first agent is the orchestrator |
+| `extensions/orchestration/agent-team-2.ts` | Core orchestration engine |
+| `pi-aliases` | Shell aliases — user entry points (`pnews`, `pretro`, `pchat`, etc.) |
+| `prompts/` | Prompt templates — become `/commands` in interactive sessions |
+| `scripts/` | Headless runners for cron/unattended use |
+| `skills/` | Tool-usage guides (SearXNG, browser, Nostr) |
+| `workspaces/` | Agent team outputs per-run (gitignored) |
+| `sessions/` | Non-team session archives (gitignored) |
+| `reference/` | External repos: pi-mono, pi-recipes, feynman (gitignored, never modify) |
+
+## Critical Pitfalls
+
+1. **Orchestrator system prompt is REPLACED.** The orchestrator's `.md` body is completely replaced by `agent-team-2.ts` at runtime. Editing the body only matters when that agent is dispatched as a sub-agent by something else. Workflow instructions come from prompt templates (`prompts/`) or inlined prompts in headless scripts (`scripts/`).
+
+2. **Prompt duplication.** `prompts/news-report.md` and `scripts/newsroom.sh` describe the same workflow independently. Same for `prompts/retro.md` and `scripts/retro.sh`. Changes to the workflow must be reflected in both.
+
+3. **`.json` files are JSONL.** Sub-agent sessions at `workspaces/*/sessions/*.json` are JSONL (one JSON object per line) despite the extension. Use `json.loads()` per line, not `json.load()`.
+
+4. **8KB return truncation.** Sub-agent text output returned to the dispatcher is capped at 8KB by `agent-team-2.ts`. Agents must write full output to disk and return brief summaries.
+
+5. **Three-tier dispatch.** Orchestrator -> Leads (`role: lead`) -> Workers. Leads get `dispatch_agent` plus their own tools. Workers get frontmatter tools only. Max two levels of dispatch.
+
+6. **Agent `role: lead`** means the agent is spawned with the orchestration extension, giving it `dispatch_agent` alongside its frontmatter tools. Its system prompt is preserved (not replaced) with the team roster appended.
+
+7. **Per-agent model override.** Agents with a `model` field in frontmatter use that model instead of inheriting. Used by `newsroom-vlm` for a vision-capable model.
+
+## Do NOT
+
+- Modify anything under `reference/` — external repos, read-only
+- Commit `.env` — contains API keys
+- Assume `workspaces/` or `sessions/` are in git — they are gitignored
+- Add tools to the orchestrator — `agent-team-2.ts` enforces `dispatch_agent` only via `setActiveTools`
+- Forget to update docs after structural changes — they are part of the improvement loop
