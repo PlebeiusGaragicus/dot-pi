@@ -54,9 +54,10 @@ Teams are defined in `agents/teams.yaml`. Each team is a list of agent names tha
 ```yaml
 newsroom:
   - newsroom-editor
-  - desk-geopolitics
-  - desk-scitech
+  - desk-reporter
+  - newsroom-scraper
   - newsroom-researcher
+  - newsroom-vlm
   - newsroom-fact-checker
   - newsroom-copy-editor
 

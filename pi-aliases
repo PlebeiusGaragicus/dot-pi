@@ -71,8 +71,10 @@ Always answer questions fully and comprehensively - multiple searches may be req
 
 pnews() {
   local RUN_ID=$(date +%Y-%m-%d_%H%M)
-  local WORKSPACE="$HOME/dot-pi/workspaces/newsroom/$RUN_ID"
-  mkdir -p "$WORKSPACE/stories" "$WORKSPACE/sources" "$WORKSPACE/sources/images" "$WORKSPACE/sessions"
+  local TEAM_DIR="$HOME/dot-pi/workspaces/newsroom"
+  local WORKSPACE="$TEAM_DIR/$RUN_ID"
+  mkdir -p "$WORKSPACE/stories" "$WORKSPACE/sources" "$WORKSPACE/sources/images" "$WORKSPACE/sessions" \
+           "$TEAM_DIR/topics"
   export AGENT_TEAM="newsroom"
   export AGENT_WORKSPACE="$WORKSPACE"
   pi \
@@ -82,6 +84,10 @@ pnews() {
     --theme "$HOME/dot-pi/themes" \
     --prompt-template "$HOME/dot-pi/prompts" \
     "$@"
+
+  # Update story index if the run produced one (structured workflows only)
+  [ -f "$WORKSPACE/story-index-update.yaml" ] && \
+    cp "$WORKSPACE/story-index-update.yaml" "$TEAM_DIR/topics/story-index.yaml"
 }
 
 # ── team orchestrators ───────────────────────────────────────────────────────

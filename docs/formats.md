@@ -83,7 +83,7 @@ for sources with has_images: true. Format per image:
 
 ---
 
-## 2. Wire File (`wire-<beat>.md`)
+## 2. Wire File (`wire-<topic-slug>.md`)
 
 Produced during SCAN mode. A lightweight ranked candidate list — no source files are created, no article content is fetched. This is the cheapest phase: headline-only queries to survey the news landscape.
 
@@ -91,7 +91,7 @@ Produced during SCAN mode. A lightweight ranked candidate list — no source fil
 
 ```markdown
 ---
-beat: geopolitics
+topic: geopolitics
 date: 2026-04-08
 queries_run: 7
 candidates: 10
@@ -116,7 +116,7 @@ candidates: 10
 
 | Field | Values | Description |
 |-------|--------|-------------|
-| `beat` | String | Reporter's beat (geopolitics, scitech, etc.) |
+| `topic` | String | Topic slug (geopolitics, scitech, etc.) |
 | `date` | Date | Date of the scan |
 | `queries_run` | Integer | Number of SearXNG queries executed |
 | `candidates` | Integer | Number of story candidates listed |
@@ -135,7 +135,7 @@ One per assigned story, produced during INVESTIGATE mode. Each story follows BLU
 ---
 title: "US-Iran Ceasefire Takes Hold Amid Strait of Hormuz Tensions"
 slug: us-iran-ceasefire
-beat: geopolitics
+topic: geopolitics
 date: 2026-04-08
 significance: high
 sources_primary: 2
@@ -172,7 +172,7 @@ Flag any sources with has_images or has_pdf for VLM processing.]
 |-------|--------|-------------|
 | `title` | String | Story headline |
 | `slug` | String | Filename-safe identifier (used as `stories/<slug>.md`) |
-| `beat` | String | Which beat this story belongs to |
+| `topic` | String | Topic slug this story belongs to |
 | `date` | Date | Date of the briefing |
 | `significance` | `high`, `medium`, `low` | Editorial significance rating |
 | `sources_primary` | Integer | Count of primary sources cited |
@@ -193,7 +193,7 @@ date: 2026-04-08
 run_id: 2026-04-08_1430
 stories: 8
 sources: 24
-beats:
+topics:
   - geopolitics
   - scitech
 ---
@@ -268,11 +268,11 @@ Every factual claim traces to a numbered source in the Source Index.]
 | `run_id` | String | Workspace directory name (YYYY-MM-DD_HHMM) |
 | `stories` | Integer | Total stories in the report |
 | `sources` | Integer | Total unique sources cited |
-| `beats` | List | Beats covered in this briefing |
+| `topics` | List | Topics covered in this briefing |
 
 ### BLUF Guidelines
 
-- **Report-level BLUF:** 2-3 sentences capturing the most important developments across all beats. Written for a busy reader who will read nothing else. Answers: "What happened today that matters?"
+- **Report-level BLUF:** 2-3 sentences capturing the most important developments across all topics. Written for a busy reader who will read nothing else. Answers: "What happened today that matters?"
 - **Per-story BLUF:** One bold sentence before supporting paragraphs. Answers: "What is the bottom line of this story?" Must be self-contained — a reader should understand the key fact without reading further.
 - **Developing Stories:** Each item is a single BLUF sentence with source references. These are stories still evolving or with weak sourcing that don't warrant full treatment.
 

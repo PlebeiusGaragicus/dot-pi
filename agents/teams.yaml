@@ -9,8 +9,7 @@ update-documentation:
 
 newsroom:
   - newsroom-editor
-  - desk-geopolitics
-  - desk-scitech
+  - desk-reporter
   - newsroom-scraper
   - newsroom-researcher
   - newsroom-vlm

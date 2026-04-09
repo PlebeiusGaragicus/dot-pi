@@ -31,8 +31,8 @@ The goal is a **self-improving agentic system**. Agent teams produce output. The
 dot-pi/
   agents/                Agent definitions (.md with YAML frontmatter)
     teams.yaml           Team compositions
-    newsroom-editor.md   Example: managing editor for the newsroom team
-    desk-geopolitics.md  Example: beat reporter agent
+    newsroom-editor.md   Managing editor for the newsroom team
+    desk-reporter.md     Generic desk reporter (parameterized per topic)
     ...
   docs/                  Documentation (you are here)
   extensions/            Pi extensions (TypeScript)
@@ -45,7 +45,8 @@ dot-pi/
     news-report.md       Kicks off a newsroom run via /news-report
     retro.md             Kicks off a retro analysis via /retro
   scripts/               Shell scripts for headless/scheduled runs
-    newsroom.sh          Cron-friendly headless newsroom runner
+    newsroom-daily.sh    Daily briefing runner (cron-friendly)
+    newsroom-weekly.sh   Weekly overview runner (cron-friendly)
   sessions/              Session archives for non-team aliases (pchat, pweb, pexplain)
   skills/                Skill files that teach agents how to use specific tools
     bowser/              Browser automation
@@ -54,6 +55,7 @@ dot-pi/
   themes/                Color themes (.json) for the pi TUI
   workspaces/            Agent team outputs — per-team, per-run
     newsroom/
+      topics/            Persistent topic configs and story index (shared across runs)
       2026-04-08_1430/   One run: session.jsonl, sessions/*.jsonl, output files
   reference/             Reference repos (gitignored) — pi-mono, pi-recipes, feynman
   pi-aliases             Shell aliases and functions — the main user entry point
@@ -93,8 +95,10 @@ Key difference: `pnews` uses `--session "$WORKSPACE/session.jsonl"` to co-locate
 ```bash
 pnews() {
   local RUN_ID=$(date +%Y-%m-%d_%H%M)
-  local WORKSPACE="$HOME/dot-pi/workspaces/newsroom/$RUN_ID"
-  mkdir -p "$WORKSPACE/stories" "$WORKSPACE/sources" "$WORKSPACE/sources/images" "$WORKSPACE/sessions"
+  local TEAM_DIR="$HOME/dot-pi/workspaces/newsroom"
+  local WORKSPACE="$TEAM_DIR/$RUN_ID"
+  mkdir -p "$WORKSPACE/stories" "$WORKSPACE/sources" "$WORKSPACE/sources/images" "$WORKSPACE/sessions" \
+           "$TEAM_DIR/topics"
   export AGENT_TEAM="newsroom"
   export AGENT_WORKSPACE="$WORKSPACE"
   pi \
@@ -104,6 +108,10 @@ pnews() {
     --theme "$HOME/dot-pi/themes" \
     --prompt-template "$HOME/dot-pi/prompts" \
     "$@"
+
+  # Update story index if the run produced one (structured workflows only)
+  [ -f "$WORKSPACE/story-index-update.yaml" ] && \
+    cp "$WORKSPACE/story-index-update.yaml" "$TEAM_DIR/topics/story-index.yaml"
 }
 ```
 
@@ -116,22 +124,33 @@ This function does several things:
    - Setting the sub-agent session directory to `$WORKSPACE/sessions/`
    - Injecting the workspace path into the dispatcher's system prompt
 5. **Uses `--session`** (not `--session-dir`) to write the dispatcher's session file directly into the workspace root.
-6. **Loads prompt templates** from `prompts/`, making `/news-report` available as a command.
+6. **Loads prompt templates** from `prompts/`, making `/news-report` and `/wire` available as commands.
+7. **Post-run story index hook** — after `pi` exits, copies `story-index-update.yaml` (if it exists) back to the team's `topics/story-index.yaml` at the workspace root. This only fires after structured workflows that produce the update file. Ad-hoc conversations do not affect the story index.
 
-### `pnews` vs `scripts/newsroom.sh`
+### How Humans Use `pnews`
 
-Both run the newsroom team. They share the same workspace setup, env vars, and extension loading. The differences:
+Three use cases, one entry point. The extension always injects saved topics and the story index as context — the user and prompt templates control what happens.
 
-| Aspect | `pnews` (interactive) | `newsroom.sh` (headless) |
-|--------|----------------------|--------------------------|
+**Use Case 1: Ad-hoc exploration.** The user opens `pnews` and talks to the editor about whatever interests them, or provides an initial query (`pnews "tell me about zoning rules for ADUs"`). No structured workflow runs. The editor follows the user's lead, dispatching `desk-reporter` as needed. No story index update occurs — global memory is untouched.
+
+**Use Case 2: Monitored topic updates.** The user triggers a structured workflow against saved topics: `/wire` for a quick scan, `/news-report` for a full six-phase briefing. Headless scripts (`newsroom-daily.sh`, `newsroom-weekly.sh`) pass equivalent prompts non-interactively. These workflows produce `story-index-update.yaml`, which is copied back to the team's `topics/story-index.yaml` by the post-run hook.
+
+**Use Case 3: Topic management.** The user manages saved topics through conversation ("show my topics", "add a topic about bitcoin", "disable the fashion topic"). The editor reads topic info from its system prompt and dispatches `desk-reporter` to create/modify/delete YAML files in `~/dot-pi/workspaces/newsroom/topics/`.
+
+### `pnews` vs headless scripts
+
+Both run the newsroom team. They share the same workspace setup, env vars, extension loading, and post-run story index hook. The differences:
+
+| Aspect | `pnews` (interactive) | `newsroom-daily.sh` / `newsroom-weekly.sh` |
+|--------|----------------------|----------------------------------------------|
 | Mode | Interactive TUI | `pi -p` (non-interactive, stdout) |
-| Prompt delivery | User types `/news-report` | Full prompt inlined with shell variable expansion |
+| Prompt delivery | User types `/news-report`, `/wire`, or free-form | Full prompt inlined with shell variable expansion |
 | Prompt templates | Loaded via `--prompt-template` | Disabled via `--no-prompt-templates` |
 | Skills | Loaded (default) | Disabled via `--no-skills` |
 | UI | Theme cycler, footer, status bar | No extensions beyond orchestration |
-| Use case | Human-in-the-loop, intervention | Cron jobs, scheduled unattended runs |
+| Use case | Human-in-the-loop, ad-hoc, testing | Cron jobs, scheduled unattended runs |
 
-The main duplication risk is the prompt text: `prompts/news-report.md` for interactive mode, and the inlined string in `newsroom.sh` for headless mode. Both describe the same six-phase workflow. Changes to the workflow must be reflected in both places.
+The main duplication risk is the prompt text: `prompts/news-report.md` for interactive mode, and the inlined string in the headless scripts for unattended mode. Both describe the same workflow. Changes must be reflected in both places.
 
 ## How Agent Teams Work
 
@@ -141,14 +160,15 @@ Each agent is a markdown file in `agents/` with YAML frontmatter:
 
 ```markdown
 ---
-name: desk-geopolitics
-description: Beat reporter — geopolitics, US foreign policy
+name: desk-reporter
+description: Generic desk reporter — scans any topic and writes sourced stories
 tools: read,bash,write
+role: lead
 ---
-You are a geopolitics desk reporter...
+You are a desk reporter in an automated newsroom...
 ```
 
-- **`name`** — identifier used for dispatch (`dispatch_agent("desk-geopolitics", ...)`). Case-insensitive.
+- **`name`** — identifier used for dispatch (`dispatch_agent("desk-reporter", ...)`). Case-insensitive.
 - **`description`** — shown in the agent catalog injected into the dispatcher's system prompt.
 - **`tools`** — comma-separated list of pi tools the agent gets when dispatched as a sub-agent. **Important:** these tools only apply when the agent runs as a sub-agent. When the agent is the top-level dispatcher, `agent-team-2.ts` overrides its tools to `["dispatch_agent"]` only (see below).
 - **`model`** (optional) — a `provider/model-id` string that overrides the dispatcher's model for this agent. If omitted, the agent inherits the dispatcher's model. Used by `newsroom-vlm` to run on `lmstudio/qwen3.5-122b-a10b` (a vision-capable model) while other agents use the stronger text-only model.
@@ -162,8 +182,7 @@ Teams are defined in `agents/teams.yaml`:
 ```yaml
 newsroom:
   - newsroom-editor        # orchestrator (implicit: first in list)
-  - desk-geopolitics       # role: lead — can dispatch scraper/researcher
-  - desk-scitech           # role: lead — can dispatch scraper/researcher
+  - desk-reporter          # role: lead — generic, dispatched per topic
   - newsroom-scraper       # worker — fetches, cleans, writes source files
   - newsroom-researcher    # worker — deep investigation
   - newsroom-vlm           # worker — image/PDF processing (vision model)
@@ -226,18 +245,18 @@ A workspace-based team run produces the following session files:
 workspaces/newsroom/2026-04-08_1430/
   session.jsonl                                  # orchestrator's pi session
   sessions/
-    desk-geopolitics_1.jsonl                     # 1st dispatch of desk-geopolitics
-    desk-geopolitics_2.jsonl                     # 2nd dispatch (if any)
-    desk-scitech_1.jsonl
-    desk-geopolitics.newsroom-scraper_1.jsonl    # newsroom-scraper dispatched BY desk-geopolitics
-    desk-scitech.newsroom-researcher_1.jsonl     # newsroom-researcher dispatched BY desk-scitech
+    desk-reporter_1.jsonl                        # 1st dispatch of desk-reporter (e.g. geopolitics scan)
+    desk-reporter_2.jsonl                        # 2nd dispatch (e.g. scitech scan)
+    desk-reporter_3.jsonl                        # 3rd dispatch (e.g. geopolitics investigate)
+    desk-reporter.newsroom-scraper_1.jsonl       # newsroom-scraper dispatched BY desk-reporter
+    desk-reporter.newsroom-researcher_1.jsonl    # newsroom-researcher dispatched BY desk-reporter
 ```
 
 **Naming convention:** `[<dispatcher>.]<agent-key>_<N>.jsonl`
 
 - `session.jsonl` at the workspace root is the **orchestrator's own pi session**. It records the orchestrator's `dispatch_agent` tool calls and their returned summaries. This file is set up by the shell alias via `--session "$WORKSPACE/session.jsonl"`.
 - Sub-agent sessions use the `.jsonl` extension to match pi's native convention. The numeric suffix `_N` is the per-agent dispatch count (1-indexed). Each dispatch creates a **separate file** -- there is no cross-dispatch continuity or session resumption.
-- For three-tier dispatch, the `AGENT_DISPATCHER` env var is set to the lead's agent key. Workers dispatched by a lead get the lead's name as a prefix (e.g., `desk-geopolitics.newsroom-scraper_1.jsonl`). This prevents collisions when multiple leads dispatch the same worker.
+- For three-tier dispatch, the `AGENT_DISPATCHER` env var is set to the lead's agent key. Workers dispatched by a lead get the lead's name as a prefix (e.g., `desk-reporter.newsroom-scraper_1.jsonl`). This prevents collisions when multiple leads dispatch the same worker concurrently.
 
 All session files are JSONL (one JSON object per line). The first line is always a `type: "session"` header with the session UUID and timestamp.
 
@@ -254,7 +273,7 @@ Tier 1: Orchestrator (editor) — has ONLY dispatch_agent
     |  - Knows: team members, workspace path, rules
     |  - Cannot: read files, run bash, write files
     |
-    |--- dispatch_agent("desk-geopolitics", "INVESTIGATE MODE. ...")
+    |--- dispatch_agent("desk-reporter", "INVESTIGATE MODE. Topic: Geopolitics...")
     |       |
     |       v
     |    Tier 2: Lead — has frontmatter tools + dispatch_agent
@@ -305,7 +324,7 @@ For leads, `AGENT_TEAM`, `AGENT_WORKSPACE`, and `AGENT_DISPATCHER` are forwarded
 ### Constraints
 
 - **Two levels of dispatch maximum.** Orchestrators dispatch leads and workers. Leads dispatch workers. Workers cannot dispatch.
-- **No parallel dispatch of the same agent.** An agent must finish before it can be dispatched again. Different agents can run concurrently if the model issues multiple tool calls in one turn.
+- **Concurrent dispatch allowed.** The same agent can be dispatched multiple times concurrently (each gets a unique session file via the `_N` suffix). The editor's prompt instructs conservative batching (1-2 topics at a time) to manage inference load, but the extension does not enforce a limit.
 - **8KB return truncation.** Sub-agent text output returned to the dispatcher is capped at 8KB. Write full output to disk.
 - **No shared memory.** Agents communicate only through the file system. There is no message passing between sub-agents.
 - **Orchestrator has no filesystem tools.** The orchestrator cannot `read`, `write`, `bash`, or `edit`. It can only `dispatch_agent`. This is enforced by `pi.setActiveTools(["dispatch_agent"])` at startup.
@@ -353,9 +372,93 @@ When loaded via `--prompt-template`, each template becomes a `/command` in inter
 
 Templates are instructions for the dispatcher agent, not for sub-agents. They describe the workflow the dispatcher should execute using `dispatch_agent`.
 
+Available templates:
+
+| Template | Purpose | Story index affected? |
+|----------|---------|----------------------|
+| `/news-report` | Full six-phase briefing against saved topics | Yes — copy editor writes `story-index-update.yaml` |
+| `/wire` | Scan-only: produce wire files for saved topics, return editorial summary | Yes — lighter update, new candidates only |
+| `/retro` | Run retro analysis against a workspace | No |
+
 Templates use placeholder tokens like `[DATE]` and `[WORKSPACE]` that the dispatcher agent is expected to resolve from its system prompt context (the workspace path is injected by `agent-team-2.ts`, the date is usually mentioned in the task or system prompt).
 
-In the headless script (`newsroom.sh`), these placeholders are replaced by shell variable expansion since the prompt is inlined directly.
+In the headless scripts (`newsroom-daily.sh`, `newsroom-weekly.sh`), these placeholders are replaced by shell variable expansion since the prompt is inlined directly.
+
+## Topic System
+
+The newsroom uses a data-driven topic system. Instead of hardcoded desk agents per beat, topics are defined as YAML files in `workspaces/newsroom/topics/` and a single generic `desk-reporter` agent handles all of them, parameterized per dispatch. Co-locating topics with the team's workspace directory keeps all team-specific persistent data portable and self-contained.
+
+### Topic Definitions (`workspaces/newsroom/topics/*.yaml`)
+
+Each YAML file defines one topic the newsroom should cover:
+
+```yaml
+name: Geopolitics & Foreign Policy
+slug: geopolitics
+active: true
+priority: high        # high = every run, medium = rotating, low = weekly
+scan_queries:
+  - "US+foreign+policy"
+  - "sanctions+diplomacy+international"
+categories: [news]
+time_range: month
+follow:
+  - "US-Iran ceasefire developments"
+notes: |
+  Prefer primary sources: White House releases, State Dept briefings...
+```
+
+Key fields:
+- `active: false` disables a topic without deleting it
+- `priority` controls scheduling: `high` topics scan every run, `medium` rotate, `low` only in weekly mode
+- `scan_queries` are user-crafted search terms — handles niche/local interests where generic keywords would miss
+- `follow` lists ongoing storylines the desk should check for updates
+- `categories` and `time_range` map to SearXNG API params
+
+### Story Index (`workspaces/newsroom/topics/story-index.yaml`)
+
+A persistent file tracking stories across runs for temporal continuity:
+
+```yaml
+- slug: us-iran-ceasefire
+  topic: geopolitics
+  status: developing     # developing | concluded | dormant
+  first_covered: 2026-04-07
+  last_covered: 2026-04-09
+  bluf: "Pakistan-mediated talks resume after Hormuz closure tests ceasefire"
+  timeline:
+    - date: 2026-04-07
+      bluf: "Ceasefire announced, contingent on Hormuz reopening"
+    - date: 2026-04-08
+      bluf: "Iran closes Hormuz, ceasefire tested; Pakistan mediating"
+```
+
+The `timeline` is an append-only log — each structured run adds at most one entry per story. The top-level `bluf` always reflects the most recent update. Stories without updates for 7+ days are marked `dormant` by the weekly workflow.
+
+**Lifecycle:**
+1. `agent-team-2.ts` reads `workspaces/newsroom/topics/story-index.yaml` at startup and injects developing stories into the editor's system prompt
+2. Editor tells `desk-reporter` about developing stories, including last known BLUF and date
+3. Copy editor writes `story-index-update.yaml` to the workspace as its final step
+4. `pnews` shell function copies the update back to `workspaces/newsroom/topics/story-index.yaml` after `pi` exits — but only if the file exists (structured workflows produce it, ad-hoc conversations do not)
+
+### Topic Injection
+
+The `agent-team-2.ts` extension loads all active topics and the story index at startup (`loadTopics()`), deriving the topics directory from the parent of `AGENT_WORKSPACE`. For orchestrator agents, these are injected into the system prompt as `## Saved Topics` and `## Developing Stories` sections. This gives the editor full context regardless of invocation mode — the editor decides what to act on based on the user's message or prompt template.
+
+### Generic Desk Reporter
+
+The `desk-reporter` agent is topic-agnostic. Its system prompt contains SCAN MODE and INVESTIGATE MODE instructions with placeholders. The editor composes topic-specific dispatch tasks:
+
+```
+SCAN MODE. Today is 2026-04-08. Topic: Geopolitics & Foreign Policy (slug: geopolitics).
+Search queries: US+foreign+policy, sanctions+diplomacy, ...
+Categories: news. Time range: month.
+Developing stories to check for updates:
+  - us-iran-ceasefire (last covered 2026-04-08): "..."
+Write your wire to /path/workspace/wire-geopolitics.md
+```
+
+This replaces the old model of having separate `desk-geopolitics.md` and `desk-scitech.md` agents. Adding a new topic requires only creating a new YAML file in `workspaces/newsroom/topics/` — no code or agent changes needed.
 
 ## Output Formats
 
@@ -398,7 +501,7 @@ The system is designed to run on locally-hosted or free-tier non-frontier models
 
 - **Smaller context windows.** Agents can overflow if given too much data in a single dispatch. The phased architecture (scan then investigate) and write-to-disk discipline mitigate this.
 - **Weaker instruction following.** Non-frontier models sometimes ignore specific instructions (e.g., using `time_range=day` when told to use `time_range=month`). The retro team catches these compliance failures.
-- **No parallel tool calls.** Some models can't issue multiple tool calls in a single turn, so dispatching "both desks in parallel" may actually be sequential.
+- **No parallel tool calls.** Some models can't issue multiple tool calls in a single turn, so dispatching multiple topics may actually be sequential.
 - **Occasional hallucination.** Cheaper models are more prone to fabricating tool arguments or misunderstanding task descriptions.
 
 ### Orchestration constraints
@@ -416,7 +519,7 @@ The system is designed to run on locally-hosted or free-tier non-frontier models
 ### Known gaps
 
 - **Nostr publishing.** The `nak` skill exists but the automated publish-to-Nostr pipeline is not yet wired into the newsroom workflow.
-- **Scheduled runs.** `scripts/newsroom.sh` is ready for cron but has not been tested in a cron environment.
+- **Scheduled runs.** `scripts/newsroom-daily.sh` and `newsroom-weekly.sh` are ready for cron but have not been tested in a cron environment.
 - **Cross-team retro.** The retro team can diagnose a single team's run but cannot compare across days or teams to identify longitudinal trends.
 - **PDF parsing.** The VLM agent (`newsroom-vlm`) can attempt PDF text extraction, but results vary depending on PDF structure. Complex layouts, scanned-image PDFs, and encrypted documents may fail.
 - **Image processing.** The VLM agent can describe images but cannot modify, crop, or resize them. Image descriptions are text-only.

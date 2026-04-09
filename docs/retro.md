@@ -102,7 +102,7 @@ bash ~/dot-pi/scripts/retro.sh
 ### Chaining newsroom + retro
 
 ```bash
-bash ~/dot-pi/scripts/newsroom.sh && bash ~/dot-pi/scripts/retro.sh newsroom
+bash ~/dot-pi/scripts/newsroom-daily.sh && bash ~/dot-pi/scripts/retro.sh newsroom
 ```
 
 ### Target resolution logic
@@ -133,11 +133,12 @@ For workspace-based teams (like newsroom), all session files are co-located in t
 workspaces/newsroom/2026-04-08_1430/
   session.jsonl              # Main dispatcher session
   sessions/
-    desk-geopolitics.json    # Sub-agent sessions (JSONL despite .json extension)
-    desk-scitech.json
-    newsroom-researcher.json
-    newsroom-fact-checker.json
-    newsroom-copy-editor.json
+    desk-reporter_1.jsonl    # Per-dispatch sub-agent sessions
+    desk-reporter_2.jsonl
+    desk-reporter.newsroom-scraper_1.jsonl
+    newsroom-researcher_1.jsonl
+    newsroom-fact-checker_1.jsonl
+    newsroom-copy-editor_1.jsonl
 ```
 
 The session analyst should **not** need to look in `~/dot-pi/sessions/` for team runs. That directory is only used by non-team aliases (`pchat`, `pweb`, `pexplain`).

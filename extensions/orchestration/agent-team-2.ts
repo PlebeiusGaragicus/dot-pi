@@ -19,7 +19,7 @@ import { Type } from "@sinclair/typebox";
 import { Text, type AutocompleteItem, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 import { spawn } from "child_process";
 import { readdirSync, readFileSync, existsSync, mkdirSync, unlinkSync, mkdtempSync, writeFileSync, rmdirSync } from "fs";
-import { join, resolve } from "path";
+import { join, resolve, dirname } from "path";
 import { homedir, tmpdir } from "os";
 
 
@@ -37,8 +37,16 @@ interface AgentDef {
 
 interface AgentState {
 	def: AgentDef;
-	status: "idle" | "running" | "done" | "error";
+	activeDispatches: number;
 	runCount: number;
+}
+
+interface TopicDef {
+	name: string;
+	slug: string;
+	active: boolean;
+	priority: string;
+	raw: string;
 }
 
 type TranscriptEntry =
@@ -142,6 +150,8 @@ export default function (pi: ExtensionAPI) {
 	let activeTeamName = "";
 	let sessionDir = "";
 	let contextWindow = 0;
+	let loadedTopics: TopicDef[] = [];
+	let storyIndexRaw = "";
 
 	function loadAgents(cwd: string) {
 		const workspace = process.env.AGENT_WORKSPACE;
@@ -175,6 +185,47 @@ export default function (pi: ExtensionAPI) {
 		}
 	}
 
+	function loadTopics() {
+		loadedTopics = [];
+		storyIndexRaw = "";
+
+		const workspace = process.env.AGENT_WORKSPACE;
+		if (!workspace) return;
+
+		// Topics live at the team workspace root (parent of the per-run directory)
+		const topicDir = join(dirname(workspace), "topics");
+		if (!existsSync(topicDir)) return;
+
+		try {
+			for (const file of readdirSync(topicDir)) {
+				if (!file.endsWith(".yaml") || file === "story-index.yaml") continue;
+				const fullPath = join(topicDir, file);
+				try {
+					const raw = readFileSync(fullPath, "utf-8");
+					const nameMatch = raw.match(/^name:\s*(.+)$/m);
+					const slugMatch = raw.match(/^slug:\s*(.+)$/m);
+					const activeMatch = raw.match(/^active:\s*(.+)$/m);
+					const priorityMatch = raw.match(/^priority:\s*(.+)$/m);
+					if (!slugMatch) continue;
+					loadedTopics.push({
+						name: nameMatch?.[1]?.trim() || slugMatch[1].trim(),
+						slug: slugMatch[1].trim(),
+						active: activeMatch ? activeMatch[1].trim() !== "false" : true,
+						priority: priorityMatch?.[1]?.trim() || "medium",
+						raw: raw.trim(),
+					});
+				} catch {}
+			}
+		} catch {}
+
+		const indexPath = join(topicDir, "story-index.yaml");
+		if (existsSync(indexPath)) {
+			try {
+				storyIndexRaw = readFileSync(indexPath, "utf-8").trim();
+			} catch {}
+		}
+	}
+
 	function activateTeam(teamName: string) {
 		activeTeamName = teamName;
 		const members = teams[teamName] || [];
@@ -186,7 +237,7 @@ export default function (pi: ExtensionAPI) {
 			if (!def) continue;
 			agentStates.set(def.name.toLowerCase(), {
 				def,
-				status: "idle",
+				activeDispatches: 0,
 				runCount: 0,
 			});
 		}
@@ -211,15 +262,7 @@ export default function (pi: ExtensionAPI) {
 			});
 		}
 
-		if (state.status === "running") {
-			return Promise.resolve({
-				output: `Agent "${displayName(state.def.name)}" is already running. Wait for it to finish.`,
-				exitCode: 1,
-				elapsed: 0,
-			});
-		}
-
-		state.status = "running";
+		state.activeDispatches++;
 		state.runCount++;
 
 		const startTime = Date.now();
@@ -401,11 +444,12 @@ export default function (pi: ExtensionAPI) {
 
 				flushText();
 				const elapsed = Date.now() - startTime;
-				state.status = code === 0 ? "done" : "error";
+				state.activeDispatches = Math.max(0, state.activeDispatches - 1);
 
+				const doneStatus = code === 0 ? "done" : "error";
 				ctx.ui.notify(
-					`${displayName(state.def.name)} ${state.status} in ${Math.round(elapsed / 1000)}s`,
-					state.status === "done" ? "success" : "error"
+					`${displayName(state.def.name)} ${doneStatus} in ${Math.round(elapsed / 1000)}s`,
+					doneStatus === "done" ? "success" : "error"
 				);
 
 				resolve({
@@ -417,7 +461,7 @@ export default function (pi: ExtensionAPI) {
 
 			proc.on("error", (err) => {
 				cleanupPromptFile();
-				state.status = "error";
+				state.activeDispatches = Math.max(0, state.activeDispatches - 1);
 				resolve({
 					output: `Error spawning agent: ${err.message}`,
 					exitCode: 1,
@@ -603,7 +647,10 @@ export default function (pi: ExtensionAPI) {
 		description: "List all loaded agents",
 		handler: async (_args, ctx) => {
 			const names = Array.from(agentStates.values())
-				.map(s => `${displayName(s.def.name)} (${s.status}, runs: ${s.runCount}): ${s.def.description}`)
+				.map(s => {
+					const status = s.activeDispatches > 0 ? `running (${s.activeDispatches})` : "idle";
+					return `${displayName(s.def.name)} (${status}, runs: ${s.runCount}): ${s.def.description}`;
+				})
 				.join("\n");
 			ctx.ui.notify(names || "No agents loaded", "info");
 		},
@@ -633,6 +680,20 @@ export default function (pi: ExtensionAPI) {
 			? `\n## Retro Target\n\nThe workspace to analyze:\n\`\`\`\n${retroTarget}\n\`\`\`\n`
 			: "";
 
+		let topicsBlock = "";
+		if (agentRole === "orchestrator" && loadedTopics.length > 0) {
+			const activeTopics = loadedTopics.filter(t => t.active);
+			if (activeTopics.length > 0) {
+				const topicEntries = activeTopics.map(t => {
+					return `### ${t.name} (slug: ${t.slug}, priority: ${t.priority})\n\`\`\`yaml\n${t.raw}\n\`\`\``;
+				}).join("\n\n");
+				topicsBlock = `\n## Saved Topics\n\n${topicEntries}\n`;
+			}
+			if (storyIndexRaw && storyIndexRaw !== "[]") {
+				topicsBlock += `\n## Developing Stories (Story Index)\n\n\`\`\`yaml\n${storyIndexRaw}\n\`\`\`\n`;
+			}
+		}
+
 		if (agentRole === "lead") {
 			const currentPrompt = (_event as any).systemPrompt || _ctx.getSystemPrompt?.() || "";
 			return {
@@ -658,7 +719,7 @@ agents using the dispatch_agent tool.
 ## Active Team: ${activeTeamName}
 Members: ${teamMembers}
 You can ONLY dispatch to agents listed below. Do not attempt to dispatch to agents outside this team.
-${workspaceBlock}${retroTargetBlock}
+${workspaceBlock}${retroTargetBlock}${topicsBlock}
 ## How to Work
 - Analyze the user's request and break it into clear sub-tasks
 - Choose the right agent(s) for each sub-task
@@ -687,6 +748,7 @@ ${agentCatalog}`,
 		contextWindow = _ctx.model?.contextWindow || 0;
 
 		loadAgents(_ctx.cwd);
+		loadTopics();
 
 		const teamNames = Object.keys(teams);
 		if (teamNames.length > 0) {

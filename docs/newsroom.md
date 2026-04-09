@@ -9,19 +9,20 @@ The newsroom uses a three-tier dispatch model (see [architecture.md](architectur
 | Tier | Agent | Role | Tools | Model | Dispatched by |
 |------|-------|------|-------|-------|---------------|
 | 1 | `newsroom-editor` | Orchestrator | `dispatch_agent` only | Inherited | User |
-| 2 | `desk-geopolitics` | Lead — geopolitics beat | `read,bash,write` + `dispatch_agent` | Inherited | Editor |
-| 2 | `desk-scitech` | Lead — science & tech beat | `read,bash,write` + `dispatch_agent` | Inherited | Editor |
-| 3 | `newsroom-scraper` | Worker — source fetcher | `read,bash,write` | Inherited | Desk leads |
-| 3 | `newsroom-researcher` | Worker — deep investigation | `read,bash,write` | Inherited | Desk leads or Editor |
+| 2 | `desk-reporter` | Lead — generic, dispatched per topic | `read,bash,write` + `dispatch_agent` | Inherited | Editor |
+| 3 | `newsroom-scraper` | Worker — source fetcher | `read,bash,write` | Inherited | Desk reporter |
+| 3 | `newsroom-researcher` | Worker — deep investigation | `read,bash,write` | Inherited | Desk reporter or Editor |
 | 3 | `newsroom-vlm` | Worker — VLM source processor | `read,bash,write` | `lmstudio/qwen3.5-122b-a10b` | Editor |
 | 3 | `newsroom-fact-checker` | Worker — claim verification | `read,bash,write` | Inherited | Editor |
 | 3 | `newsroom-copy-editor` | Worker — assembly & polish | `read,bash,write,edit` | Inherited | Editor |
 
-### Desk leads and nested dispatch
+### Desk reporter and nested dispatch
 
-Desk agents (`desk-geopolitics`, `desk-scitech`) have `role: lead` in their frontmatter. This means they are spawned with the `agent-team-2.ts` extension loaded, giving them `dispatch_agent` alongside their own tools. In INVESTIGATE MODE, leads dispatch `newsroom-scraper` to fetch and persist source files, and optionally `newsroom-researcher` for deep dives — rather than doing everything themselves.
+The `desk-reporter` agent has `role: lead` in its frontmatter, meaning it is spawned with the `agent-team-2.ts` extension loaded, giving it `dispatch_agent` alongside its own tools. The desk-reporter is topic-agnostic — the editor composes topic-specific dispatch tasks from the topic YAML files (see [architecture.md](architecture.md#topic-system)).
 
-This solves the "source files referenced but never written" problem: the lead dispatches the scraper, waits for confirmation, and only then writes a story file that references the source.
+In INVESTIGATE MODE, the desk reporter dispatches `newsroom-scraper` to fetch and persist source files, and optionally `newsroom-researcher` for deep dives. The same `desk-reporter` agent handles all topics — it is dispatched multiple times with different topic configurations. Concurrent dispatch is allowed since each dispatch gets a unique session file.
+
+This solves the "source files referenced but never written" problem: the reporter dispatches the scraper, waits for confirmation, and only then writes a story file that references the source.
 
 ### `newsroom-scraper` agent
 
@@ -41,35 +42,44 @@ The `newsroom-vlm` agent specifies `model: lmstudio/qwen3.5-122b-a10b` in its fr
 
 ### Editor system prompt
 
-The editor's `.md` body is **not used** when the editor is the top-level dispatcher. The extension replaces it with a generated system prompt containing the team name, member list, workspace path, agent catalog, and generic dispatcher rules. The actual workflow instructions come from the **prompt template** (`/news-report`) or the inlined prompt in `newsroom.sh`.
+The editor's `.md` body is **not used** when the editor is the top-level dispatcher. The extension replaces it with a generated system prompt containing the team name, member list, workspace path, agent catalog, generic dispatcher rules, **saved topics**, and **developing stories from the story index**. The actual workflow instructions come from the **prompt template** (`/news-report`, `/wire`) or the user's free-form message.
+
+The editor handles three interaction modes:
+1. **Conversational / ad-hoc** — follows the user's lead, uses topics as passive context
+2. **Wire scan** (`/wire`) — lightweight monitoring of all saved topics
+3. **Full briefing** (`/news-report`) — complete six-phase workflow against saved topics
 
 ## The Six Phases
 
 ### Phase 1: Reconnaissance
 
-The editor dispatches both desk agents in **SCAN MODE**. Each desk:
-- Runs 5-8 broad headline-only SearXNG queries across its beat
+The editor dispatches `desk-reporter` in **SCAN MODE** for each saved topic, composing the task with topic-specific search queries, categories, time range, and any developing stories to check for updates. Each dispatch:
+- Runs the topic's search queries as headline-only SearXNG queries
 - Uses ONLY `{title, url}` jq filter — no article content is pulled
+- Checks for updates on developing stories from the story index
 - Produces a ranked list of ~10 story candidates with freshness and sourcing potential ratings
-- Writes the list to `wire-[beat].md` with YAML frontmatter in the workspace
+- Writes the list to `wire-[topic-slug].md` with YAML frontmatter in the workspace
 - Returns the list to the editor
 
-This phase is deliberately cheap: headline-only queries keep context small (~2K tokens per desk).
+Topics are processed sequentially (or 1-2 at a time) to conserve inference. High-priority topics scan first.
 
-**Wire file format:** YAML frontmatter with beat, date, queries_run, candidates count. Each candidate includes headline, URL, sourcing potential (high/medium/low), and freshness (breaking/24h/48h/older).
+This phase is deliberately cheap: headline-only queries keep context small (~2K tokens per topic).
+
+**Wire file format:** YAML frontmatter with topic, date, queries_run, candidates count. Each candidate includes headline, URL, sourcing potential (high/medium/low), and freshness (breaking/24h/48h/older).
 
 ### Phase 2: Editorial Selection
 
-The editor reads the wire scans returned by both desks and **makes the editorial decision** about which 5-8 stories to pursue. For each selected story, the editor writes:
+The editor reviews wire scan results from **all topics** and **makes the editorial decision** about which 5-8 stories to pursue. For each selected story, the editor writes:
 - A one-sentence assignment specifying the angle and expected sourcing
 - A **slug** for the filename (e.g., `us-iran-ceasefire`)
+- Which topic it belongs to
 - Whether a researcher deep dive is warranted
 
 This phase happens entirely within the editor's context — no agents are dispatched.
 
 ### Phase 3: Deep Reporting
 
-The editor dispatches both desk agents (leads) in **INVESTIGATE MODE** with their specific story assignments including slugs. Each desk lead:
+For each topic that has assigned stories, the editor dispatches `desk-reporter` in **INVESTIGATE MODE** with the story assignments. The desk reporter:
 
 1. Runs targeted deep searches pulling full `{title, url, content}` for each assigned story
 2. Hunts primary source URLs using `categories=general` and `categories=science`
@@ -79,11 +89,11 @@ The editor dispatches both desk agents (leads) in **INVESTIGATE MODE** with thei
 6. **Writes story files** to `stories/<slug>.md` with YAML frontmatter and a **BLUF** sentence
 7. Returns a brief summary to the editor (3 lines max per story)
 
-The key change from a flat model: desk leads handle their own source fetching pipeline via nested dispatch rather than doing everything inline. This ensures source files actually get persisted to disk before story files reference them.
+The desk reporter handles its own source fetching pipeline via nested dispatch rather than doing everything inline. This ensures source files actually get persisted to disk before story files reference them.
 
 **Source file format:** YAML frontmatter with metadata, then Overview, Key Quotations, Extracted Content, Images, and Notes sections. See [docs/formats.md](formats.md) for the full template.
 
-**Story file format:** YAML frontmatter (title, slug, beat, date, significance, source counts), then a bold BLUF sentence, Report section, Primary Sources, Secondary Sources, and Notes for Editor. See [docs/formats.md](formats.md) for the full template.
+**Story file format:** YAML frontmatter (title, slug, topic, date, significance, source counts), then a bold BLUF sentence, Report section, Primary Sources, Secondary Sources, and Notes for Editor. See [docs/formats.md](formats.md) for the full template.
 
 ### Phase 4: Source Enrichment
 
@@ -107,7 +117,7 @@ The editor dispatches `newsroom-fact-checker` to read all story files in `storie
 - Reads saved source files to verify extracted content supports claims
 - Writes `fact-check.md` with YAML frontmatter (date, stories_checked, stories_verified, stories_flagged, stories_unverifiable) and per-story verdicts
 
-If critical issues are flagged, the editor can dispatch the relevant desk agent to fix the story before proceeding.
+If critical issues are flagged, the editor can dispatch `desk-reporter` to fix the story before proceeding.
 
 ### Phase 6: Final Edit
 
@@ -117,7 +127,7 @@ The editor dispatches `newsroom-copy-editor` to assemble the final **BLUF-struct
 - Reads `fact-check.md` for flagged claims
 - Writes a **report-level BLUF**: 2-3 sentences capturing the most important developments for a busy reader who will read nothing else
 - Writes **per-story BLUFs**: one bold sentence before supporting paragraphs
-- Groups stories by beat, leads with highest significance
+- Groups stories by topic, leads with highest significance
 - Handles flagged claims (caveats, annotations, demotion to Developing Stories)
 - Builds a **consolidated Source Index** table at the bottom with numbered references
 - Writes the final report to `newsreport-[DATE].md` with YAML frontmatter
@@ -128,11 +138,12 @@ All newsroom artifacts use YAML frontmatter and follow BLUF structure where appl
 
 | Artifact | Location | BLUF? | Frontmatter? |
 |----------|----------|-------|-------------|
-| Wire scan | `wire-<beat>.md` | No | Yes (beat, date, queries, candidates) |
+| Wire scan | `wire-<topic-slug>.md` | No | Yes (topic, date, queries, candidates) |
 | Source file | `sources/<slug>.md` | No (has Overview) | Yes (title, url, source_type, quality, media flags) |
-| Story file | `stories/<slug>.md` | Yes | Yes (title, slug, beat, significance, source counts) |
+| Story file | `stories/<slug>.md` | Yes | Yes (title, slug, topic, significance, source counts) |
 | Fact-check | `fact-check.md` | No | Yes (date, counts by verdict) |
-| Final report | `newsreport-YYYY-MM-DD.md` | Yes (report + per-story) | Yes (title, date, run_id, stories, sources, beats) |
+| Final report | `newsreport-YYYY-MM-DD.md` | Yes (report + per-story) | Yes (title, date, run_id, stories, sources, topics) |
+| Story index update | `story-index-update.yaml` | No | YAML list (slug, topic, status, bluf, timeline) |
 
 ### Content Sanitization
 
@@ -159,8 +170,8 @@ Each run creates a timestamped workspace under `workspaces/newsroom/`:
 
 ```
 workspaces/newsroom/2026-04-08_1430/
-  wire-geopolitics.md          # Phase 1 — scan results
-  wire-scitech.md              # Phase 1 — scan results
+  wire-geopolitics.md          # Phase 1 — scan results for geopolitics topic
+  wire-scitech.md              # Phase 1 — scan results for scitech topic
   stories/                     # Phase 3 — one BLUF-structured file per story
     us-iran-ceasefire.md
     artemis-ii-mission.md
@@ -172,13 +183,16 @@ workspaces/newsroom/2026-04-08_1430/
       hormuz-map.jpg
   fact-check.md                # Phase 5 — verification report
   newsreport-2026-04-08.md     # Phase 6 — final BLUF-structured report
+  story-index-update.yaml      # Phase 6 — story index update (copied to ../topics/ post-run)
   session.jsonl                # Dispatcher session log (co-located)
   sessions/                    # Sub-agent session logs
-    desk-geopolitics.json      # JSONL despite .json extension
-    desk-scitech.json
-    newsroom-vlm.json
-    newsroom-fact-checker.json
-    newsroom-copy-editor.json
+    desk-reporter_1.jsonl      # 1st dispatch (e.g. geopolitics scan)
+    desk-reporter_2.jsonl      # 2nd dispatch (e.g. scitech scan)
+    desk-reporter_3.jsonl      # 3rd dispatch (e.g. geopolitics investigate)
+    desk-reporter.newsroom-scraper_1.jsonl
+    newsroom-vlm_1.jsonl
+    newsroom-fact-checker_1.jsonl
+    newsroom-copy-editor_1.jsonl
 ```
 
 ## Running
@@ -186,23 +200,38 @@ workspaces/newsroom/2026-04-08_1430/
 ### Interactive (pnews alias)
 
 ```bash
-pnews
-# Pi starts with the newsroom team active
-# Type the command:
-/news-report
+pnews                                        # open interactive session
+pnews "tell me about zoning rules for ADUs"  # one-shot with initial query
 ```
 
-The `/news-report` prompt template provides the six-phase workflow instructions. The editor gets the workspace path from its system prompt (injected by the extension).
+Inside the session:
+- `/news-report` — full six-phase briefing against saved topics
+- `/wire` — quick scan of saved topics, no deep reporting
+- Free-form conversation — the editor follows your lead
 
 You can append extra instructions: `/news-report Focus on semiconductor supply chains today`
 
-### Headless (newsroom.sh script)
+### Headless (daily/weekly scripts)
 
 ```bash
-~/dot-pi/scripts/newsroom.sh
+~/dot-pi/scripts/newsroom-daily.sh   # full briefing, all high-priority topics
+~/dot-pi/scripts/newsroom-weekly.sh  # broader scan, all priorities, week-in-review
 ```
 
-The prompt text in `newsroom.sh` must be kept in sync with `prompts/news-report.md` manually — they describe the same six-phase workflow but are maintained separately. See [docs/architecture.md](architecture.md) for the design rationale.
+The prompt text in the headless scripts must be kept in sync with `prompts/news-report.md` manually — they describe the same workflow but are maintained separately. See [docs/architecture.md](architecture.md) for the design rationale.
+
+### Topic management
+
+Inside any `pnews` session, manage saved topics conversationally:
+
+```
+> show me my topics
+> add a topic about bitcoin mining regulations
+> update the search queries for geopolitics to include "tariffs"
+> disable the fashion topic
+```
+
+The editor dispatches `desk-reporter` (which has `write` tool) to modify YAML files in `~/dot-pi/workspaces/newsroom/topics/`.
 
 ## SearXNG Usage
 
@@ -233,11 +262,15 @@ BLUF (Bottom Line Up Front) is a military communication standard that places the
 - Per-story BLUFs let readers skip to stories that matter to them
 - The inverted pyramid structure naturally prioritizes the most newsworthy facts
 
+### Why a generic desk-reporter instead of specialized desk agents?
+
+The old model had `desk-geopolitics` and `desk-scitech` — separate agents with identical structure but different topic configurations hardcoded in their prompts. Adding a new topic required copying ~130 lines and editing the topic-specific parts. The generic `desk-reporter` contains only the reusable workflow logic (scan, investigate, dispatch scraper). Topic configuration (search queries, categories, follow items) is composed into the task description by the editor at dispatch time, read from `workspaces/newsroom/topics/*.yaml` files. Adding a topic is now a YAML file creation — no code changes.
+
 ### Why three-tier dispatch?
 
-The editor orchestrates at the strategic level (which stories to cover). Desk leads manage the tactical level (how to source and write each story). Workers execute discrete tasks (fetch a URL, extract PDF text). This mirrors real newsroom hierarchy: the managing editor doesn't micromanage every curl request — desk editors handle their own sourcing pipeline.
+The editor orchestrates at the strategic level (which stories to cover). The desk reporter manages the tactical level (how to source and write each story). Workers execute discrete tasks (fetch a URL, extract PDF text). This mirrors real newsroom hierarchy: the managing editor doesn't micromanage every curl request — desk editors handle their own sourcing pipeline.
 
-The three-tier model solved a concrete problem: in the flat model, desk agents were supposed to fetch sources and write story files in a single dispatch, but the source files often never made it to disk. By splitting source fetching into a dedicated scraper worker dispatched by the desk lead, the lead can confirm the source file exists before writing a story that references it.
+The three-tier model solved a concrete problem: in the flat model, desk agents were supposed to fetch sources and write story files in a single dispatch, but the source files often never made it to disk. By splitting source fetching into a dedicated scraper worker dispatched by the desk reporter, the reporter can confirm the source file exists before writing a story that references it.
 
 ### Why a separate VLM agent?
 
