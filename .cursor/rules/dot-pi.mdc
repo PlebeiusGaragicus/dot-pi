@@ -7,7 +7,7 @@ alwaysApply: true
 
 Dotfiles for the pi coding agent. Multi-agent teams run on cheap/free models, a retro team diagnoses failures, and you (Cursor) implement fixes. You are step 3 of the self-improvement loop:
 
-1. Agent team runs (`pnews`, `pretro`) and produces output + session logs
+1. Agent team runs (`pnews`, `..., etc`) and produces output + session logs
 2. Retro team parses sessions and writes a lean diagnosis (`retro.md`)
 3. **You read the diagnosis and implement systemic fixes** (prompts, agents, extensions, docs)
 4. The improved system runs again

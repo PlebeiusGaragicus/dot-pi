@@ -54,7 +54,7 @@ dot-pi/
   themes/                Color themes (.json) for the pi TUI
   workspaces/            Agent team outputs — per-team, per-run
     newsroom/
-      2026-04-08_1430/   One run: output files, session.jsonl, sessions/
+      2026-04-08_1430/   One run: session.jsonl, sessions/*.jsonl, output files
   reference/             Reference repos (gitignored) — pi-mono, pi-recipes, feynman
   pi-aliases             Shell aliases and functions — the main user entry point
   .env                   API keys (gitignored)
@@ -184,11 +184,10 @@ This is the core orchestration engine. Understanding its behavior is critical fo
 
 #### Startup sequence (`session_start` hook)
 
-1. Cleans stale sub-agent sessions from `.pi/agent-sessions/` in the working directory (legacy cleanup).
-2. Scans `agents/*.md` from both the working directory and `~/dot-pi/agents/` for agent definitions.
-3. Reads `teams.yaml` from both locations (working directory takes precedence).
-4. Auto-selects the team specified by `AGENT_TEAM` env var, or the first team if unset.
-5. Calls `pi.setActiveTools(["dispatch_agent"])` — **this overrides whatever tools the top-level agent's frontmatter specifies.** The dispatcher only gets `dispatch_agent`. No `bash`, no `read`, no `write`.
+1. Scans `agents/*.md` from both the working directory and `~/dot-pi/agents/` for agent definitions.
+2. Reads `teams.yaml` from both locations (working directory takes precedence).
+3. Auto-selects the team specified by `AGENT_TEAM` env var, or the first team if unset.
+4. For orchestrators only, calls `pi.setActiveTools(["dispatch_agent"])` — **this overrides whatever tools the top-level agent's frontmatter specifies.** The dispatcher only gets `dispatch_agent`. No `bash`, no `read`, no `write`. Leads skip this step and keep their frontmatter tools.
 
 #### System prompt injection (`before_agent_start` hook)
 
@@ -207,22 +206,40 @@ The dispatcher's original system prompt (from its `.md` file's body) is **comple
 When the dispatcher calls `dispatch_agent(agent, task)`:
 
 1. The extension spawns a new `pi -p` process (non-interactive, JSON output mode).
-2. The sub-agent gets:
+2. The agent's system prompt (`.md` body) is written to a **temp file** and passed via `--append-system-prompt <path>`. This avoids OS argv length limits for agents with long prompts. The temp file is cleaned up when the process exits.
+3. The sub-agent gets:
    - `--tools` from the agent definition's frontmatter
-   - `--append-system-prompt` from the agent definition's body
+   - `--append-system-prompt` pointing to the temp file containing the agent's `.md` body
    - `--model` from the agent's frontmatter `model` field if set, otherwise the dispatcher's current model
-   - `--session` pointing to `$WORKSPACE/sessions/<agent-name>.json`
+   - `--session` pointing to `$WORKSPACE/sessions/<agent-name>_<N>.jsonl` (see **Session File Layout** below)
    - `--thinking off`
    - The `task` string as the user message
-3. If the agent has been dispatched before in this session, `-c` (continue) is added so it resumes context.
 4. The sub-agent's output streams inline in the TUI.
 5. The sub-agent's **text output is truncated to 8KB** before being returned to the dispatcher. This is critical: agents must write full output to disk and return brief summaries. If an agent returns a 50KB report as text, the dispatcher only sees the first 8KB.
+6. The `AbortSignal` from the tool execution is wired to the child process. If the user cancels, the child receives `SIGTERM` (with a 5-second fallback to `SIGKILL`), preventing orphan processes.
 
-#### Sub-agent session files
+#### Session File Layout
 
-Sub-agent sessions are written to `$WORKSPACE/sessions/<agent-name>.json`. Despite the `.json` extension, these are **JSONL** (one JSON object per line). Each contains the sub-agent's complete tool call history.
+A workspace-based team run produces the following session files:
 
-When an agent is dispatched multiple times (e.g., desk agent dispatched in scan mode, then again in investigate mode), subsequent dispatches use `-c` to continue the session, appending to the same `.json` file. This means the agent retains memory of its previous dispatch within the same run.
+```
+workspaces/newsroom/2026-04-08_1430/
+  session.jsonl                                  # orchestrator's pi session
+  sessions/
+    desk-geopolitics_1.jsonl                     # 1st dispatch of desk-geopolitics
+    desk-geopolitics_2.jsonl                     # 2nd dispatch (if any)
+    desk-scitech_1.jsonl
+    desk-geopolitics.newsroom-scraper_1.jsonl    # newsroom-scraper dispatched BY desk-geopolitics
+    desk-scitech.newsroom-researcher_1.jsonl     # newsroom-researcher dispatched BY desk-scitech
+```
+
+**Naming convention:** `[<dispatcher>.]<agent-key>_<N>.jsonl`
+
+- `session.jsonl` at the workspace root is the **orchestrator's own pi session**. It records the orchestrator's `dispatch_agent` tool calls and their returned summaries. This file is set up by the shell alias via `--session "$WORKSPACE/session.jsonl"`.
+- Sub-agent sessions use the `.jsonl` extension to match pi's native convention. The numeric suffix `_N` is the per-agent dispatch count (1-indexed). Each dispatch creates a **separate file** -- there is no cross-dispatch continuity or session resumption.
+- For three-tier dispatch, the `AGENT_DISPATCHER` env var is set to the lead's agent key. Workers dispatched by a lead get the lead's name as a prefix (e.g., `desk-geopolitics.newsroom-scraper_1.jsonl`). This prevents collisions when multiple leads dispatch the same worker.
+
+All session files are JSONL (one JSON object per line). The first line is always a `type: "session"` header with the session UUID and timestamp.
 
 ### Three-Tier Dispatch Model
 
@@ -270,8 +287,20 @@ Orchestrator reviews summaries, dispatches next phase
 #### How role dispatch works in `agent-team-2.ts`
 
 - **Orchestrator:** `session_start` calls `pi.setActiveTools(["dispatch_agent"])`, stripping all other tools. `before_agent_start` replaces the system prompt.
-- **Lead:** Spawned with `-e agent-team-2.ts` instead of `--no-extensions`. The extension fires again inside the lead's process. `AGENT_ROLE=lead` is set in the environment, so `session_start` skips `setActiveTools` — the lead keeps its frontmatter tools AND gets `dispatch_agent` registered by the extension. `before_agent_start` appends the team roster to the lead's own system prompt rather than replacing it.
+- **Lead:** Spawned with `-e agent-team-2.ts` instead of `--no-extensions`. Four env vars are forwarded to the child process: `AGENT_ROLE=lead`, `AGENT_TEAM` (current team name), `AGENT_WORKSPACE` (if set), and `AGENT_DISPATCHER` (the lead's own agent key, used to prefix worker session filenames). The extension fires again inside the lead's process. Because `AGENT_ROLE=lead`, `session_start` skips `setActiveTools` — the lead keeps its frontmatter tools AND gets `dispatch_agent` registered by the extension. `before_agent_start` appends the team roster to the lead's own system prompt rather than replacing it.
 - **Worker:** Spawned with `--no-extensions`. Gets only frontmatter tools. Cannot dispatch.
+
+#### Environment variables for dispatch
+
+| Variable | Set by | Read by | Purpose |
+|----------|--------|---------|---------|
+| `AGENT_TEAM` | Shell alias / parent process | `session_start` | Selects which team to activate |
+| `AGENT_WORKSPACE` | Shell alias / parent process | `loadAgents()`, `before_agent_start` | Sets session dir and workspace path in system prompt |
+| `AGENT_ROLE` | Parent `dispatchAgent()` | `session_start`, `before_agent_start` | Controls tool restriction and prompt handling |
+| `AGENT_DISPATCHER` | Parent `dispatchAgent()` (for leads) | `dispatchAgent()` | Prefixes sub-agent session filenames to avoid collisions in three-tier dispatch |
+| `RETRO_TARGET` | `pretro` alias | `before_agent_start` | Workspace path for retro analysis (retro team only) |
+
+For leads, `AGENT_TEAM`, `AGENT_WORKSPACE`, and `AGENT_DISPATCHER` are forwarded from the parent process so the lead's extension instance can load the same team, write sessions to the same workspace, and namespace its workers' session files.
 
 ### Constraints
 
@@ -302,11 +331,11 @@ Assistant messages include a `usage` object with `input`, `output`, and `cacheRe
 
 | Run type | Main session | Sub-agent sessions |
 |----------|-------------|-------------------|
-| Team with workspace (`pnews`) | `WORKSPACE/session.jsonl` | `WORKSPACE/sessions/*.json` (JSONL despite `.json` extension) |
-| Team without workspace (`pretro`, `pteam2`) | `~/dot-pi/sessions/` | `.pi/agent-sessions/` in working dir |
+| Team with workspace (`pnews`, `pretro`) | `WORKSPACE/session.jsonl` | `WORKSPACE/sessions/<agent>_<N>.jsonl` |
+| Team without workspace (`pteam2`) | `~/dot-pi/sessions/` | `.pi/agent-sessions/<agent>_<N>.jsonl` |
 | Non-team (`pchat`, `pweb`) | `~/dot-pi/sessions/` | N/A |
 
-For workspace-based team runs, everything lives together: session files, sub-agent sessions, and output files. One directory = one run = everything needed for retro analysis.
+For workspace-based team runs, everything lives together: session files, sub-agent sessions, and output files. One directory = one run = everything needed for retro analysis. Each dispatch creates a separate session file (no cross-dispatch continuation), and three-tier dispatches use a dispatcher prefix to avoid collisions (see **Session File Layout** above).
 
 ## Prompt Templates
 
@@ -376,7 +405,7 @@ The system is designed to run on locally-hosted or free-tier non-frontier models
 
 - **Two levels of dispatch.** The orchestrator dispatches leads and workers. Leads (with `role: lead`) can dispatch workers beneath them. Workers cannot dispatch. A desk lead needing source files dispatches `newsroom-scraper` directly rather than flagging the need for the orchestrator to handle.
 - **System prompt handling.** The orchestrator's `.md` body is replaced by the extension at top level. Lead agents keep their `.md` body and get the team roster appended. Worker agents get their `.md` body via `--append-system-prompt`.
-- **Session resume across dispatches.** When an agent is dispatched a second time, it resumes its session (`-c` flag). This means it has memory of the previous dispatch, which can be helpful (it knows what it scanned) or harmful (its context is larger and may overflow).
+- **No cross-dispatch memory.** Each dispatch creates a fresh session file. The agent does not retain memory of prior dispatches within the same run. If an agent needs context from a prior dispatch, the orchestrator must include it in the task description.
 
 ### Infrastructure requirements
 

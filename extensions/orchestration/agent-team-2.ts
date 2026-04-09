@@ -18,9 +18,9 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { Text, type AutocompleteItem, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 import { spawn } from "child_process";
-import { readdirSync, readFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
+import { readdirSync, readFileSync, existsSync, mkdirSync, unlinkSync, mkdtempSync, writeFileSync, rmdirSync } from "fs";
 import { join, resolve } from "path";
-import { homedir } from "os";
+import { homedir, tmpdir } from "os";
 
 
 // ── Types ────────────────────────────────────────
@@ -39,7 +39,6 @@ interface AgentState {
 	def: AgentDef;
 	status: "idle" | "running" | "done" | "error";
 	runCount: number;
-	sessionFile: string | null;
 }
 
 type TranscriptEntry =
@@ -185,13 +184,10 @@ export default function (pi: ExtensionAPI) {
 		for (const member of members) {
 			const def = defsByName.get(member.toLowerCase());
 			if (!def) continue;
-			const key = def.name.toLowerCase().replace(/\s+/g, "-");
-			const sessionFile = join(sessionDir, `${key}.json`);
 			agentStates.set(def.name.toLowerCase(), {
 				def,
 				status: "idle",
 				runCount: 0,
-				sessionFile: existsSync(sessionFile) ? sessionFile : null,
 			});
 		}
 	}
@@ -203,6 +199,7 @@ export default function (pi: ExtensionAPI) {
 		task: string,
 		ctx: any,
 		onUpdate?: (data: any) => void,
+		signal?: AbortSignal,
 	): Promise<{ output: string; exitCode: number; elapsed: number }> {
 		const key = agentName.toLowerCase();
 		const state = agentStates.get(key);
@@ -231,8 +228,14 @@ export default function (pi: ExtensionAPI) {
 			|| (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "openrouter/google/gemini-3-flash-preview");
 
 		const agentKey = state.def.name.toLowerCase().replace(/\s+/g, "-");
-		const agentSessionFile = join(sessionDir, `${agentKey}.json`);
+		const dispatcher = process.env.AGENT_DISPATCHER || "";
+		const prefix = dispatcher ? `${dispatcher}.` : "";
+		const agentSessionFile = join(sessionDir, `${prefix}${agentKey}_${state.runCount}.jsonl`);
 		const isLead = state.def.role === "lead";
+
+		const promptTmpDir = mkdtempSync(join(tmpdir(), "pi-agent-"));
+		const promptFile = join(promptTmpDir, `${agentKey}.md`);
+		writeFileSync(promptFile, state.def.systemPrompt, { mode: 0o600 });
 
 		const args = [
 			"--mode", "json",
@@ -240,7 +243,7 @@ export default function (pi: ExtensionAPI) {
 			"--model", model,
 			"--tools", state.def.tools,
 			"--thinking", "off",
-			"--append-system-prompt", state.def.systemPrompt,
+			"--append-system-prompt", promptFile,
 			"--session", agentSessionFile,
 		];
 
@@ -249,10 +252,6 @@ export default function (pi: ExtensionAPI) {
 			args.push("-e", extPath);
 		} else {
 			args.push("--no-extensions");
-		}
-
-		if (state.sessionFile) {
-			args.push("-c");
 		}
 
 		args.push(task);
@@ -312,15 +311,29 @@ export default function (pi: ExtensionAPI) {
 		}
 
 		return new Promise((resolve) => {
-			const childEnv = { ...process.env };
-			if (isLead) {
-				childEnv.AGENT_ROLE = "lead";
+		const childEnv = { ...process.env };
+		if (isLead) {
+			childEnv.AGENT_ROLE = "lead";
+			childEnv.AGENT_TEAM = activeTeamName;
+			childEnv.AGENT_DISPATCHER = agentKey;
+			if (process.env.AGENT_WORKSPACE) {
+				childEnv.AGENT_WORKSPACE = process.env.AGENT_WORKSPACE;
 			}
+		}
 
 			const proc = spawn("pi", args, {
 				stdio: ["ignore", "pipe", "pipe"],
 				env: childEnv,
 			});
+
+			if (signal) {
+				const killProc = () => {
+					proc.kill("SIGTERM");
+					setTimeout(() => { if (!proc.killed) proc.kill("SIGKILL"); }, 5000);
+				};
+				if (signal.aborted) killProc();
+				else signal.addEventListener("abort", killProc, { once: true });
+			}
 
 			let buffer = "";
 
@@ -368,7 +381,14 @@ export default function (pi: ExtensionAPI) {
 			proc.stderr!.setEncoding("utf-8");
 			proc.stderr!.on("data", () => {});
 
+			function cleanupPromptFile() {
+				try { unlinkSync(promptFile); } catch {}
+				try { rmdirSync(promptTmpDir); } catch {}
+			}
+
 			proc.on("close", (code) => {
+				cleanupPromptFile();
+
 				if (buffer.trim()) {
 					try {
 						const event = JSON.parse(buffer);
@@ -383,10 +403,6 @@ export default function (pi: ExtensionAPI) {
 				const elapsed = Date.now() - startTime;
 				state.status = code === 0 ? "done" : "error";
 
-				if (code === 0) {
-					state.sessionFile = agentSessionFile;
-				}
-
 				ctx.ui.notify(
 					`${displayName(state.def.name)} ${state.status} in ${Math.round(elapsed / 1000)}s`,
 					state.status === "done" ? "success" : "error"
@@ -400,6 +416,7 @@ export default function (pi: ExtensionAPI) {
 			});
 
 			proc.on("error", (err) => {
+				cleanupPromptFile();
 				state.status = "error";
 				resolve({
 					output: `Error spawning agent: ${err.message}`,
@@ -421,7 +438,7 @@ export default function (pi: ExtensionAPI) {
 			task: Type.String({ description: "Task description for the agent to execute" }),
 		}),
 
-		async execute(_toolCallId, params, _signal, onUpdate, ctx) {
+		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			const { agent, task } = params as { agent: string; task: string };
 
 			try {
@@ -432,7 +449,7 @@ export default function (pi: ExtensionAPI) {
 					});
 				}
 
-				const result = await dispatchAgent(agent, task, ctx, onUpdate);
+				const result = await dispatchAgent(agent, task, ctx, onUpdate, signal);
 
 				const status = result.exitCode === 0 ? "done" : "error";
 				const summary = `[${agent}] ${status} in ${Math.round(result.elapsed / 1000)}s`;
@@ -586,10 +603,7 @@ export default function (pi: ExtensionAPI) {
 		description: "List all loaded agents",
 		handler: async (_args, ctx) => {
 			const names = Array.from(agentStates.values())
-				.map(s => {
-					const session = s.sessionFile ? "resumed" : "new";
-					return `${displayName(s.def.name)} (${s.status}, ${session}, runs: ${s.runCount}): ${s.def.description}`;
-				})
+				.map(s => `${displayName(s.def.name)} (${s.status}, runs: ${s.runCount}): ${s.def.description}`)
 				.join("\n");
 			ctx.ui.notify(names || "No agents loaded", "info");
 		},
@@ -620,8 +634,9 @@ export default function (pi: ExtensionAPI) {
 			: "";
 
 		if (agentRole === "lead") {
+			const currentPrompt = (_event as any).systemPrompt || _ctx.getSystemPrompt?.() || "";
 			return {
-				systemPrompt: `${_ctx.systemPrompt || ""}
+				systemPrompt: `${currentPrompt}
 
 ## Agents Available for Dispatch
 
@@ -670,15 +685,6 @@ ${agentCatalog}`,
 	pi.on("session_start", async (_event, _ctx) => {
 		setTimeout(() => _ctx.ui.setTitle("π - agent-team-2"), 150);
 		contextWindow = _ctx.model?.contextWindow || 0;
-
-		const sessDir = join(_ctx.cwd, ".pi", "agent-sessions");
-		if (existsSync(sessDir)) {
-			for (const f of readdirSync(sessDir)) {
-				if (f.endsWith(".json")) {
-					try { unlinkSync(join(sessDir, f)); } catch {}
-				}
-			}
-		}
 
 		loadAgents(_ctx.cwd);
 
