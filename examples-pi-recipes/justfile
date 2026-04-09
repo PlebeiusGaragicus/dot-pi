@@ -1,0 +1,287 @@
+set dotenv-load := true
+
+ext := justfile_directory() / "extensions"
+agents := justfile_directory() / ".pi" / "agents"
+
+default:
+    @just --justfile {{justfile()}} --list
+
+# 1. default pi
+pi:
+    pi
+
+# Chat mode: pure conversation, no tools, no file access
+chat:
+    pi -e {{ext}}/workflow/chat.ts -e {{ext}}/ui/pure-focus.ts
+
+# Vision: auto-switch to vision model when reading images
+vision:
+    pi -e {{ext}}/workflow/vision-switch.ts -e {{ext}}/ui/minimal.ts
+
+# 2. Pure focus pi: strip footer and status line entirely
+ext-pure-focus:
+    pi -e {{ext}}/ui/pure-focus.ts
+
+# 3. Minimal pi: model name + 10-block context meter
+ext-minimal:
+    pi -e {{ext}}/ui/minimal.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 4. Cross-agent pi: load commands from .claude/, .gemini/, .codex/ dirs
+ext-cross-agent:
+    pi -e {{ext}}/workflow/cross-agent.ts -e {{ext}}/ui/minimal.ts
+
+# 5. Purpose gate pi: declare intent before working, persistent widget, focus the system prompt on the ONE PURPOSE for this agent
+ext-purpose-gate:
+    pi -e {{ext}}/workflow/purpose-gate.ts -e {{ext}}/ui/minimal.ts
+
+# 6. Customized footer pi: Tool counter, model, branch, cwd, cost, etc.
+ext-tool-counter:
+    pi -e {{ext}}/ui/tool-counter.ts
+
+# 7. Tool counter widget: tool call counts in a below-editor widget
+ext-tool-counter-widget:
+    pi -e {{ext}}/ui/tool-counter-widget.ts -e {{ext}}/ui/minimal.ts
+
+# 8. Subagent widget: /sub <task> with live streaming progress
+ext-subagent-widget:
+    pi -e {{ext}}/orchestration/subagent-widget.ts -e {{ext}}/ui/pure-focus.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 9. TillDone: task-driven discipline -- define tasks before working
+ext-tilldone:
+    pi -e {{ext}}/workflow/tilldone.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 10. Agent team: dispatcher orchestrator with team select and grid dashboard
+ext-agent-team:
+    pi -e {{ext}}/orchestration/agent-team.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 11. System select: /system to pick an agent persona as system prompt
+ext-system-select:
+    pi -e {{ext}}/workflow/system-select.ts -e {{ext}}/ui/minimal.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 12. Launch with Damage-Control safety auditing
+ext-damage-control:
+    pi -e {{ext}}/safety/damage-control.ts -e {{ext}}/ui/minimal.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 13. Agent chain: sequential pipeline orchestrator
+ext-agent-chain:
+    pi -e {{ext}}/orchestration/agent-chain.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 14. Pi Pi: meta-agent that builds Pi agents with parallel expert research
+ext-pi-pi:
+    pi -e {{ext}}/orchestration/pi-pi.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 15. Session Replay: scrollable timeline overlay of session history (legit)
+ext-session-replay:
+    pi -e {{ext}}/ui/session-replay.ts -e {{ext}}/ui/minimal.ts
+
+# 16. Theme cycler: Ctrl+X forward, Ctrl+Q backward, /theme picker
+ext-theme-cycler:
+    pi -e {{ext}}/ui/theme-cycler.ts -e {{ext}}/ui/minimal.ts
+
+# 17. UV: redirect python/pip/poetry to uv equivalents
+ext-uv:
+    pi -e {{ext}}/workflow/uv.ts -e {{ext}}/ui/minimal.ts
+
+# 18. Chart: inline matplotlib visualizations with uv-managed Python
+ext-chart:
+    pi -e {{ext}}/ui/chart.ts -e {{ext}}/workflow/uv.ts -e {{ext}}/ui/minimal.ts
+
+# 19. Data analyst: structured analysis workspace with inline charts
+analyst:
+    pi -e {{ext}}/ui/chart.ts -e {{ext}}/workflow/uv.ts -e {{ext}}/ui/minimal.ts --append-system-prompt {{agents}}/analyst.md
+
+# --- Safety & Git ---
+
+# 20. Protected paths: block writes to .env, .git/, node_modules/
+ext-protected-paths:
+    pi -e {{ext}}/safety/protected-paths.ts -e {{ext}}/ui/minimal.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 21. Dirty repo guard: prevent session changes with uncommitted changes
+ext-dirty-repo-guard:
+    pi -e {{ext}}/safety/dirty-repo-guard.ts -e {{ext}}/ui/minimal.ts
+
+# 22. Git checkpoint: stash checkpoints at each turn, restore on fork
+ext-git-checkpoint:
+    pi -e {{ext}}/git/git-checkpoint.ts -e {{ext}}/ui/minimal.ts
+
+# 23. Auto-commit on exit: commit changes when agent exits
+ext-auto-commit:
+    pi -e {{ext}}/git/auto-commit-on-exit.ts -e {{ext}}/ui/minimal.ts
+
+# --- Workflow ---
+
+# 24. Preset: named presets for model/tools/instructions
+ext-preset:
+    pi -e {{ext}}/workflow/preset.ts -e {{ext}}/ui/minimal.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 25. Todo: LLM-managed todo list with /todos command
+ext-todo:
+    pi -e {{ext}}/workflow/todo.ts -e {{ext}}/ui/minimal.ts
+
+# 26. Handoff: transfer context to a new focused session
+ext-handoff:
+    pi -e {{ext}}/workflow/handoff.ts -e {{ext}}/ui/minimal.ts
+
+# 27. Trigger compact: auto-compact at token threshold
+ext-trigger-compact:
+    pi -e {{ext}}/workflow/trigger-compact.ts -e {{ext}}/ui/minimal.ts
+
+# 28. Claude rules: inject .claude/rules/ into system prompt
+ext-claude-rules:
+    pi -e {{ext}}/workflow/claude-rules.ts -e {{ext}}/ui/minimal.ts
+
+# --- UI & Feedback ---
+
+# 29. Notify: desktop notifications when agent finishes
+ext-notify:
+    pi -e {{ext}}/ui/notify.ts -e {{ext}}/ui/minimal.ts
+
+# 30. Titlebar spinner: braille animation while agent works
+ext-titlebar-spinner:
+    pi -e {{ext}}/ui/titlebar-spinner.ts -e {{ext}}/ui/minimal.ts
+
+# 31. Inline bash: expand !{command} patterns in prompts
+ext-inline-bash:
+    pi -e {{ext}}/ui/inline-bash.ts -e {{ext}}/ui/minimal.ts
+
+# 32. Summarize: /summarize conversation with LLM overlay
+ext-summarize:
+    pi -e {{ext}}/ui/summarize.ts -e {{ext}}/ui/minimal.ts
+
+# --- Multi-Agent ---
+
+# 33. Subagent: delegate tasks to specialized agents (single/parallel/chain)
+ext-subagent:
+    pi -e {{ext}}/subagent/index.ts -e {{ext}}/ui/minimal.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 34. Plan mode: read-only exploration with plan tracking
+ext-plan-mode:
+    pi -e {{ext}}/plan-mode/index.ts -e {{ext}}/ui/minimal.ts -e {{ext}}/ui/theme-cycler.ts
+
+# --- Project-Scoped ---
+
+# 36. TPS: tokens-per-second throughput display
+ext-tps:
+    pi -e {{ext}}/project-scoped/tps.ts -e {{ext}}/ui/minimal.ts
+
+# 37. Files: /files to list all files read/written/edited
+ext-files:
+    pi -e {{ext}}/project-scoped/files.ts -e {{ext}}/ui/minimal.ts
+
+# 38. Diff: /diff to view git changes with VS Code diff
+ext-diff:
+    pi -e {{ext}}/project-scoped/diff.ts -e {{ext}}/ui/minimal.ts
+
+# 39. Prompt URL widget: show PR/issue metadata during reviews
+ext-prompt-url:
+    pi -e {{ext}}/project-scoped/prompt-url-widget.ts -e {{ext}}/ui/minimal.ts
+
+# --- From agent-stuff ---
+
+# 40. Review: multi-mode code review (PR, branch, uncommitted, loop-fix)
+ext-review:
+    pi -e {{ext}}/workflow/review.ts -e {{ext}}/ui/minimal.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 41. Loop: iterative coding until tests pass or condition met
+ext-loop:
+    pi -e {{ext}}/workflow/loop.ts -e {{ext}}/ui/minimal.ts
+
+# 42. Todos: file-based todo manager with /todos TUI
+ext-todos:
+    pi -e {{ext}}/workflow/todos.ts -e {{ext}}/ui/minimal.ts
+
+# 43. Prompt editor: model + thinking level mode management
+ext-prompt-editor:
+    pi -e {{ext}}/workflow/prompt-editor.ts -e {{ext}}/ui/minimal.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 44. Answer: extract and answer questions from assistant messages
+ext-answer:
+    pi -e {{ext}}/workflow/answer.ts -e {{ext}}/ui/minimal.ts
+
+# 45. Context: /context TUI showing extensions, skills, token usage
+ext-context:
+    pi -e {{ext}}/ui/context.ts -e {{ext}}/ui/minimal.ts
+
+# 46. Session breakdown: /session-breakdown analytics with calendar graph
+ext-session-breakdown:
+    pi -e {{ext}}/ui/session-breakdown.ts -e {{ext}}/ui/minimal.ts
+
+# 47. Whimsical: fun "Thinking..." message replacements
+ext-whimsical:
+    pi -e {{ext}}/ui/whimsical.ts -e {{ext}}/ui/minimal.ts
+
+# 48. Files browser: full file browser with git status, fuzzy search, Quick Look
+ext-files-browser:
+    pi -e {{ext}}/ui/files-browser.ts -e {{ext}}/ui/minimal.ts
+
+# 49. Go to bed: block tool calls during quiet hours (00:00-05:59)
+ext-go-to-bed:
+    pi -e {{ext}}/safety/go-to-bed.ts -e {{ext}}/ui/minimal.ts
+
+# 50. Control: inter-session communication via Unix domain sockets
+ext-control:
+    pi -e {{ext}}/orchestration/control.ts --session-control -e {{ext}}/ui/minimal.ts
+
+# --- New Additions ---
+
+# 51. Permission gate: confirm before dangerous bash commands (rm -rf, sudo, chmod 777)
+ext-permission-gate:
+    pi -e {{ext}}/safety/permission-gate.ts -e {{ext}}/ui/minimal.ts
+
+# 52. Sandbox: OS-level sandboxing for bash (filesystem + network restrictions)
+ext-sandbox:
+    pi -e {{ext}}/safety/sandbox/index.ts -e {{ext}}/ui/minimal.ts
+
+# 53. Tools: /tools command to enable/disable tools interactively
+ext-tools:
+    pi -e {{ext}}/ui/tools.ts -e {{ext}}/ui/minimal.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 54. Question: single-question tool with custom UI options
+ext-question:
+    pi -e {{ext}}/ui/question.ts -e {{ext}}/ui/minimal.ts
+
+# 55. Questionnaire: multi-question TUI with tab navigation
+ext-questionnaire:
+    pi -e {{ext}}/ui/questionnaire.ts -e {{ext}}/ui/minimal.ts
+
+# --- Demos ---
+
+# 56. Snake: classic snake game overlay in the terminal
+ext-snake:
+    pi -e {{ext}}/examples/demos/snake.ts
+
+# 57. Space Invaders: space invaders game overlay
+ext-space-invaders:
+    pi -e {{ext}}/examples/demos/space-invaders.ts
+
+# 58. Doom: DOOM running in the terminal via WASM
+ext-doom:
+    pi -e {{ext}}/examples/demos/doom-overlay/index.ts
+
+# --- Combo Recipes ---
+
+# 59. Safety stack: all safety extensions combined
+ext-safety-stack:
+    pi -e {{ext}}/safety/damage-control.ts -e {{ext}}/safety/permission-gate.ts -e {{ext}}/safety/protected-paths.ts -e {{ext}}/safety/confirm-destructive.ts -e {{ext}}/safety/go-to-bed.ts -e {{ext}}/ui/minimal.ts -e {{ext}}/ui/theme-cycler.ts
+
+# 60. Workflow stack: review + loop + todos + prompt-editor + answer
+ext-workflow-stack:
+    pi -e {{ext}}/workflow/review.ts -e {{ext}}/workflow/loop.ts -e {{ext}}/workflow/todos.ts -e {{ext}}/workflow/prompt-editor.ts -e {{ext}}/workflow/answer.ts -e {{ext}}/ui/minimal.ts -e {{ext}}/ui/theme-cycler.ts
+
+# --- Kitchen Sink ---
+
+# 35. Full stack: safety + git + workflow + UI
+ext-full:
+    pi -e {{ext}}/safety/protected-paths.ts -e {{ext}}/safety/permission-gate.ts -e {{ext}}/safety/dirty-repo-guard.ts -e {{ext}}/git/git-checkpoint.ts -e {{ext}}/ui/notify.ts -e {{ext}}/ui/titlebar-spinner.ts -e {{ext}}/ui/inline-bash.ts -e {{ext}}/workflow/trigger-compact.ts -e {{ext}}/ui/tool-counter.ts -e {{ext}}/ui/theme-cycler.ts
+
+# Open pi with one or more stacked extensions in a new terminal: fu open minimal tool-counter
+open +exts:
+    #!/usr/bin/env bash
+    args=""
+    for ext in {{exts}}; do
+        args="$args -e {{ext}}/$ext.ts"
+    done
+    cmd="cd '$PWD' && pi$args"
+    escaped="${cmd//\\/\\\\}"
+    escaped="${escaped//\"/\\\"}"
+    osascript -e "tell application \"Terminal\" to do script \"$escaped\""

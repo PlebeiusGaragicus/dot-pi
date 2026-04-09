@@ -25,9 +25,10 @@ Dotfiles for the pi coding agent. Multi-agent teams run on cheap/free models, a 
 | Path | Purpose |
 |------|---------|
 | `agents/*.md` | Agent definitions (YAML frontmatter + system prompt body) |
-| `agents/teams.yaml` | Team compositions — first agent is the orchestrator |
+| `agents/teams/*.yaml` | Rich team definitions (orchestrator prompts, workflows, welcome messages) |
+| `agents/teams.yaml` | Flat team compositions fallback — first agent is the orchestrator |
 | `extensions/orchestration/agent-team-2.ts` | Core orchestration engine |
-| `pi-aliases` | Shell aliases — user entry points (`pnews`, `pretro`, `pchat`, etc.) |
+| `pi-aliases` | Shell aliases — user entry points (`presearch`, `pnews`, `pretro`, `pchat`, etc.) |
 | `prompts/` | Prompt templates — become `/commands` in interactive sessions |
 | `scripts/` | Headless runners for cron/unattended use |
 | `skills/` | Tool-usage guides (SearXNG, browser, Nostr) |
@@ -37,19 +38,21 @@ Dotfiles for the pi coding agent. Multi-agent teams run on cheap/free models, a 
 
 ## Critical Pitfalls
 
-1. **Orchestrator system prompt is REPLACED.** The orchestrator's `.md` body is completely replaced by `agent-team-2.ts` at runtime. Editing the body only matters when that agent is dispatched as a sub-agent by something else. Workflow instructions come from prompt templates (`prompts/`) or inlined prompts in headless scripts (`scripts/`).
+1. **Orchestrator system prompt is REPLACED.** The orchestrator's `.md` body is completely replaced by `agent-team-2.ts` at runtime. If the active team has a rich definition in `agents/teams/*.yaml`, its `orchestrator_prompt` is used; otherwise a generic dispatcher prompt is injected. Editing the `.md` body only matters when that agent is dispatched as a sub-agent.
 
-2. **Prompt duplication.** `prompts/news-report.md` and `scripts/newsroom.sh` describe the same workflow independently. Same for `prompts/retro.md` and `scripts/retro.sh`. Changes to the workflow must be reflected in both.
+2. **Team definitions are the source of truth.** Rich team YAML files in `agents/teams/` carry orchestrator prompts, welcome messages, and workflow definitions. The flat `agents/teams.yaml` is a fallback for simple teams. Rich definitions take precedence.
 
-3. **`.json` files are JSONL.** Sub-agent sessions at `workspaces/*/sessions/*.json` are JSONL (one JSON object per line) despite the extension. Use `json.loads()` per line, not `json.load()`.
+3. **Workflow prompts are shared.** Headless scripts set `AGENT_WORKFLOW` env var to inject workflow prompts from `prompts/*.md` into the system prompt. Interactive sessions use the same files as `/commands`. No manual sync needed between scripts and prompts.
 
-4. **8KB return truncation.** Sub-agent text output returned to the dispatcher is capped at 8KB by `agent-team-2.ts`. Agents must write full output to disk and return brief summaries.
+4. **`.json` files are JSONL.** Sub-agent sessions at `workspaces/*/sessions/*.json` are JSONL (one JSON object per line) despite the extension. Use `json.loads()` per line, not `json.load()`.
 
-5. **Three-tier dispatch.** Orchestrator -> Leads (`role: lead`) -> Workers. Leads get `dispatch_agent` plus their own tools. Workers get frontmatter tools only. Max two levels of dispatch.
+5. **8KB return truncation.** Sub-agent text output returned to the dispatcher is capped at 8KB by `agent-team-2.ts`. Agents must write full output to disk and return brief summaries.
 
-6. **Agent `role: lead`** means the agent is spawned with the orchestration extension, giving it `dispatch_agent` alongside its frontmatter tools. Its system prompt is preserved (not replaced) with the team roster appended.
+6. **Three-tier dispatch.** Orchestrator -> Leads (`role: lead`) -> Workers. Leads get `dispatch_agent` plus their own tools. Workers get frontmatter tools only. Max two levels of dispatch.
 
-7. **Per-agent model override.** Agents with a `model` field in frontmatter use that model instead of inheriting. Used by `newsroom-vlm` for a vision-capable model.
+7. **Agent `role: lead`** means the agent is spawned with the orchestration extension, giving it `dispatch_agent` alongside its frontmatter tools. Its system prompt is preserved (not replaced) with the team roster appended.
+
+8. **Per-agent model override.** Agents with a `model` field in frontmatter use that model instead of inheriting. Used by `newsroom-vlm` for a vision-capable model.
 
 ## Do NOT
 

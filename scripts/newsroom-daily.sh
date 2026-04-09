@@ -11,6 +11,7 @@ mkdir -p "$WORKSPACE/stories" "$WORKSPACE/sources" "$WORKSPACE/sources/images" "
 
 export AGENT_TEAM="newsroom"
 export AGENT_WORKSPACE="$WORKSPACE"
+export AGENT_WORKFLOW="news-report"
 
 echo "[newsroom-daily] $(date '+%H:%M:%S') Starting daily briefing for $DATE"
 
@@ -18,10 +19,7 @@ pi -p \
   --session "$WORKSPACE/session.jsonl" \
   -e "$HOME/dot-pi/extensions/orchestration/agent-team-2.ts" \
   --no-skills --no-prompt-templates \
-  "Today is $DATE. Workspace: $WORKSPACE. Run ID: $RUN_ID.
-Run the full newsroom workflow against all saved topics.
-For each saved topic in your system prompt, dispatch desk-reporter in SCAN MODE with the topic's search queries, categories, and time range. Then select 5-8 stories, dispatch desk-reporter in INVESTIGATE MODE per topic, run fact-check, and produce the final report via newsroom-copy-editor.
-The copy editor must also write $WORKSPACE/story-index-update.yaml listing all stories with slug, topic, status, date, and BLUF. Include timeline entries for developing stories."
+  "Produce today's news briefing. Today is $DATE. Run ID: $RUN_ID."
 
 [ -f "$WORKSPACE/story-index-update.yaml" ] && \
   cp "$WORKSPACE/story-index-update.yaml" "$TEAM_DIR/topics/story-index.yaml"

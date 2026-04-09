@@ -18,8 +18,8 @@ dot-pi is a self-improving agentic system built on the [pi coding agent](https:/
 
 ## Key Facts
 
-- Agent definitions are `agents/*.md` (YAML frontmatter + system prompt body). Teams are composed in `agents/teams.yaml`.
-- The orchestrator's `.md` body is **replaced** at runtime by `extensions/orchestration/agent-team-2.ts`. Workflow instructions come from `prompts/` (interactive) or `scripts/` (headless). These must be kept in sync manually.
+- Agent definitions are `agents/*.md` (YAML frontmatter + system prompt body). Teams are defined in `agents/teams/*.yaml` (rich per-team YAML with orchestrator prompts, welcome messages, and workflows). Flat `agents/teams.yaml` is a fallback for simple teams.
+- The orchestrator's `.md` body is **replaced** at runtime by `extensions/orchestration/agent-team-2.ts`. If the active team has a rich definition, its `orchestrator_prompt` is used instead of the generic dispatcher text. Workflow instructions come from `prompts/` (interactive) or via `AGENT_WORKFLOW` env var (headless). Both reference the same prompt files — no manual sync needed.
 - Three-tier dispatch: orchestrator (dispatch only) -> leads (`role: lead`, tools + dispatch) -> workers (tools only).
 - Sub-agent output returned to the dispatcher is truncated to 8KB. Agents write full output to disk.
 - Sub-agent session files (`workspaces/*/sessions/*.json`) are JSONL despite the `.json` extension.

@@ -11,6 +11,7 @@ mkdir -p "$WORKSPACE/stories" "$WORKSPACE/sources" "$WORKSPACE/sources/images" "
 
 export AGENT_TEAM="newsroom"
 export AGENT_WORKSPACE="$WORKSPACE"
+export AGENT_WORKFLOW="news-report"
 
 echo "[newsroom-weekly] $(date '+%H:%M:%S') Starting weekly overview for $DATE"
 
@@ -18,11 +19,7 @@ pi -p \
   --session "$WORKSPACE/session.jsonl" \
   -e "$HOME/dot-pi/extensions/orchestration/agent-team-2.ts" \
   --no-skills --no-prompt-templates \
-  "Today is $DATE. Workspace: $WORKSPACE. Run ID: $RUN_ID.
-Run the full newsroom workflow as a WEEKLY OVERVIEW.
-Include ALL saved topics regardless of priority. For each topic, dispatch desk-reporter in SCAN MODE.
-Select 8-12 stories for a broader weekly briefing. Add a 'Week in Review' section to the final report summarizing the week's major themes across all topics.
-The copy editor must write $WORKSPACE/story-index-update.yaml listing all stories. Mark stories without new developments in 7+ days as dormant. Include timeline entries for developing stories."
+  "Produce a WEEKLY OVERVIEW briefing. Today is $DATE. Run ID: $RUN_ID. Include ALL saved topics regardless of priority. Select 8-12 stories for a broader weekly briefing. Add a 'Week in Review' section to the final report summarizing the week's major themes. Mark stories without new developments in 7+ days as dormant."
 
 [ -f "$WORKSPACE/story-index-update.yaml" ] && \
   cp "$WORKSPACE/story-index-update.yaml" "$TEAM_DIR/topics/story-index.yaml"

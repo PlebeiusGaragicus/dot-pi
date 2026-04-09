@@ -1,11 +1,20 @@
 /**
  * Agent Team 2 — Dispatcher orchestrator with inline agent output
  *
- * Same dispatch model as agent-team, but agent output streams directly
- * into the chat instead of a separate grid widget.
- *
  * Loads agent definitions from agents/*.md, .claude/agents/*.md, .pi/agents/*.md.
- * Teams are defined in .pi/agents/teams.yaml or ~/dot-pi/agents/teams.yaml.
+ *
+ * Team definitions are loaded from (in priority order):
+ *   1. Rich YAML files in agents/teams/*.yaml (per-team files with orchestrator
+ *      prompts, welcome messages, and workflow definitions)
+ *   2. Flat teams.yaml in .pi/agents/teams.yaml or ~/dot-pi/agents/teams.yaml
+ *      (simple name-to-member-list mapping, used as fallback)
+ *
+ * Environment variables:
+ *   AGENT_TEAM       — select the active team at startup
+ *   AGENT_WORKSPACE  — workspace directory for agent output
+ *   AGENT_WORKFLOW   — auto-inject a named workflow's prompt into the system prompt
+ *   AGENT_ROLE       — "orchestrator" (default) or "lead" (for nested dispatch)
+ *   RETRO_TARGET     — target workspace for retro analysis
  *
  * Commands:
  *   /agents-team          — switch active team
@@ -31,6 +40,7 @@ interface AgentDef {
 	tools: string;
 	model: string;
 	role: string;
+	skills: string;
 	systemPrompt: string;
 	file: string;
 }
@@ -47,6 +57,23 @@ interface TopicDef {
 	active: boolean;
 	priority: string;
 	raw: string;
+}
+
+interface WorkflowDef {
+	description: string;
+	prompt_file: string;
+	requires_workspace: boolean;
+	requires_topics: boolean;
+}
+
+interface TeamDef {
+	name: string;
+	description: string;
+	mode: string;
+	members: string[];
+	welcome: string;
+	orchestrator_prompt: string;
+	workflows: Record<string, WorkflowDef>;
 }
 
 type TranscriptEntry =
@@ -80,6 +107,125 @@ function parseTeamsYaml(raw: string): Record<string, string[]> {
 	return teams;
 }
 
+// ── Rich Team YAML Parser ───────────────────────
+
+function parseTeamFile(raw: string): TeamDef | null {
+	const def: TeamDef = {
+		name: "", description: "", mode: "interactive",
+		members: [], welcome: "", orchestrator_prompt: "",
+		workflows: {},
+	};
+	const lines = raw.split("\n");
+	let i = 0;
+
+	function indent(line: string): number {
+		const m = line.match(/^(\s*)/);
+		return m ? m[1].length : 0;
+	}
+
+	function stripComment(val: string): string {
+		const m = val.match(/^([^#]*?)(\s+#.*)?$/);
+		return m ? m[1].trim() : val.trim();
+	}
+
+	function unquote(val: string): string {
+		return val.replace(/^["']|["']$/g, "").trim();
+	}
+
+	function readBlockScalar(): string {
+		const result: string[] = [];
+		while (i < lines.length) {
+			const line = lines[i];
+			if (line.trim() === "" || indent(line) >= 2) {
+				result.push(line.length >= 2 ? line.slice(2) : "");
+				i++;
+			} else {
+				break;
+			}
+		}
+		while (result.length > 0 && result[result.length - 1].trim() === "") result.pop();
+		return result.join("\n");
+	}
+
+	function readList(): string[] {
+		const result: string[] = [];
+		while (i < lines.length) {
+			const m = lines[i].match(/^\s+-\s+(.+)$/);
+			if (m) {
+				result.push(stripComment(m[1]));
+				i++;
+			} else if (lines[i].trim() === "" || lines[i].match(/^\s+#/)) {
+				i++;
+			} else {
+				break;
+			}
+		}
+		return result;
+	}
+
+	function readWorkflows(): Record<string, WorkflowDef> {
+		const workflows: Record<string, WorkflowDef> = {};
+		while (i < lines.length) {
+			const line = lines[i];
+			if (line.trim() === "" || line.match(/^\s+#/)) { i++; continue; }
+			if (indent(line) < 2) break;
+			const nameMatch = line.match(/^\s{2}(\S[^:]*):$/);
+			if (nameMatch) {
+				const wfName = nameMatch[1].trim();
+				i++;
+				const wf: WorkflowDef = { description: "", prompt_file: "", requires_workspace: false, requires_topics: false };
+				while (i < lines.length) {
+					const wfLine = lines[i];
+					if (wfLine.trim() === "") { i++; continue; }
+					if (indent(wfLine) < 4) break;
+					const kvMatch = wfLine.match(/^\s{4}(\w[\w_]*):\s*(.+)$/);
+					if (kvMatch) {
+						const val = unquote(kvMatch[2]);
+						if (kvMatch[1] === "description") wf.description = val;
+						else if (kvMatch[1] === "prompt_file") wf.prompt_file = val;
+						else if (kvMatch[1] === "requires_workspace") wf.requires_workspace = val === "true";
+						else if (kvMatch[1] === "requires_topics") wf.requires_topics = val === "true";
+					}
+					i++;
+				}
+				workflows[wfName] = wf;
+			} else {
+				i++;
+			}
+		}
+		return workflows;
+	}
+
+	while (i < lines.length) {
+		const line = lines[i];
+		if (line.trim() === "" || line.match(/^#/)) { i++; continue; }
+		const kvMatch = line.match(/^(\w[\w_]*)\s*:\s*(.*)$/);
+		if (kvMatch) {
+			const [, key, rawVal] = kvMatch;
+			const val = unquote(rawVal);
+			i++;
+			if (key === "name") def.name = val;
+			else if (key === "description") def.description = val;
+			else if (key === "mode") def.mode = val;
+			else if (key === "members") def.members = readList();
+			else if (key === "welcome" && rawVal.trim() === "|") def.welcome = readBlockScalar();
+			else if (key === "orchestrator_prompt" && rawVal.trim() === "|") def.orchestrator_prompt = readBlockScalar();
+			else if (key === "workflows") {
+				if (rawVal.trim() === "{}" || rawVal.trim() === "") {
+					def.workflows = {};
+				} else {
+					def.workflows = readWorkflows();
+				}
+			}
+		} else {
+			i++;
+		}
+	}
+
+	if (!def.name) return null;
+	return def;
+}
+
 // ── Frontmatter Parser ───────────────────────────
 
 function parseAgentFile(filePath: string): AgentDef | null {
@@ -104,6 +250,7 @@ function parseAgentFile(filePath: string): AgentDef | null {
 			tools: frontmatter.tools || "read,grep,find,ls",
 			model: frontmatter.model || "",
 			role: frontmatter.role || "",
+			skills: frontmatter.skills || "",
 			systemPrompt: match[2].trim(),
 			file: filePath,
 		};
@@ -147,7 +294,9 @@ export default function (pi: ExtensionAPI) {
 	const agentStates: Map<string, AgentState> = new Map();
 	let allAgentDefs: AgentDef[] = [];
 	let teams: Record<string, string[]> = {};
+	let teamDefs: Map<string, TeamDef> = new Map();
 	let activeTeamName = "";
+	let activeTeamDef: TeamDef | null = null;
 	let sessionDir = "";
 	let contextWindow = 0;
 	let loadedTopics: TopicDef[] = [];
@@ -167,15 +316,41 @@ export default function (pi: ExtensionAPI) {
 		allAgentDefs = scanAgentDirs(cwd);
 
 		teams = {};
-		const teamsPaths = [
+		teamDefs = new Map();
+
+		const richTeamDirs = [
+			join(cwd, ".pi", "agents", "teams"),
+			join(homedir(), "dot-pi", "agents", "teams"),
+		];
+		for (const teamDir of richTeamDirs) {
+			if (!existsSync(teamDir)) continue;
+			try {
+				for (const file of readdirSync(teamDir)) {
+					if (!file.endsWith(".yaml")) continue;
+					try {
+						const def = parseTeamFile(readFileSync(join(teamDir, file), "utf-8"));
+						if (def && !teamDefs.has(def.name)) {
+							teamDefs.set(def.name, def);
+							teams[def.name] = def.members;
+						}
+					} catch {}
+				}
+			} catch {}
+		}
+
+		const flatTeamsPaths = [
 			join(cwd, ".pi", "agents", "teams.yaml"),
 			join(homedir(), "dot-pi", "agents", "teams.yaml"),
 		];
-		for (const teamsPath of teamsPaths) {
+		for (const teamsPath of flatTeamsPaths) {
 			if (existsSync(teamsPath)) {
 				try {
 					const parsed = parseTeamsYaml(readFileSync(teamsPath, "utf-8"));
-					teams = { ...parsed, ...teams };
+					for (const [name, members] of Object.entries(parsed)) {
+						if (!teams[name]) {
+							teams[name] = members;
+						}
+					}
 				} catch {}
 			}
 		}
@@ -228,6 +403,7 @@ export default function (pi: ExtensionAPI) {
 
 	function activateTeam(teamName: string) {
 		activeTeamName = teamName;
+		activeTeamDef = teamDefs.get(teamName) || null;
 		const members = teams[teamName] || [];
 		const defsByName = new Map(allAgentDefs.map(d => [d.name.toLowerCase(), d]));
 
@@ -295,6 +471,16 @@ export default function (pi: ExtensionAPI) {
 			args.push("-e", extPath);
 		} else {
 			args.push("--no-extensions");
+		}
+
+		if (state.def.skills) {
+			const skillsDir = join(homedir(), "dot-pi", "skills");
+			for (const skill of state.def.skills.split(",").map(s => s.trim()).filter(Boolean)) {
+				const skillPath = join(skillsDir, skill);
+				if (existsSync(skillPath)) {
+					args.push("--skill", skillPath);
+				}
+			}
 		}
 
 		args.push(task);
@@ -639,7 +825,12 @@ export default function (pi: ExtensionAPI) {
 			const name = teamNames[idx];
 			activateTeam(name);
 			ctx.ui.setStatus("agent-team", `Team: ${name} (${agentStates.size})`);
-			ctx.ui.notify(`Team: ${name} — ${Array.from(agentStates.values()).map(s => displayName(s.def.name)).join(", ")}`, "info");
+			const switchedDef = teamDefs.get(name);
+			if (switchedDef?.welcome) {
+				ctx.ui.notify(switchedDef.welcome.trim(), "info");
+			} else {
+				ctx.ui.notify(`Team: ${name} — ${Array.from(agentStates.values()).map(s => displayName(s.def.name)).join(", ")}`, "info");
+			}
 		},
 	});
 
@@ -664,7 +855,8 @@ export default function (pi: ExtensionAPI) {
 		const agentCatalog = Array.from(agentStates.values())
 			.map(s => {
 				const roleTag = s.def.role === "lead" ? " (lead)" : "";
-				return `### ${displayName(s.def.name)}${roleTag}\n**Dispatch as:** \`${s.def.name}\`\n${s.def.description}\n**Tools:** ${s.def.tools}`;
+				const skillsTag = s.def.skills ? `\n**Skills:** ${s.def.skills}` : "";
+				return `### ${displayName(s.def.name)}${roleTag}\n**Dispatch as:** \`${s.def.name}\`\n${s.def.description}\n**Tools:** ${s.def.tools}${skillsTag}`;
 			})
 			.join("\n\n");
 
@@ -711,15 +903,12 @@ ${agentCatalog}`,
 			};
 		}
 
-		return {
-			systemPrompt: `You are a dispatcher agent. You coordinate specialist agents to accomplish tasks.
+		const basePrompt = activeTeamDef?.orchestrator_prompt
+			? activeTeamDef.orchestrator_prompt
+			: `You are a dispatcher agent. You coordinate specialist agents to accomplish tasks.
 You do NOT have direct access to the codebase. You MUST delegate all work through
 agents using the dispatch_agent tool.
 
-## Active Team: ${activeTeamName}
-Members: ${teamMembers}
-You can ONLY dispatch to agents listed below. Do not attempt to dispatch to agents outside this team.
-${workspaceBlock}${retroTargetBlock}${topicsBlock}
 ## How to Work
 - Analyze the user's request and break it into clear sub-tasks
 - Choose the right agent(s) for each sub-task
@@ -733,11 +922,34 @@ ${workspaceBlock}${retroTargetBlock}${topicsBlock}
 - ALWAYS use dispatch_agent to get work done
 - You can chain agents: use scout to explore, then builder to implement
 - You can dispatch the same agent multiple times with different tasks
-- Keep tasks focused — one clear objective per dispatch
+- Keep tasks focused — one clear objective per dispatch`;
 
+		let workflowBlock = "";
+		const workflowName = process.env.AGENT_WORKFLOW;
+		if (workflowName && activeTeamDef?.workflows[workflowName]) {
+			const wf = activeTeamDef.workflows[workflowName];
+			const promptPath = resolve(join(homedir(), "dot-pi", wf.prompt_file));
+			if (existsSync(promptPath)) {
+				try {
+					let promptContent = readFileSync(promptPath, "utf-8");
+					const fmMatch = promptContent.match(/^---\n[\s\S]*?\n---\n([\s\S]*)$/);
+					if (fmMatch) promptContent = fmMatch[1].trim();
+					workflowBlock = `\n## Active Workflow: ${workflowName}\n\n${promptContent}\n`;
+				} catch {}
+			}
+		}
+
+		return {
+			systemPrompt: `${basePrompt}
+
+## Active Team: ${activeTeamName}
+Members: ${teamMembers}
+You can ONLY dispatch to agents listed below. Do not attempt to dispatch to agents outside this team.
+${workspaceBlock}${retroTargetBlock}${topicsBlock}
 ## Agents
 
-${agentCatalog}`,
+${agentCatalog}
+${workflowBlock}`,
 		};
 	});
 
@@ -764,12 +976,22 @@ ${agentCatalog}`,
 
 		_ctx.ui.setStatus("agent-team", `Team: ${activeTeamName} (${agentStates.size})`);
 		const members = Array.from(agentStates.values()).map(s => displayName(s.def.name)).join(", ");
-		_ctx.ui.notify(
-			`Team: ${activeTeamName} (${members})\n\n` +
-			`/agents-team          Select a team\n` +
-			`/agents-list          List active agents`,
-			"info",
-		);
+
+		let welcomeText: string;
+		if (activeTeamDef?.welcome) {
+			welcomeText = activeTeamDef.welcome.trim();
+		} else {
+			welcomeText = `Team: ${activeTeamName} (${members})`;
+			const wfs = activeTeamDef?.workflows;
+			if (wfs && Object.keys(wfs).length > 0) {
+				welcomeText += "\n\nAvailable workflows:";
+				for (const [name, wf] of Object.entries(wfs)) {
+					welcomeText += `\n  /${name}  — ${wf.description}`;
+				}
+			}
+		}
+		welcomeText += `\n\n/agents-team          Select a team\n/agents-list          List active agents`;
+		_ctx.ui.notify(welcomeText, "info");
 
 		_ctx.ui.setFooter((_tui, theme, _footerData) => ({
 			dispose: () => {},

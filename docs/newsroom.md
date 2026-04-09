@@ -42,9 +42,11 @@ The `newsroom-vlm` agent specifies `model: lmstudio/qwen3.5-122b-a10b` in its fr
 
 ### Editor system prompt
 
-The editor's `.md` body is **not used** when the editor is the top-level dispatcher. The extension replaces it with a generated system prompt containing the team name, member list, workspace path, agent catalog, generic dispatcher rules, **saved topics**, and **developing stories from the story index**. The actual workflow instructions come from the **prompt template** (`/news-report`, `/wire`) or the user's free-form message.
+The editor's `.md` body is **not used** when the editor is the top-level dispatcher. The extension replaces it with the `orchestrator_prompt` from the team's rich definition (`agents/teams/newsroom.yaml`), plus runtime context: team name, member list, workspace path, agent catalog, saved topics, and developing stories from the story index. The `orchestrator_prompt` contains the editor's routing table, dispatch rules, and workflow descriptions — all co-located in the team definition file.
 
-The editor handles three interaction modes:
+For one-off research questions, use `presearch` instead of `pnews`. The research team (`agents/teams/research.yaml`) has a simpler orchestrator prompt optimized for ad-hoc questions without topic management.
+
+The newsroom editor handles three interaction modes:
 1. **Conversational / ad-hoc** — follows the user's lead, uses topics as passive context
 2. **Wire scan** (`/wire`) — lightweight monitoring of all saved topics
 3. **Full briefing** (`/news-report`) — complete six-phase workflow against saved topics
@@ -197,14 +199,25 @@ workspaces/newsroom/2026-04-08_1430/
 
 ## Running
 
-### Interactive (pnews alias)
+### Ad-hoc research (presearch alias)
+
+For one-off research questions, use `presearch` instead of the full newsroom:
+
+```bash
+presearch "what are the latest developments in RISC-V adoption?"
+presearch                                    # open interactive session
+```
+
+This loads the `research` team — a lighter team with `desk-reporter`, `newsroom-scraper`, and `newsroom-researcher`. No topic management, no workflows, no slash commands needed.
+
+### Interactive newsroom (pnews alias)
 
 ```bash
 pnews                                        # open interactive session
 pnews "tell me about zoning rules for ADUs"  # one-shot with initial query
 ```
 
-Inside the session:
+On startup, the team's welcome message lists available workflows:
 - `/news-report` — full six-phase briefing against saved topics
 - `/wire` — quick scan of saved topics, no deep reporting
 - Free-form conversation — the editor follows your lead
@@ -218,7 +231,7 @@ You can append extra instructions: `/news-report Focus on semiconductor supply c
 ~/dot-pi/scripts/newsroom-weekly.sh  # broader scan, all priorities, week-in-review
 ```
 
-The prompt text in the headless scripts must be kept in sync with `prompts/news-report.md` manually — they describe the same workflow but are maintained separately. See [docs/architecture.md](architecture.md) for the design rationale.
+Headless scripts set `AGENT_WORKFLOW=news-report`, which tells the extension to read the workflow prompt from the team definition (`agents/teams/newsroom.yaml` -> `workflows.news-report.prompt_file` -> `prompts/news-report.md`) and inject it into the system prompt. This eliminates the previous duplication between interactive prompts and script-inlined prompts — both modes now use the same `prompts/news-report.md` as the source of truth.
 
 ### Topic management
 

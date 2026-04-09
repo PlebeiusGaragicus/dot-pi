@@ -69,6 +69,20 @@ Always answer questions fully and comprehensively - multiple searches may be req
     "$@"
 }
 
+presearch() {
+  local RUN_ID=$(date +%Y-%m-%d_%H%M)
+  local WORKSPACE="$HOME/dot-pi/workspaces/research/$RUN_ID"
+  mkdir -p "$WORKSPACE/stories" "$WORKSPACE/sources" "$WORKSPACE/sessions"
+  export AGENT_TEAM="research"
+  export AGENT_WORKSPACE="$WORKSPACE"
+  pi \
+    --session "$WORKSPACE/session.jsonl" \
+    -e "$HOME/dot-pi/extensions/orchestration/agent-team-2.ts" \
+    -e "$HOME/dot-pi/extensions/ui/theme-cycler.ts" \
+    --theme "$HOME/dot-pi/themes" \
+    "$@"
+}
+
 pnews() {
   local RUN_ID=$(date +%Y-%m-%d_%H%M)
   local TEAM_DIR="$HOME/dot-pi/workspaces/newsroom"
@@ -80,8 +94,7 @@ pnews() {
   pi \
     --session "$WORKSPACE/session.jsonl" \
     -e "$HOME/dot-pi/extensions/orchestration/agent-team-2.ts" \
-    -e "$HOME/dot-pi/extensions/ui/theme-cycler.ts" \
-    --theme "$HOME/dot-pi/themes" \
+    --theme "$HOME/dot-pi/themes/synthwave.json" \
     --prompt-template "$HOME/dot-pi/prompts" \
     "$@"
 

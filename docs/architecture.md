@@ -30,7 +30,12 @@ The goal is a **self-improving agentic system**. Agent teams produce output. The
 ```
 dot-pi/
   agents/                Agent definitions (.md with YAML frontmatter)
-    teams.yaml           Team compositions
+    teams/               Rich team definitions (per-team YAML files)
+      research.yaml      Deep research team — ad-hoc interactive research
+      newsroom.yaml      Newsroom team — structured briefings with workflows
+      retro.yaml         Retro team — session analysis and diagnosis
+      review.yaml        Code review team — explore and review
+    teams.yaml           Flat team compositions (fallback for teams without rich defs)
     newsroom-editor.md   Managing editor for the newsroom team
     desk-reporter.md     Generic desk reporter (parameterized per topic)
     ...
@@ -83,12 +88,15 @@ These launch the `agent-team-2.ts` orchestration extension. The `AGENT_TEAM` env
 
 | Alias | Team | Session location | Workspace |
 |-------|------|------------------|-----------|
+| `presearch` | `research` | `WORKSPACE/session.jsonl` | `~/dot-pi/workspaces/research/$RUN_ID/` |
 | `pnews` | `newsroom` | `WORKSPACE/session.jsonl` | `~/dot-pi/workspaces/newsroom/$RUN_ID/` |
 | `pretro` | `retro` | `WORKSPACE/session.jsonl` | `~/dot-pi/workspaces/retro/$RUN_ID/` |
 | `pteam` | User-selected | `~/dot-pi/sessions/` | None |
 | `pteam2` | User-selected | `~/dot-pi/sessions/` | None |
 
-Key difference: `pnews` uses `--session "$WORKSPACE/session.jsonl"` to co-locate the dispatcher's session with the workspace. `pretro` also uses co-located sessions in its own workspace. Both `pnews` and `pretro` use `AGENT_WORKSPACE` — `pretro` additionally sets `RETRO_TARGET` to the workspace being analyzed.
+`presearch` is the simplest team alias — it creates a workspace and sets the research team, which has no workflows or prompt templates. The user asks a question and the orchestrator dispatches agents to research it.
+
+`pnews` and `pretro` use `--session "$WORKSPACE/session.jsonl"` to co-locate the dispatcher's session with the workspace. Both use `AGENT_WORKSPACE` — `pretro` additionally sets `RETRO_TARGET` to the workspace being analyzed.
 
 ### `pnews` alias in detail
 
@@ -119,12 +127,12 @@ This function does several things:
 
 1. **Creates a timestamped workspace** (`YYYY-MM-DD_HHMM`) so multiple runs per day get separate directories.
 2. **Pre-creates subdirectories** (`stories/`, `sources/`, `sources/images/`, `sessions/`) so agents can write immediately.
-3. **Exports `AGENT_TEAM`** — `agent-team-2.ts` reads this to auto-select the team on startup.
+3. **Exports `AGENT_TEAM`** — `agent-team-2.ts` reads this to auto-select the team on startup, loading the team's rich definition from `agents/teams/newsroom.yaml`.
 4. **Exports `AGENT_WORKSPACE`** — `agent-team-2.ts` reads this for two purposes:
    - Setting the sub-agent session directory to `$WORKSPACE/sessions/`
    - Injecting the workspace path into the dispatcher's system prompt
 5. **Uses `--session`** (not `--session-dir`) to write the dispatcher's session file directly into the workspace root.
-6. **Loads prompt templates** from `prompts/`, making `/news-report` and `/wire` available as commands.
+6. **Loads prompt templates** from `prompts/`, making `/news-report` and `/wire` available as interactive commands. The team's `welcome` message (from the rich definition) lists these workflows on startup so the user knows what's available.
 7. **Post-run story index hook** — after `pi` exits, copies `story-index-update.yaml` (if it exists) back to the team's `topics/story-index.yaml` at the workspace root. This only fires after structured workflows that produce the update file. Ad-hoc conversations do not affect the story index.
 
 ### How Humans Use `pnews`
@@ -144,13 +152,13 @@ Both run the newsroom team. They share the same workspace setup, env vars, exten
 | Aspect | `pnews` (interactive) | `newsroom-daily.sh` / `newsroom-weekly.sh` |
 |--------|----------------------|----------------------------------------------|
 | Mode | Interactive TUI | `pi -p` (non-interactive, stdout) |
-| Prompt delivery | User types `/news-report`, `/wire`, or free-form | Full prompt inlined with shell variable expansion |
+| Prompt delivery | User types `/news-report`, `/wire`, or free-form | `AGENT_WORKFLOW=news-report` env var triggers auto-injection |
 | Prompt templates | Loaded via `--prompt-template` | Disabled via `--no-prompt-templates` |
 | Skills | Loaded (default) | Disabled via `--no-skills` |
 | UI | Theme cycler, footer, status bar | No extensions beyond orchestration |
 | Use case | Human-in-the-loop, ad-hoc, testing | Cron jobs, scheduled unattended runs |
 
-The main duplication risk is the prompt text: `prompts/news-report.md` for interactive mode, and the inlined string in the headless scripts for unattended mode. Both describe the same workflow. Changes must be reflected in both places.
+Headless scripts set `AGENT_WORKFLOW` to tell the extension which workflow to auto-inject. The extension reads the workflow's `prompt_file` from the team's rich definition and appends it to the orchestrator's system prompt. This eliminates the previous duplication where scripts inlined a copy of the workflow prompt — both modes now reference the same `prompts/news-report.md` file as their source of truth.
 
 ## How Agent Teams Work
 
@@ -164,6 +172,7 @@ name: desk-reporter
 description: Generic desk reporter — scans any topic and writes sourced stories
 tools: read,bash,write
 role: lead
+skills: searxng,bowser
 ---
 You are a desk reporter in an automated newsroom...
 ```
@@ -173,27 +182,60 @@ You are a desk reporter in an automated newsroom...
 - **`tools`** — comma-separated list of pi tools the agent gets when dispatched as a sub-agent. **Important:** these tools only apply when the agent runs as a sub-agent. When the agent is the top-level dispatcher, `agent-team-2.ts` overrides its tools to `["dispatch_agent"]` only (see below).
 - **`model`** (optional) — a `provider/model-id` string that overrides the dispatcher's model for this agent. If omitted, the agent inherits the dispatcher's model. Used by `newsroom-vlm` to run on `lmstudio/qwen3.5-122b-a10b` (a vision-capable model) while other agents use the stronger text-only model.
 - **`role`** (optional) — one of `lead` or omitted (defaults to worker). Leads are spawned with the orchestration extension loaded, giving them `dispatch_agent` alongside their own tools. Workers get only their frontmatter tools. See **Three-Tier Dispatch Model** below.
+- **`skills`** (optional) — comma-separated list of skill directory names (e.g., `searxng,bowser`). During dispatch, `agent-team-2.ts` resolves each name to `~/dot-pi/skills/<name>` and passes `--skill <path>` to the spawned `pi` subprocess. This gives the agent access to the skill's instructions and tools at runtime. Skills are loaded regardless of role (lead or worker). Agents without this field receive no skills.
 - **Body** — everything after the frontmatter becomes the agent's system prompt, passed via `--append-system-prompt`.
 
 ### Team Composition
 
-Teams are defined in `agents/teams.yaml`:
+Teams can be defined in two formats, loaded by `agent-team-2.ts` at startup:
+
+**1. Rich team definitions (`agents/teams/*.yaml`)** — per-team files that carry orchestrator prompts, welcome messages, workflow definitions, and member lists. Rich definitions are the preferred format.
 
 ```yaml
-newsroom:
-  - newsroom-editor        # orchestrator (implicit: first in list)
-  - desk-reporter          # role: lead — generic, dispatched per topic
-  - newsroom-scraper       # worker — fetches, cleans, writes source files
-  - newsroom-researcher    # worker — deep investigation
-  - newsroom-vlm           # worker — image/PDF processing (vision model)
-  - newsroom-fact-checker   # worker — verification
-  - newsroom-copy-editor   # worker — final assembly
+# agents/teams/newsroom.yaml
+name: newsroom
+description: "Structured news briefings from saved topic files"
+mode: both                     # interactive | headless | both
 
-retro:
-  - retro-editor
-  - retro-session-analyst
-  - retro-output-reviewer
+members:
+  - newsroom-editor
+  - desk-reporter
+  - newsroom-scraper
+  - ...
+
+welcome: |
+  Newsroom team loaded. Available workflows:
+
+    /news-report  — Full six-phase briefing against saved topics
+    /wire         — Quick scan of all topics for new developments
+
+orchestrator_prompt: |
+  You are the managing editor of an automated newsroom...
+  (team-specific instructions for the orchestrator model)
+
+workflows:
+  news-report:
+    description: "Full six-phase newsroom briefing against saved topics"
+    prompt_file: prompts/news-report.md
+    requires_workspace: true
+    requires_topics: true
 ```
+
+Key fields in a rich team definition:
+- `orchestrator_prompt` replaces the generic "You are a dispatcher agent" text that the extension would otherwise inject. This gives each team a purpose-built orchestrator prompt with routing tables, rules, and workflow descriptions.
+- `welcome` is shown to the user in a notification on session start. It lists available workflows and usage guidance so the user doesn't need to memorize slash commands.
+- `workflows` maps workflow names to prompt files. When `AGENT_WORKFLOW` is set (by headless scripts), the extension reads the prompt file and injects its content into the system prompt. In interactive mode, the user invokes workflows via `/command` from prompt templates.
+- `mode` documents whether the team is designed for interactive, headless, or both.
+
+**2. Flat team list (`agents/teams.yaml`)** — a simpler format that only lists member names per team. Used as a fallback for teams without rich definitions.
+
+```yaml
+review:
+  - scout
+  - reviewer
+```
+
+Rich definitions in `agents/teams/` take precedence. Teams defined only in the flat `teams.yaml` get the generic dispatcher prompt and a default welcome message.
 
 The first agent in the list becomes the dispatcher (orchestrator). Agents with `role: lead` in their frontmatter get dispatch capabilities alongside their own tools. All others are workers.
 
@@ -204,21 +246,32 @@ This is the core orchestration engine. Understanding its behavior is critical fo
 #### Startup sequence (`session_start` hook)
 
 1. Scans `agents/*.md` from both the working directory and `~/dot-pi/agents/` for agent definitions.
-2. Reads `teams.yaml` from both locations (working directory takes precedence).
+2. Loads rich team definitions from `agents/teams/*.yaml` (per-team files with orchestrator prompts, workflows, welcome messages). Then loads flat `agents/teams.yaml` as fallback for any teams not already defined by rich files.
 3. Auto-selects the team specified by `AGENT_TEAM` env var, or the first team if unset.
 4. For orchestrators only, calls `pi.setActiveTools(["dispatch_agent"])` — **this overrides whatever tools the top-level agent's frontmatter specifies.** The dispatcher only gets `dispatch_agent`. No `bash`, no `read`, no `write`. Leads skip this step and keep their frontmatter tools.
+5. Displays the team's `welcome` message (from the rich team definition) as a notification. If no rich definition exists, shows the team name and member list.
 
 #### System prompt injection (`before_agent_start` hook)
 
-Before the dispatcher's first turn, the extension replaces the system prompt with:
+Before the dispatcher's first turn, the extension replaces the system prompt. The content depends on whether the active team has a rich definition:
 
-1. A preamble explaining the dispatcher role ("You are a dispatcher agent...")
+**With a rich team definition (`agents/teams/*.yaml`):**
+
+1. The team's `orchestrator_prompt` — team-specific instructions, routing tables, rules
 2. The active team name and member list
-3. **The workspace path** (if `AGENT_WORKSPACE` is set) — injected as a code block so the dispatcher knows where agents should write output
-4. Rules ("NEVER try to read, write, or execute code directly")
-5. An agent catalog with each sub-agent's name, description, and tools
+3. Runtime context: workspace path, retro target, saved topics, story index
+4. An agent catalog with each sub-agent's name, description, and tools
+5. If `AGENT_WORKFLOW` is set: the workflow's prompt file content, injected as an "Active Workflow" section
 
-The dispatcher's original system prompt (from its `.md` file's body) is **completely replaced** by this generated prompt. The `.md` body for dispatcher agents (like `newsroom-editor.md`) is only used when that agent is dispatched as a sub-agent by something else.
+**Without a rich definition (flat `teams.yaml` fallback):**
+
+1. A generic preamble ("You are a dispatcher agent...")
+2. Generic "How to Work" and "Rules" sections
+3. Same runtime context and agent catalog as above
+
+The dispatcher's original system prompt (from its `.md` file's body) is **completely replaced** in both cases. The `.md` body for dispatcher agents (like `newsroom-editor.md`) is only used when that agent is dispatched as a sub-agent by something else.
+
+The `AGENT_WORKFLOW` env var is the mechanism for headless scripts to inject workflow prompts without inlining the full prompt text. The extension reads the workflow's `prompt_file` from the team definition, strips any YAML frontmatter, and appends the content to the system prompt. This eliminates the duplication between `prompts/*.md` and inlined script prompts.
 
 #### Sub-agent dispatch (`dispatch_agent` tool)
 
@@ -230,6 +283,7 @@ When the dispatcher calls `dispatch_agent(agent, task)`:
    - `--tools` from the agent definition's frontmatter
    - `--append-system-prompt` pointing to the temp file containing the agent's `.md` body
    - `--model` from the agent's frontmatter `model` field if set, otherwise the dispatcher's current model
+   - `--skill <path>` for each skill listed in the agent's frontmatter `skills` field (resolved to `~/dot-pi/skills/<name>`). Only skills whose directories exist are passed.
    - `--session` pointing to `$WORKSPACE/sessions/<agent-name>_<N>.jsonl` (see **Session File Layout** below)
    - `--thinking off`
    - The `task` string as the user message
@@ -315,6 +369,7 @@ Orchestrator reviews summaries, dispatches next phase
 |----------|--------|---------|---------|
 | `AGENT_TEAM` | Shell alias / parent process | `session_start` | Selects which team to activate |
 | `AGENT_WORKSPACE` | Shell alias / parent process | `loadAgents()`, `before_agent_start` | Sets session dir and workspace path in system prompt |
+| `AGENT_WORKFLOW` | Headless scripts | `before_agent_start` | Auto-injects a named workflow's prompt into the system prompt |
 | `AGENT_ROLE` | Parent `dispatchAgent()` | `session_start`, `before_agent_start` | Controls tool restriction and prompt handling |
 | `AGENT_DISPATCHER` | Parent `dispatchAgent()` (for leads) | `dispatchAgent()` | Prefixes sub-agent session filenames to avoid collisions in three-tier dispatch |
 | `RETRO_TARGET` | `pretro` alias | `before_agent_start` | Workspace path for retro analysis (retro team only) |
@@ -382,7 +437,7 @@ Available templates:
 
 Templates use placeholder tokens like `[DATE]` and `[WORKSPACE]` that the dispatcher agent is expected to resolve from its system prompt context (the workspace path is injected by `agent-team-2.ts`, the date is usually mentioned in the task or system prompt).
 
-In the headless scripts (`newsroom-daily.sh`, `newsroom-weekly.sh`), these placeholders are replaced by shell variable expansion since the prompt is inlined directly.
+Headless scripts set `AGENT_WORKFLOW` to inject workflow prompts from `prompts/*.md` into the system prompt automatically. They pass a short user message with run-specific context (date, run ID) rather than inlining the full workflow prompt.
 
 ## Topic System
 

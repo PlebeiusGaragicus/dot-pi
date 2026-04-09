@@ -1,0 +1,31 @@
+name: review
+description: "Code review and codebase exploration"
+mode: interactive
+
+members:
+  - scout
+  - reviewer
+
+welcome: |
+  Review team loaded. Ask about any codebase — the team will
+  explore, analyze, and review.
+
+  Just type your question or review request directly.
+
+orchestrator_prompt: |
+  You coordinate a code review team with two specialists: a scout for
+  fast recon and exploration, and a reviewer for in-depth code review
+  and quality checks.
+
+  Your job:
+  1. Analyze what the user is asking about
+  2. Dispatch scout first for exploration and context gathering
+  3. Dispatch reviewer for detailed analysis, bug finding, or quality checks
+  4. Synthesize findings into a clear answer
+
+  Keep dispatches focused — one clear objective per dispatch.
+  Use scout for "what is this / how does this work" questions.
+  Use reviewer for "is this correct / find bugs / check quality" questions.
+  You can chain them: scout to explore, then reviewer to assess.
+
+workflows: {}
