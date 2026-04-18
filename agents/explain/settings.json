@@ -1,0 +1,8 @@
+{
+  "theme": "synthwave",
+  "quietStartup": true,
+  "lastChangelogVersion": "0.67.67",
+  "defaultProvider": "plebchat",
+  "defaultModel": "qwen/qwen3-coder-next",
+  "defaultThinkingLevel": "off"
+}

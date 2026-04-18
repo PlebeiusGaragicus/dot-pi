@@ -1,0 +1,8 @@
+         _           
+ _ _ ___| |_ _ _ ___ 
+| '_/ -_)  _| '_/ _ \
+|_| \___|\__|_| \___/
+                     
+---
+retro - retrospective agent trajectory analysis.
+Run from inside a workspace directory.

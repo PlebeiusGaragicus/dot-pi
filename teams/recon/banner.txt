@@ -1,0 +1,10 @@
+                     
+ _ _ ___ __ ___ _ _  
+| '_/ -_) _/ _ \ ' \ 
+|_| \___\__\___/_||_|
+                     
+---
+Reconnaissance & planning team for codebase exploration.
+
+Agents: recon-scout (fast exploration), recon-planner (deep analysis)
+Usage:  p recon "explore the auth module"

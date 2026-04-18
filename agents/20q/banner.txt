@@ -1,0 +1,9 @@
+ ___ __                     _   _             
+|_  )  \   __ _ _  _ ___ __| |_(_)___ _ _  ___
+ / / () | / _` | || / -_|_-<  _| / _ \ ' \(_-<
+/___\__/  \__, |\_,_\___/__/\__|_\___/_||_/__/
+             |_|                              
+---
+A game of 20 questions -- think of something and the agent will guess it.
+
+Say "I'm ready" to start the game.

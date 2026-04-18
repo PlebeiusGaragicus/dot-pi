@@ -1,0 +1,1 @@
+../../../shared/extensions/bash-guardrails.ts

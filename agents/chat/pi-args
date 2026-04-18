@@ -1,0 +1,6 @@
+# Chat only: no built-in tools, no skills, no slash templates
+--no-tools
+--no-skills
+--no-prompt-templates
+--tts-enable
+# IMPORTANT: must end with a newline (this comment also works) or last line will be ignored

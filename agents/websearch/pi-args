@@ -1,0 +1,3 @@
+# Optional default CLI flags for `p websearch` (read by bash_aliases). One flag per line.
+#
+# IMPORTANT: must end with a newline (this comment also works) or last line will be ignored

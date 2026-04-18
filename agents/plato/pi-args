@@ -1,0 +1,5 @@
+--no-tools
+--no-skills
+--no-prompt-templates
+--tts-enable
+# IMPORTANT: must end with a newline / comment

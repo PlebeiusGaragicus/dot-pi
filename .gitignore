@@ -1,0 +1,35 @@
+.DS_Store
+.env
+example-reports/
+
+# Runtime session data (each team gets its own sessions/ dir)
+teams/*/sessions/*
+!teams/*/sessions/.gitkeep
+
+# Auth tokens (may be symlinked across teams)
+teams/*/auth.json
+
+# Pi runtime state
+# teams/*/settings.json
+teams/*/.cache/
+
+# Standalone agent runtime data (mirrors team patterns)
+agents/*/sessions/*
+!agents/*/sessions/.gitkeep
+agents/*/auth.json
+# agents/*/settings.json
+agents/*/.cache/
+
+# Eval results (generated per-run, can be large)
+evals/results/
+
+# Workspace team output (research artifacts are ephemeral)
+workspaces/*/
+!workspaces/.gitkeep
+
+# Downloaded binaries (fd, rg) -- shared across teams via symlinks
+shared/bin/*
+!shared/bin/.gitkeep
+
+# Submodule build artifacts
+references/*

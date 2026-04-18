@@ -1,0 +1,9 @@
+ _        _ _   
+| |_ __ _| | |__
+|  _/ _` | | / /
+ \__\__,_|_|_\_\
+                
+---
+Chat-only agent. No tools, no skills — just conversation.
+
+Usage: p talk "your question"

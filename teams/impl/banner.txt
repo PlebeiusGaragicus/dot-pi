@@ -1,0 +1,10 @@
+ _            _ 
+(_)_ __  _ __| |
+| | '  \| '_ \ |
+|_|_|_|_| .__/_|
+        |_|     
+---
+Implementation & review team for writing and reviewing code.
+
+Agents: impl-worker (code generation), impl-reviewer (quality review)
+Usage:  p impl "implement the login feature"
