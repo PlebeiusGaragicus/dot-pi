@@ -1,6 +1,7 @@
 .DS_Store
 .env
 example-reports/
+exported-traces/
 
 # Runtime session data (each team gets its own sessions/ dir)
 teams/*/sessions/*

@@ -78,8 +78,16 @@ export default function plan(pi: ExtensionAPI): void {
 
 			if (!ctx.hasUI) {
 				exitToIdle(ctx);
+				const toolList = pi.getActiveTools().join(", ");
 				return {
-					content: [{ type: "text", text: "Plan auto-approved (non-interactive). Proceed with implementation." }],
+					content: [{
+						type: "text",
+						text: `Plan approved (non-interactive). PLAN MODE ENDED.
+
+Implementation mode is now active. Available tools: ${toolList}.
+
+Previous plan-mode constraints no longer apply. Begin implementing the plan you just submitted, starting with the first step. Use the tools above to make file changes and/or run commands with 'bash'.`,
+					}],
 				};
 			}
 
@@ -93,8 +101,16 @@ export default function plan(pi: ExtensionAPI): void {
 
 			if (choice === "Approve and implement") {
 				exitToIdle(ctx);
+				const toolList = pi.getActiveTools().join(", ");
 				return {
-					content: [{ type: "text", text: "Plan approved. Begin implementation now." }],
+					content: [{
+						type: "text",
+						text: `Plan approved. PLAN MODE ENDED.
+
+Implementation mode is now active. Available tools: ${toolList}.
+
+Previous plan-mode constraints no longer apply. Begin implementing the plan you just submitted, starting with the first step. Use the tools above to make file changes and/or run commands with 'bash'.`,
+					}],
 				};
 			}
 
@@ -137,14 +153,13 @@ export default function plan(pi: ExtensionAPI): void {
 				customType: "plan-context",
 				content: `PLAN MODE ACTIVE.
 
-Constraints:
-- Read-only tools only: read, grep, find, ls. write/edit/bash are blocked.
-- Do NOT write the plan as a chat reply. The plan body MUST be passed as the \`plan\` parameter to the ${PLAN_SUBMIT} tool. The user only sees what is inside that parameter, rendered as markdown.
-- Do not narrate "let me check" / "now I will" between tool calls.
+You are exploring before implementing. Use only the tools listed in your system prompt above.
 
-Each turn ends with EITHER:
-  (a) a question to the user (only for things the code cannot answer), OR
-  (b) a ${PLAN_SUBMIT} tool call.
+Workflow:
+- Read code to understand the task.
+- Do not write the plan as a chat reply. The plan body MUST be passed as the \`plan\` parameter to ${PLAN_SUBMIT}. The user only sees what is inside that parameter.
+- Do not narrate "let me check" between tool calls.
+- Each turn ends with EITHER a clarifying question (only for things the code cannot answer) OR a ${PLAN_SUBMIT} tool call.
 
 The \`plan\` parameter must be markdown with these sections:
   ## Context
@@ -153,7 +168,7 @@ The \`plan\` parameter must be markdown with these sections:
   ## Steps
   ## Verification
 
-When the user denies and provides feedback, revise the plan and call ${PLAN_SUBMIT} again. Do not rewrite from scratch unless asked.`,
+If the user denies and provides feedback, revise the plan and call ${PLAN_SUBMIT} again.`,
 				display: false,
 			},
 		};
