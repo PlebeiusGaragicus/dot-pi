@@ -96,7 +96,7 @@ No `agents/` subdirectory, no `team-prompt.md`. The main pi process IS the agent
 
 1. **`SYSTEM.md` / `APPEND_SYSTEM.md`** (pi-native): `SYSTEM.md` replaces pi's default system prompt entirely; `APPEND_SYSTEM.md` appends to it. No extension needed — pi discovers these from `PI_CODING_AGENT_DIR` at startup.
 2. **`pi-args`** (via `p` dispatcher): plain text file with default CLI flags (e.g. `--tools websearch`, `--no-tools`, `--no-skills`), one per line. The `p` function prepends these to the `pi` invocation. **End the file with a newline after the last flag** (or leave the scaffolded trailing comment line) so the last flag is not dropped; `bash_aliases` also defends against a missing final newline when reading this file.
-3. **`AGENT.md`** (optional, legacy): YAML frontmatter sets `tools` and/or `model`; body appended to the system prompt. Requires symlink: `ln -sf ../../../shared/extensions/agent-prompt.ts extensions/agent-prompt.ts` — the `agent-prompt` shared extension reads `AGENT.md`. New `setup.sh create-agent` scaffolds do not link this file by default.
+3. **`AGENT.md`** (optional, legacy): YAML frontmatter sets `tools` and/or `model`; body appended to the system prompt. Requires symlink: `ln -sf ../../../shared/extensions/agent-prompt extensions/agent-prompt` — the `agent-prompt` shared extension reads `AGENT.md`. New `setup.sh create-agent` scaffolds do not link this file by default.
 
 ## Key Concepts
 

@@ -1,1 +1,0 @@
-../../../references/pi-mono/packages/coding-agent/examples/extensions/questionnaire.ts

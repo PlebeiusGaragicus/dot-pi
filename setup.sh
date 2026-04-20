@@ -55,8 +55,8 @@ create_team() {
   # Symlink shared extensions into the team's extensions/ directory.
   # pi auto-discovers extensions from <agentDir>/extensions/.
   ln -sf "../../../shared/extensions/subagent-teams" "$team_dir/extensions/subagent-teams"
-  ln -sf "../../../shared/extensions/run-finish-notify.ts" "$team_dir/extensions/run-finish-notify.ts"
-  ln -sf "../../../shared/extensions/startup-branding.ts" "$team_dir/extensions/startup-branding.ts"
+  ln -sf "../../../shared/extensions/run-finish-notify" "$team_dir/extensions/run-finish-notify"
+  ln -sf "../../../shared/extensions/startup-branding" "$team_dir/extensions/startup-branding"
 
   # skills/ is created empty — add symlinks with: ./setup.sh link-skill <team-name> <skill>
   # pi auto-discovers skills from <agentDir>/skills/. Per-subagent control: frontmatter (skills, no-skills).
@@ -177,9 +177,9 @@ create_agent() {
   mkdir -p "$agent_dir/extensions/$agent_name" "$agent_dir/skills" "$agent_dir/sessions"
 
   # Symlink shared extensions (but NOT subagent-teams -- standalone agents don't need it).
-  ln -sf "../../../shared/extensions/run-finish-notify.ts" "$agent_dir/extensions/run-finish-notify.ts"
-  ln -sf "../../../shared/extensions/startup-branding.ts" "$agent_dir/extensions/startup-branding.ts"
-  ln -sf "../../../shared/extensions/say.ts" "$agent_dir/extensions/say.ts"
+  ln -sf "../../../shared/extensions/run-finish-notify" "$agent_dir/extensions/run-finish-notify"
+  ln -sf "../../../shared/extensions/startup-branding" "$agent_dir/extensions/startup-branding"
+  ln -sf "../../../shared/extensions/say" "$agent_dir/extensions/say"
 
   # Create a stub extension for the agent to customize
   cat > "$agent_dir/extensions/$agent_name/index.ts" <<'STUB'

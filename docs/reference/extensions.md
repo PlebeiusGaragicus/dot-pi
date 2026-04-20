@@ -286,7 +286,7 @@ Key patterns:
 
 A shared extension that hooks `agent_end` to send desktop notifications when the agent finishes. Demonstrates the `agent_end` hook with platform detection.
 
-Source: `shared/extensions/run-finish-notify.ts`
+Source: `shared/extensions/run-finish-notify/index.ts`
 
 Key patterns:
 

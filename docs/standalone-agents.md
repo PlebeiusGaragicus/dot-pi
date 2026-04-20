@@ -78,13 +78,13 @@ Available flags include `--tools <list>` (whitelist), `--no-tools` (disable all 
 
 **Optional: `AGENT.md` (via manually linked `agent-prompt` extension)**
 
-YAML frontmatter + markdown body, similar to `team-prompt.md` for teams. **`setup.sh create-agent` does not symlink `agent-prompt.ts`.** To use it:
+YAML frontmatter + markdown body, similar to `team-prompt.md` for teams. **`setup.sh create-agent` does not symlink `agent-prompt`.** To use it:
 
 ```bash
-ln -sf ../../../shared/extensions/agent-prompt.ts agents/<name>/extensions/agent-prompt.ts
+ln -sf ../../../shared/extensions/agent-prompt agents/<name>/extensions/agent-prompt
 ```
 
-Then add `AGENT.md` with frontmatter (`tools`, `model`) and a body. The `agent-prompt` extension (`shared/extensions/agent-prompt.ts`) applies tools/model on `session_start` and appends the body via `before_agent_start`.
+Then add `AGENT.md` with frontmatter (`tools`, `model`) and a body. The `agent-prompt` extension (`shared/extensions/agent-prompt/index.ts`) applies tools/model on `session_start` and appends the body via `before_agent_start`.
 
 **Combining:** `SYSTEM.md` sets the base prompt; with `AGENT.md` + `agent-prompt`, the body can append and frontmatter can restrict tools/model.
 
