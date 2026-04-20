@@ -1,0 +1,9 @@
+            _     
+ __ ___  __| |___ 
+/ _/ _ \/ _` / -_)
+\__\___/\__,_\___|
+                  
+---
+Agent: code
+
+Usage: use '/plan' to enter planning mode.
