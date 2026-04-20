@@ -1,5 +1,5 @@
 # Optional default CLI flags for `p <name>` (read by bash_aliases). One flag per line; # starts a comment.
 
---tools
-read,bash,edit,write,grep,find,ls
+# --tools
+# read,bash,edit,write,grep,find,ls
 # IMPORTANT: must end with a newline (this comment also works) or last line will be ignored
