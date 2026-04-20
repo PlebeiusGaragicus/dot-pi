@@ -15,10 +15,8 @@ const PLAN_SUBMIT = "plan_submit";
 const PLANNING_TOOLS = new Set(["read", "grep", "find", "ls", PLAN_SUBMIT]);
 const BLOCKED_TOOLS = new Set(["write", "edit", "bash"]);
 
-function notifySystem(title: string, body: string): void {
-	if (process.stdout.isTTY) {
-		process.stdout.write(`\x1b]777;notify;${title};${body}\x07`);
-	}
+function notifySystem(): void {
+	if (process.stdout.isTTY) process.stdout.write("\x07");
 }
 
 export default function plan(pi: ExtensionAPI): void {
@@ -80,13 +78,12 @@ export default function plan(pi: ExtensionAPI): void {
 
 			if (!ctx.hasUI) {
 				exitToIdle(ctx);
-				ctx.compact();
 				return {
-					content: [{ type: "text", text: "Plan auto-approved (non-interactive). Context compacted. Proceed with implementation." }],
+					content: [{ type: "text", text: "Plan auto-approved (non-interactive). Proceed with implementation." }],
 				};
 			}
 
-			notifySystem("Plan Review", "A plan is ready for your review");
+			notifySystem();
 
 			const choice = await ctx.ui.select("Plan Review", [
 				"Approve and implement",
@@ -96,9 +93,8 @@ export default function plan(pi: ExtensionAPI): void {
 
 			if (choice === "Approve and implement") {
 				exitToIdle(ctx);
-				ctx.compact();
 				return {
-					content: [{ type: "text", text: "Plan approved. Context compacted. Proceed with implementation." }],
+					content: [{ type: "text", text: "Plan approved. Begin implementation now." }],
 				};
 			}
 
