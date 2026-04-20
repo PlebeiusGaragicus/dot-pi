@@ -11,7 +11,10 @@
  *   before the full reply is generated. Bullet items, table rows, and paragraph breaks still get
  *   a gap between them because each is its own line in the source text.
  * - Manual: `/say` speaks the last assistant reply in the session; `/stop-speaking` halts it.
- * - Replaces URLs with "URL redacted"; strips Markdown `*` and `#` so `say` does not read them aloud.
+ * - Replaces URLs with "URL redacted"; strips Markdown `*`, `#`, blockquote `>` prefixes, and
+ *   Unicode box-drawing / tree characters so `say` does not read them aloud.
+ * - Fenced code blocks (```) are omitted from speech entirely; exception: ```txt and ```markdown
+ *   fences have their content spoken (fence lines themselves are always omitted).
  * - Only runs when `ctx.hasUI` (interactive TUI) on macOS.
  * - Speech rate: `say -r` (words per minute), see SAY_RATE_WPM.
  * - A new user prompt, `/stop-speaking`, `/tts-toggle off`, or pi exiting all cancel speech.
@@ -23,7 +26,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 const URL_REDACTED = "URL redacted";
 const MAX_CHARS = 32_000;
 /** Words per minute for `say -r` */
-const SAY_RATE_WPM = 220;
+const SAY_RATE_WPM = 320;
 
 /** In-memory; synced from `--tts-enable` on every session_start; `/tts-toggle` until next session_start */
 let autoTtsEnabled = false;
@@ -38,6 +41,8 @@ const speechQueue: string[] = [];
 
 /** Per-contentIndex buffers of streamed text not yet terminated by a newline */
 const pendingByIndex = new Map<number, string>();
+/** Per-contentIndex fence state for streaming code-block detection */
+const fenceModeByIndex = new Map<number, FenceMode>();
 /** Set when streaming has already produced at least one spoken line for the current
  *  turn so the `agent_end` fallback does not re-speak the whole reply. */
 let streamedThisTurn = false;
@@ -75,20 +80,67 @@ function stopSay(): void {
 function resetSpeechState(): void {
 	speechQueue.length = 0;
 	pendingByIndex.clear();
+	fenceModeByIndex.clear();
 	streamedThisTurn = false;
 	stopSay();
+}
+
+/** Matches an opening or closing ``` fence line. Group 1 captures the language token (if any). */
+const FENCE_OPEN_RE = /^\s*```(\S*)\s*$/;
+const FENCE_CLOSE_RE = /^\s*```\s*$/;
+const SPOKEN_FENCE_LANGS = new Set(["txt", "markdown"]);
+
+type FenceMode = "normal" | "skip" | "keep";
+
+const CODE_BLOCK_SKIPPED = "Code block skipped.";
+
+/** Classify a line against the current fence state and return the next state,
+ *  whether to emit, and an optional replacement line (e.g. "Code block skipped."). */
+function updateFenceState(mode: FenceMode, line: string): { next: FenceMode; emit: boolean; replace?: string } {
+	if (mode === "normal") {
+		const m = FENCE_OPEN_RE.exec(line);
+		if (m) {
+			const lang = (m[1] ?? "").toLowerCase();
+			if (SPOKEN_FENCE_LANGS.has(lang)) return { next: "keep", emit: false };
+			return { next: "skip", emit: true, replace: CODE_BLOCK_SKIPPED };
+		}
+		return { next: "normal", emit: true };
+	}
+	// Inside a fence (skip or keep): closing fence ends the block
+	if (FENCE_CLOSE_RE.test(line)) return { next: "normal", emit: false };
+	return { next: mode, emit: mode === "keep" };
+}
+
+/** Remove fenced code blocks from full text, preserving `txt` and `markdown` fence content. */
+function removeSkippedFencedCodeBlocks(text: string): string {
+	const lines = text.split("\n");
+	const out: string[] = [];
+	let mode: FenceMode = "normal";
+	for (const line of lines) {
+		const { next, emit, replace } = updateFenceState(mode, line);
+		mode = next;
+		if (emit) out.push(replace ?? line);
+	}
+	return out.join("\n");
 }
 
 /** http(s) URLs and bare www.… tokens */
 function redactUrlsForSpeech(text: string): string {
 	let s = text.replace(/https?:\/\/\S+/gi, URL_REDACTED);
 	s = s.replace(/\bwww\.\S+/gi, URL_REDACTED);
-	return s.replace(/\s+/g, " ").trim();
+	return s.replace(/[^\S\n]+/g, " ").trim();
 }
 
-/** Remove common Markdown markers the speech synthesizer would speak literally */
+/** Remove Markdown markers, blockquote prefixes, and box-drawing chars the synthesizer would speak */
 function stripMarkdownForSpeech(text: string): string {
-	return text.replace(/[*#]/g, "").replace(/\s+/g, " ").trim();
+	let s = text;
+	// Strip blockquote `>` prefixes (supports nested `> > `)
+	s = s.replace(/^(?:>\s*)+/gm, "");
+	// Strip box-drawing (U+2500–U+257F) and block-element (U+2580–U+259F) characters
+	s = s.replace(/[\u2500-\u257F\u2580-\u259F]/g, "");
+	// Strip Markdown emphasis/heading markers
+	s = s.replace(/[*#]/g, "");
+	return s.replace(/[^\S\n]+/g, " ").trim();
 }
 
 type ContentPart = { type: string; text?: string };
@@ -103,7 +155,7 @@ function assistantToSpeechText(msg: Record<string, unknown>): string | null {
 	for (const part of msg.content as ContentPart[]) {
 		if (part.type === "text" && typeof part.text === "string") chunks.push(part.text);
 	}
-	const raw = chunks.join("");
+	const raw = removeSkippedFencedCodeBlocks(chunks.join(""));
 	const cleaned = stripMarkdownForSpeech(redactUrlsForSpeech(raw));
 	if (cleaned.length === 0) return null;
 	return cleaned.length > MAX_CHARS ? cleaned.slice(0, MAX_CHARS) : cleaned;
@@ -232,11 +284,12 @@ function prewarmNext(): void {
 	child.on("error", clearIfSelf);
 }
 
+/** Called when a `say` child exits. Always drains the queue — items were enqueued
+ *  intentionally (by streaming or `/say`) and must play out. The `autoTtsEnabled`
+ *  gate is enforced at *enqueue* time (`enqueueSpeech`), not at dequeue time, so
+ *  `/say` works even when auto TTS is off and toggling TTS off mid-stream still
+ *  works because `resetSpeechState` clears the queue explicitly. */
 function onSayFinished(): void {
-	if (process.platform !== "darwin" || !autoTtsEnabled) {
-		speechQueue.length = 0;
-		return;
-	}
 	const next = speechQueue.shift();
 	if (next === undefined) return;
 	startSpeaking(next);
@@ -327,12 +380,17 @@ export default function (pi: ExtensionAPI) {
 			const { lines, rest } = extractLines(prev + e.delta);
 			pendingByIndex.set(e.contentIndex, rest);
 			for (const line of lines) {
-				if (enqueueSpeech(line)) streamedThisTurn = true;
+				const mode = fenceModeByIndex.get(e.contentIndex) ?? "normal";
+				const { next, emit, replace } = updateFenceState(mode, line);
+				fenceModeByIndex.set(e.contentIndex, next);
+				if (emit && enqueueSpeech(replace ?? line)) streamedThisTurn = true;
 			}
 		} else if (e.type === "text_end") {
 			const tail = pendingByIndex.get(e.contentIndex) ?? "";
+			const mode = fenceModeByIndex.get(e.contentIndex) ?? "normal";
 			pendingByIndex.delete(e.contentIndex);
-			if (tail.trim() && enqueueSpeech(tail)) streamedThisTurn = true;
+			fenceModeByIndex.delete(e.contentIndex);
+			if (tail.trim() && mode !== "skip" && enqueueSpeech(tail)) streamedThisTurn = true;
 		}
 	});
 
@@ -344,8 +402,10 @@ export default function (pi: ExtensionAPI) {
 			return;
 		}
 		for (const [idx, tail] of pendingByIndex) {
-			if (tail.trim() && enqueueSpeech(tail)) streamedThisTurn = true;
+			const mode = fenceModeByIndex.get(idx) ?? "normal";
+			if (tail.trim() && mode !== "skip" && enqueueSpeech(tail)) streamedThisTurn = true;
 			pendingByIndex.delete(idx);
+			fenceModeByIndex.delete(idx);
 		}
 	});
 
@@ -407,16 +467,13 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 
-			// Manual replay: stop anything in flight, then enqueue. Temporarily flip auto
-			// TTS on so enqueueSpeech will actually start `say`.
+			// Manual replay: stop anything in flight, then enqueue. Temporarily enable
+			// autoTtsEnabled so enqueueSpeech accepts the text (it gates on this flag).
+			// We leave it enabled — onSayFinished drains the queue regardless, and the
+			// next session_start or /tts-toggle will reset it to the CLI default.
 			resetSpeechState();
-			const wasEnabled = autoTtsEnabled;
 			autoTtsEnabled = true;
-			try {
-				speakBlock(text);
-			} finally {
-				autoTtsEnabled = wasEnabled;
-			}
+			speakBlock(text);
 		},
 	});
 
