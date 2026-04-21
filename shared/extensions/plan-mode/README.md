@@ -4,11 +4,11 @@ Read-only exploration mode for safe code analysis.
 
 ## Features
 
-- **Read-only tools**: Restricts available tools to read, bash, grep, find, ls, question
+- **Read-only tools**: Restricts available tools to read, bash, grep, find, ls, questionnaire
 - **Bash allowlist**: Only read-only bash commands are allowed
 - **Plan extraction**: Extracts numbered steps from `Plan:` sections
 - **Progress tracking**: Widget shows completion status during execution
-- **[DONE:n] markers**: Explicit step completion tracking
+- **`todo` tool**: Claude-Code-compatible tool the agent calls to mark progress
 - **Session persistence**: State survives session resume
 
 ## Commands
@@ -31,8 +31,8 @@ Plan:
 ```
 
 4. Choose "Execute the plan" when prompted
-5. During execution, the agent marks steps complete with `[DONE:n]` tags
-6. Progress widget shows completion status
+5. During execution, the agent calls the `todo` tool with the full updated list
+   after each completed step; the progress widget reflects the latest call
 
 ## How It Works
 
@@ -42,10 +42,14 @@ Plan:
 - Agent creates a plan without making changes
 
 ### Execution Mode
-- Full tool access restored
+- Full tool access restored, plus the `todo` tool
 - Agent executes steps in order
-- `[DONE:n]` markers track completion
-- Widget shows progress
+- After each step, the agent calls `todo` with the full updated list:
+  `{ todos: [{ content, id: "<step number>", status: "pending" | "in_progress" | "completed" }, ...] }`
+- The extension matches each item back to a plan step by `id` (or array
+  position as a fallback), marks completed items, and redraws the widget
+- When all items are `completed`, the extension prints "Plan Complete!" and
+  returns to normal interactive mode
 
 ### Command Allowlist
 

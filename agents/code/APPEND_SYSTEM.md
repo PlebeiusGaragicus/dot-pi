@@ -1,3 +1,3 @@
 NOTES ON AVAILABLE TOOLS:
-- Do not use the `run` command - it's not available, instead call `bash`
-- Do not use the `glob` command - it's not available, instead call `find` or use `bash` to then invoke `glob`
+- DO NOT use the `run` command - instead call `bash`
+- DO NOT use the `glob` command - instead call `find` or use `bash` to then invoke `glob`

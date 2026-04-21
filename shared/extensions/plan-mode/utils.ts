@@ -149,20 +149,45 @@ export function extractTodoItems(message: string): TodoItem[] {
 	return items;
 }
 
-export function extractDoneSteps(message: string): number[] {
-	const steps: number[] = [];
-	for (const match of message.matchAll(/\[DONE:(\d+)\]/gi)) {
-		const step = Number(match[1]);
-		if (Number.isFinite(step)) steps.push(step);
-	}
-	return steps;
+export interface IncomingTodo {
+	content: string;
+	id?: string | number;
+	status: string;
 }
 
-export function markCompletedSteps(text: string, items: TodoItem[]): number {
-	const doneSteps = extractDoneSteps(text);
-	for (const step of doneSteps) {
+function isCompletedStatus(status: string): boolean {
+	const s = status.trim().toLowerCase();
+	return s === "completed" || s === "complete" || s === "done";
+}
+
+/**
+ * Apply an incoming todo list (from the `todo` tool) to our internal items.
+ *
+ * Matching strategy:
+ *   1. If `id` parses as a finite integer, use it as the 1-based step number.
+ *   2. Otherwise, fall back to the incoming array position (index + 1).
+ *   3. Items beyond our known step count are silently ignored — the agent
+ *      cannot add new steps mid-execution.
+ *
+ * Returns the number of items that transitioned from incomplete to complete.
+ */
+export function applyTodoUpdate(incoming: IncomingTodo[], items: TodoItem[]): number {
+	let newlyCompleted = 0;
+	incoming.forEach((todo, index) => {
+		if (!isCompletedStatus(todo.status)) return;
+
+		let step: number | undefined;
+		if (todo.id !== undefined && todo.id !== null) {
+			const parsed = typeof todo.id === "number" ? todo.id : Number.parseInt(String(todo.id), 10);
+			if (Number.isFinite(parsed)) step = parsed;
+		}
+		if (step === undefined) step = index + 1;
+
 		const item = items.find((t) => t.step === step);
-		if (item) item.completed = true;
-	}
-	return doneSteps.length;
+		if (item && !item.completed) {
+			item.completed = true;
+			newlyCompleted++;
+		}
+	});
+	return newlyCompleted;
 }

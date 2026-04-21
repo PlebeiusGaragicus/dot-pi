@@ -23,7 +23,6 @@ interface Question {
 	label: string;
 	prompt: string;
 	options: QuestionOption[];
-	allowOther: boolean;
 }
 
 interface Answer {
@@ -56,12 +55,15 @@ const QuestionSchema = Type.Object({
 	),
 	prompt: Type.String({ description: "The full question text to display" }),
 	options: Type.Array(QuestionOptionSchema, { description: "Available options to choose from" }),
-	allowOther: Type.Optional(Type.Boolean({ description: "Allow 'Type something' option (default: true)" })),
 });
 
 const QuestionnaireParams = Type.Object({
 	questions: Type.Array(QuestionSchema, { description: "Questions to ask the user" }),
 });
+
+function notifySystem(): void {
+	if (process.stdout.isTTY) process.stdout.write("\x07");
+}
 
 function errorResult(
 	message: string,
@@ -93,11 +95,12 @@ export default function questionnaire(pi: ExtensionAPI) {
 			const questions: Question[] = params.questions.map((q, i) => ({
 				...q,
 				label: q.label || `Q${i + 1}`,
-				allowOther: q.allowOther !== false,
 			}));
 
 			const isMulti = questions.length > 1;
 			const totalTabs = questions.length + 1; // questions + Submit
+
+			notifySystem();
 
 			const result = await ctx.ui.custom<QuestionnaireResult>((tui, theme, _kb, done) => {
 				// State
@@ -108,7 +111,7 @@ export default function questionnaire(pi: ExtensionAPI) {
 				let cachedLines: string[] | undefined;
 				const answers = new Map<string, Answer>();
 
-				// Editor for "Type something" option
+				// Editor for "Type your own response" option
 				const editorTheme: EditorTheme = {
 					borderColor: (s) => theme.fg("accent", s),
 					selectList: {
@@ -139,9 +142,7 @@ export default function questionnaire(pi: ExtensionAPI) {
 					const q = currentQuestion();
 					if (!q) return [];
 					const opts: RenderOption[] = [...q.options];
-					if (q.allowOther) {
-						opts.push({ value: "__other__", label: "Type something.", isOther: true });
-					}
+					opts.push({ value: "__other__", label: "Type your own response", isOther: true });
 					return opts;
 				}
 
@@ -299,7 +300,7 @@ export default function questionnaire(pi: ExtensionAPI) {
 							const isOther = opt.isOther === true;
 							const prefix = selected ? theme.fg("accent", "> ") : "  ";
 							const color = selected ? "accent" : "text";
-							// Mark "Type something" differently when in input mode
+							// Mark "Type your own response" differently when in input mode
 							if (isOther && inputMode) {
 								add(prefix + theme.fg("accent", `${i + 1}. ${opt.label} ✎`));
 							} else {

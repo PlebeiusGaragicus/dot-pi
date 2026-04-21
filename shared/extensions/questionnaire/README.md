@@ -21,7 +21,6 @@ Registers a `questionnaire` tool that lets the agent ask the user one or more mu
       label: string;       // option display label
       description?: string;// optional sub-line shown below label
     }>;
-    allowOther?: boolean;// allow a free-text "Type something" option (default: true)
   }>;
 }
 ```
@@ -35,7 +34,7 @@ Registers a `questionnaire` tool that lets the agent ask the user one or more mu
     id: string;
     value: string;
     label: string;
-    wasCustom: boolean;   // true if entered via "Type something"
+    wasCustom: boolean;   // true if entered via "Type your own response"
     index?: number;       // option index, when chosen from the list
   }>;
   cancelled: boolean;
@@ -48,8 +47,9 @@ If the agent runs without a UI (`!ctx.hasUI`) or with an empty `questions` array
 
 - Single question: arrow keys to choose, Enter to submit.
 - Multi question: the tab bar at the top shows each question's `label` plus a final Submit tab. Answering advances to the next tab; the Submit tab finalizes.
-- `allowOther: true` adds a "Type something." option that switches into an inline `Editor` for free-text input.
+- Every question always includes a built-in "Type your own response" option that switches into an inline `Editor` for free-text input. This is enforced by the tool and cannot be disabled by the agent.
 - The result is cached per tab via `refresh()`; tab navigation does not re-prompt.
+- When the prompt opens, a terminal bell (`\x07`) is written to stdout (TTY only) so the user is alerted that input is needed. This mirrors the bell used by the [`plan`](../plan/README.md) extension on `plan_submit`.
 
 ## Usage by Other Extensions
 
