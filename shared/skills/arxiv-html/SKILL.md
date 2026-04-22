@@ -1,6 +1,8 @@
 ---
-description: Fetch arXiv papers via arxiv.org for review
+name: arxiv-fetch
+description: "Fetch arXiv papers via arxiv.org for review"
 argument-hint: "<URL or paper-id>"
+disable-model-invocation: false
 ---
 
 ## Step 1 - fetch arXiv paper
