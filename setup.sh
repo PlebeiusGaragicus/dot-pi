@@ -52,6 +52,9 @@ create_team() {
   echo "Creating team '$team_name'..."
   mkdir -p "$team_dir/extensions" "$team_dir/agents" "$team_dir/prompts" "$team_dir/skills" "$team_dir/sessions"
 
+  # Symlink shared prompts (e.g. help.md) into the team's prompts/ directory.
+  ln -sf "../../../shared/prompts/help.md" "$team_dir/prompts/help.md"
+
   # Symlink shared extensions into the team's extensions/ directory.
   # pi auto-discovers extensions from <agentDir>/extensions/.
   ln -sf "../../../shared/extensions/subagent-teams" "$team_dir/extensions/subagent-teams"
@@ -174,7 +177,10 @@ create_agent() {
   fi
 
   echo "Creating standalone agent '$agent_name'..."
-  mkdir -p "$agent_dir/extensions/$agent_name" "$agent_dir/skills" "$agent_dir/sessions"
+  mkdir -p "$agent_dir/extensions/$agent_name" "$agent_dir/skills" "$agent_dir/sessions" "$agent_dir/prompts"
+
+  # Symlink shared prompts (e.g. help.md) into the agent's prompts/ directory.
+  ln -sf "../../../shared/prompts/help.md" "$agent_dir/prompts/help.md"
 
   # Symlink shared extensions (but NOT subagent-teams -- standalone agents don't need it).
   ln -sf "../../../shared/extensions/run-finish-notify" "$agent_dir/extensions/run-finish-notify"
@@ -251,7 +257,8 @@ WSCONF
   echo "Directory layout:"
   echo "  $agent_dir/"
   echo "    extensions/              ($agent_name/, run-finish-notify, startup-branding, say.ts)"
-  echo "    skills/                  (empty — use ./setup.sh link-skill $agent_name <skill>)"
+    echo "    skills/                  (empty — use ./setup.sh link-skill $agent_name <skill>)"
+  echo "    prompts/                 (shared help.md symlinked; add agent-specific prompts here)"
   echo "    themes/                  (individual themes symlinked from shared)"
   echo "    bin/                     (symlinked to shared/bin, gitignored contents)"
   echo "    sessions/                (runtime session data, gitignored)"

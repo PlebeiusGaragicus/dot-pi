@@ -1,0 +1,7 @@
+# Default CLI flags for `p papers` (read by bash_aliases). One flag per line; # starts a comment.
+#
+# Tool surface: bash for curl/pandoc/lynx (per the arxiv-html skill), plus
+# read/write so the agent can cache and re-read fetched HTML in /tmp.
+--tools
+bash,read,write
+# IMPORTANT: must end with a newline (this comment also works) or last line will be ignored
