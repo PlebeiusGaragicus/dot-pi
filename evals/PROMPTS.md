@@ -1,6 +1,6 @@
 # TEST PROMPTS
 
-## `code` agent
+## `coder` agent
 
 ```txt
 review this repo to determine next steps for its implementation

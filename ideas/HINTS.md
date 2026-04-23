@@ -1,28 +1,28 @@
-# p command
+# Commands
 
-`p` is the unified entry point for all teams and standalone agents. Run `p` with no arguments to print a table of names with `kind` (team vs agent) and `mode` (workspace vs in-situ).
+Each team and standalone agent is available as a direct command on PATH (via symlinks in `bin/` pointing to `dispatch-agent`). Run `dotpi list` to see all available commands.
 
 ```sh
 # interactive (tty)
-p recon
-p deepresearch
+recon
+deepresearch
 
 # non-interactive with -p flag (batch mode)
-p recon -p "map the auth flow"
-p deepresearch -p "creatine cognitive effects"
+recon -p "map the auth flow"
+deepresearch -p "creatine cognitive effects"
 
 # pipe stdin as prompt (batch mode)
-echo "explain the caching layer" | p recon
+echo "explain the caching layer" | recon
 
 # batch mode output: progress on stderr, final text on stdout
-p deepresearch -p "WebTransport protocol" > report.md      # progress visible, report saved
-p deepresearch -p "WebTransport protocol" 2>/dev/null       # silent, stdout only
-p recon -p "map the auth flow" > /dev/null                  # progress only, discard result
+deepresearch -p "WebTransport protocol" > report.md      # progress visible, report saved
+deepresearch -p "WebTransport protocol" 2>/dev/null       # silent, stdout only
+recon -p "map the auth flow" > /dev/null                  # progress only, discard result
 
 # workspace management (workspace teams only)
-p deepresearch --list
-p deepresearch --resume
-p deepresearch --resume 2026-04-10
+deepresearch --list
+deepresearch --resume
+deepresearch --resume 2026-04-10
 ```
 
 ---

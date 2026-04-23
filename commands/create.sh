@@ -39,8 +39,23 @@ ln -sf "../../shared/models.json" "$team_dir/models.json"
 
 ln -sf "../../shared/settings.json" "$team_dir/settings.json"
 
+cat > "$team_dir/README.md" <<README
+# $team_name
+
+$team_name agent team. Edit this file to describe what this team does.
+
+## Usage
+
+\`\`\`
+$team_name "your task"         # new session
+$team_name --list              # list past workspaces (if workspace team)
+$team_name --resume            # resume latest workspace
+$team_name -h                  # show this help
+\`\`\`
+README
+
 cat > "$team_dir/pi-args" <<'PIARGS'
-# Optional default CLI flags for `p <name>` (read by bash_aliases). One flag per line; # starts a comment.
+# Default CLI flags (read by dispatch-agent). One flag per line; # starts a comment.
 #
 # IMPORTANT: must end with a newline (this comment also works) or last line will be ignored
 PIARGS
@@ -104,8 +119,10 @@ echo "  2. Add prompt templates to $team_dir/prompts/"
 if [ "$workspace" = true ]; then
   echo "  3. Link skills as needed: dotpi link-skill $team_name <skill>"
   echo "  4. Edit workspace.conf to list subdirectories for each run"
-  echo "  5. Source bash_aliases and invoke: p $team_name \"your task\""
+  echo "  5. Run: $team_name \"your task\""
 else
   echo "  3. Link skills as needed: dotpi link-skill $team_name <skill>"
-  echo "  4. Source bash_aliases and invoke: p $team_name \"your task\""
+  echo "  4. Run: $team_name \"your task\""
 fi
+
+source "$COMMANDS_DIR/sync.sh"

@@ -1,10 +1,10 @@
-I want to consider @unix-abstraction.md philosophy and using `p` agents like unix utilities / "filters"
+I want to consider @unix-abstraction.md philosophy and using agents like unix utilities / "filters"
 
 For example: let's say we transform our deepresearch agent team into a series of individual unix-like primitives. So, instead of calling an agent team I string together a series of individual agents with `|` wherein I may call:
 
 ```sh
 # Sketch (see “what data moves across the pipe?” for a runnable layout with PIPE_RUN_DIR)
-echo "…research question…" | p research | p collector | p summarize | p draft-report | p final-report -p "$(cat ~/templates/research-template.md)"
+echo "…research question…" | research | collector | summarize | draft-report | final-report -p "$(cat ~/templates/research-template.md)"
 ```
 
 Similar to a unix utility each takes input (whether prompt, URL list, file list, etc.), makes side effects to tmp/artifact files, and generates output that the next stage can consume.
@@ -19,14 +19,14 @@ export PIPE_RUN_DIR="${TMPDIR:-/tmp}/dot-pi-pipe-$RUN_ID"
 mkdir -p "$PIPE_RUN_DIR" && cd "$PIPE_RUN_DIR" || exit 1
 
 echo "daily creatine usage for healthy 30 year old male, health benefits and latest trends in health" \
-  | p research \
-  | p collector \
-  | p summarize \
-  | p draft-report \
-  | p final-report "$(cat ~/templates/research-template.md)" > report.md
+  | research \
+  | collector \
+  | summarize \
+  | draft-report \
+  | final-report "$(cat ~/templates/research-template.md)" > report.md
 ```
 
-`p research`
+`research`
 
 **usage:** return a list of websites which are likely to assist with the provided research question
 
@@ -34,7 +34,7 @@ echo "daily creatine usage for healthy 30 year old male, health benefits and lat
  - **side effects:** none
  - **output:** json list of sources, metadata, content snippet
 
-`p collector`
+`collector`
 
 **usage:** scrapes list of urls to tmp directory
 
@@ -42,7 +42,7 @@ echo "daily creatine usage for healthy 30 year old male, health benefits and lat
  - **side effects:** /tmp/$RUN_ID/*.md
  - **output:** file paths of each scraped file
 
-`p summarize`
+`summarize`
 
 **usage:** produce a structured digest of everything the collector wrote—abstractive overview plus extractive quotes tied to source paths.
 
@@ -50,15 +50,15 @@ echo "daily creatine usage for healthy 30 year old male, health benefits and lat
 - **side effects:** `summaries/*.md` or a single `summary.md` under the run directory
 - **output:** stdout text the next stage can treat as the canonical “research brief” (headings, bullet facts, quoted excerpts with citations)
 
-`p draft-report`
+`draft-report`
 
 **usage:** turn the brief into a long-form draft in a fixed house style (sections, transitions, open questions).
 
-- **input:** stdin = summary / brief from `p summarize` (or a path pointer if the brief is only on disk)
+- **input:** stdin = summary / brief from `summarize` (or a path pointer if the brief is only on disk)
 - **side effects:** `draft.md` (and optionally `draft-meta.json` with outline or TODOs)
 - **output:** stdout = short confirmation plus path hints, or the full draft on stdout if you standardize “body on stdout” for the next filter—pick one convention per pipeline and stick to it
 
-`p final-report`
+`final-report`
 
 **usage:** apply a template (structure, required sections, tone) and emit the publishable artifact.
 
@@ -70,12 +70,12 @@ echo "daily creatine usage for healthy 30 year old male, health benefits and lat
 
 ## shell-level contract (same spirit as `unix-abstraction.md`)
 
-Each `p <name>` invocation in **batch** mode should behave like a filter:
+Each agent invocation in **batch** mode should behave like a filter:
 
 | Stream | Role |
 |--------|------|
 | **stdin** | Task text, JSON, or file-list—whatever the previous stage promised |
-| **stdout** | Machine- or human-readable **primary** handoff to the next `|` (final assistant message after JSON filtering in `p`) |
+| **stdout** | Machine- or human-readable **primary** handoff to the next `|` (final assistant message after JSON filtering) |
 | **stderr** | Progress, tool chatter, warnings—must stay off stdout so pipes stay clean |
 | **exit code** | `0` = success; non-zero should stop `&&` chains |
 | **cwd / env** | Shared run directory so side effects are visible to later stages without passing megabytes on stdin |
@@ -91,14 +91,14 @@ Unix already solves “heavy data on disk, light data on the pipe”: `gcc` leav
 
 ## corrected “dream” one-liner (syntax)
 
-The original sketch mixed a pipe with `p final-report < template`, which ties stdin to the file and **breaks** the pipe into `final-report`. Prefer one of:
+The original sketch mixed a pipe with `final-report < template`, which ties stdin to the file and **breaks** the pipe into `final-report`. Prefer one of:
 
 ```sh
 # Template as argv / -p (template path or inlined)
-... | p final-report -p "$(cat ~/templates/research-template.md)"
+... | final-report -p "$(cat ~/templates/research-template.md)"
 
 # Or process substitution if the shell supports it
-... | p final-report -p "$(< ~/templates/research-template.md)"
+... | final-report -p "$(< ~/templates/research-template.md)"
 ```
 
 If `final-report` must read the draft from stdin, pass the template via `-p` or a second flag, **not** via `< file` on the same command in a pipeline.
@@ -107,10 +107,10 @@ If `final-report` must read the draft from stdin, pass the template via `-p` or 
 
 ## stages vs. one team
 
-| Piped `p` stages | Single team + subagent chain |
+| Piped agent stages | Single team + subagent chain |
 |------------------|------------------------------|
 | Each stage is a separate pi process—slower, more tokens if context is re-explained | One orchestrator, shared session, `{previous}` as the pipe |
-| Stages are reusable CLIs: swap `p summarize` (or another summarizer agent) and test in isolation | Tighter coupling; best when steps are not useful alone |
+| Stages are reusable CLIs: swap `summarize` (or another summarizer agent) and test in isolation | Tighter coupling; best when steps are not useful alone |
 | Contract is **explicit** (stdout + files); easier to script in bash, `make`, CI | Contract is implicit in team prompts and tool use |
 
 Use **pipes** when each primitive should stand alone like `grep`/`sort`. Use a **team** when you want one brain scheduling work and recovering from failures across steps.
@@ -122,7 +122,7 @@ Use **pipes** when each primitive should stand alone like `grep`/`sort`. Use a *
 1. **Manifest format** – e.g. JSON lines vs. one JSON object for URL lists, file paths, and scrape metadata so `collector` → `summarize` is unambiguous.
 2. **Stdout vs. file for long artifacts** – for `draft-report` / `final-report`, either “body always in `draft.md` and stdout is one paragraph status” or “body on stdout for true filters”—mixing both without a rule will confuse scripts.
 3. **Workspace** – today, workspace mode is tied to `workspace.conf` on the agent. For pipes, either run **in-situ** with a shared `PIPE_RUN_DIR` or evolve toward “caller picks output dir” as described in `unix-abstraction.md`.
-4. **Idempotency** – whether re-running `p collector` overwrites `scraped/` or creates versioned subdirs (helps debugging failed pipelines).
+4. **Idempotency** – whether re-running `collector` overwrites `scraped/` or creates versioned subdirs (helps debugging failed pipelines).
 
 ---
 

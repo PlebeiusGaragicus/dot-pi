@@ -14,7 +14,7 @@ pi resolves its config root via `getAgentDir()` in the coding-agent package. Thi
 - `models.json` -- custom model providers
 - `auth.json` -- API authentication
 - `team-prompt.md` -- orchestrator config and system prompt (YAML frontmatter parsed by the subagent-teams extension for name, description, tools, model; body appended to system prompt)
-- `workspace.conf` -- workspace subdirectory list (triggers workspace mode in bash_aliases)
+- `workspace.conf` -- workspace subdirectory list (triggers workspace mode in dispatch-agent)
 
 This is the mechanism dot-pi exploits for both team isolation and standalone agent configurations.
 
@@ -24,8 +24,8 @@ This is the mechanism dot-pi exploits for both team isolation and standalone age
 dot-pi/
 ├── dotpi                     # CLI: setup, create, create-agent, list, link-skill, link-auth
 ├── commands/                 # Subcommand scripts (sourced by dotpi)
-├── bash_aliases              # Shell functions (source in .zshrc/.bashrc)
-├── .env.example              # API key template
+├── env.sh                    # Shell environment (source in .zshrc/.bashrc)
+├── dispatch-agent            # Symlink target in bin/ (dispatches commands to teams/agents)
 ├── AGENTS.md                 # LLM-readable project guide
 ├── shared/                   # Reusable resources (never loaded directly)
 │   ├── extensions/           # Shared extension source code
@@ -66,8 +66,8 @@ dot-pi/
 
 ```mermaid
 graph TD
-  User["User runs: p recon 'find auth code'"]
-  Alias["p sets<br/>PI_CODING_AGENT_DIR=~/dot-pi/teams/recon"]
+  User["User runs: recon 'find auth code'"]
+  Alias["dispatch-agent sets<br/>PI_CODING_AGENT_DIR=~/dot-pi/teams/recon"]
   PiMain["pi process starts"]
   ExtLoad["Loads extensions from<br/>teams/recon/extensions/"]
   AgentDiscover["Discovers agents from<br/>teams/recon/agents/"]
@@ -86,8 +86,8 @@ graph TD
 
 ```mermaid
 graph TD
-  WUser["User runs: p deepresearch 'topic'"]
-  WAlias["p calls<br/>_dotmi_workspace_launch"]
+  WUser["User runs: deepresearch 'topic'"]
+  WAlias["dispatch-agent calls<br/>workspace launch logic"]
   WDir["Creates dated workspace<br/>workspaces/deepresearch/timestamp/"]
   WPi["pi starts"]
   WFrontmatter["subagent-teams extension parses<br/>team-prompt.md frontmatter<br/>(sets tools, model, header)"]
@@ -104,8 +104,8 @@ graph TD
 
 ```mermaid
 graph TD
-  SUser["User runs: p talk or p websearch ..."]
-  SAlias["p reads pi-args, sets<br/>PI_CODING_AGENT_DIR=~/dot-pi/agents/name"]
+  SUser["User runs: lm or web ..."]
+  SAlias["dispatch-agent reads pi-args, sets<br/>PI_CODING_AGENT_DIR=~/dot-pi/agents/name"]
   SPiMain["pi process starts<br/>discovers SYSTEM.md / APPEND_SYSTEM.md"]
   SExtLoad["Loads extensions<br/>(optional agent-prompt + AGENT.md)"]
   SHook["Extensions may hook session_start /<br/>before_agent_start"]

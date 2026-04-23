@@ -65,13 +65,13 @@ The output report has these sections:
 
 ## Usage
 
-### Interactive (`p retro`)
+### Interactive (`retro`)
 
-The retro team runs in-situ. `cd` into the workspace directory to analyze, then run `p retro`:
+The retro team runs in-situ. `cd` into the workspace directory to analyze, then run `retro`:
 
 ```bash
 cd workspaces/deepresearch/2026-04-12-150258
-p retro
+retro
 ```
 
 The orchestrator treats the current directory as the workspace. It finds session files, dispatches analysis, and writes `retrospective-report.md` in the current directory.
@@ -116,10 +116,10 @@ The retro report is designed to be concise and structured -- ideal input for a p
 cd workspaces/deepresearch/2026-04-12-150258
 
 # Step 1: Run retro (free, on open-source model)
-p retro
+retro
 
 # Step 2: Feed the report to a frontier model for actionable recommendations
-p recon "Read retrospective-report.md and suggest specific fixes for each issue found"
+recon "Read retrospective-report.md and suggest specific fixes for each issue found"
 ```
 
 ## Configuration

@@ -19,6 +19,7 @@ Commands:
   list                                     List existing teams and standalone agents
   link-skill <team-or-agent> <skill> [...] Symlink one or more shared skills into a team or agent
   link-auth <src> <dst>                    Symlink auth.json from one team/agent (or path) into another
+  sync                                     Rebuild bin/ symlinks from agents/ and teams/
 
 Options:
   --workspace   Mark as a workspace agent/team. Creates a workspace.conf file so the
@@ -51,6 +52,7 @@ case "$cmd" in
   list)         source "$COMMANDS_DIR/list.sh" "$@" ;;
   link-skill)   source "$COMMANDS_DIR/link-skill.sh" "$@" ;;
   link-auth)    source "$COMMANDS_DIR/link-auth.sh" "$@" ;;
+  sync)         source "$COMMANDS_DIR/sync.sh" "$@" ;;
   --help|-h)    usage ;;
   *)            echo "Error: unknown command '$cmd'"; usage ;;
 esac

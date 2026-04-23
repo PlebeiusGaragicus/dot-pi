@@ -18,12 +18,12 @@ The paradigms differ in **where the control flow lives**:
 |---|---|---|
 | Control flow lives in | A shell script (or Make, Python, etc.) | A prompt (`team-prompt.md`) |
 | Who executes it | `bash` / `sh` | The orchestrator LLM |
-| When decisions happen | Write time, with a few runtime `p judge` escape hatches | Every token, the LLM re-decides |
-| Work happens in | `p research`, `p scrape`, `p summarize`, `p judge`, … | Subagent tool calls dispatched from the orchestrator |
+| When decisions happen | Write time, with a few runtime `judge` escape hatches | Every token, the LLM re-decides |
+| Work happens in | `research`, `scrape`, `summarize`, `judge`, … | Subagent tool calls dispatched from the orchestrator |
 | Determinism | High — same script, same branches | Low — same prompt, different trajectories |
 | Inspectability | Read the script, `diff` it, unit-test it | Read the prompt + every session JSONL to reconstruct what happened |
 
-**Both paradigms still use an LLM inside each step.** The compiler paradigm does not eliminate the model — it just removes the model from the *scheduling* role. `p summarize` is still an LLM call; it just doesn't decide what runs next.
+**Both paradigms still use an LLM inside each step.** The compiler paradigm does not eliminate the model — it just removes the model from the *scheduling* role. `summarize` is still an LLM call; it just doesn't decide what runs next.
 
 ## What each paradigm looks like in this repo
 
@@ -50,9 +50,9 @@ Parse the scout's source list. Dispatch one collector per URL in parallel.
 
 That "If scout finds fewer than 3 sources…" line is an `if` statement written in English and evaluated by an LLM every run. The orchestrator is a **natural language interpreter**.
 
-### Compiler: a shell script over `p` primitives
+### Compiler: a shell script over agent primitives
 
-The same workflow, compiled to bash with `p judge` as the semantic conditional:
+The same workflow, compiled to bash with `judge` as the semantic conditional:
 
 ```bash
 #!/usr/bin/env bash
@@ -61,25 +61,25 @@ set -euo pipefail
 topic="$1"
 mkdir -p sources
 
-sources=$(echo "$topic" | p research)
+sources=$(echo "$topic" | research)
 
-if ! echo "$sources" | p judge "at least 3 high-quality, non-redundant sources?"; then
-  sources=$(echo "$topic — broaden scope, try synonyms" | p research)
+if ! echo "$sources" | judge "at least 3 high-quality, non-redundant sources?"; then
+  sources=$(echo "$topic — broaden scope, try synonyms" | research)
 fi
 
-echo "$sources" | p scrape                    # parallelism handled inside p scrape
+echo "$sources" | scrape                    # parallelism handled inside scrape
 
-ls sources/*.md | p summarize > summary.md
+ls sources/*.md | summarize > summary.md
 
 cp summary.md draft.md
 for attempt in 1 2 3; do
-  p judge "does draft.md conform to template.md?" \
+  judge "does draft.md conform to template.md?" \
     < <(paste draft.md template.md) && break
-  p revise draft.md template.md
+  revise draft.md template.md
 done
 ```
 
-Every branch and every bound is explicit. The LLM does not pick the order — it only does the work inside each `p` call.
+Every branch and every bound is explicit. The LLM does not pick the order — it only does the work inside each agent call.
 
 ## The symmetry you noticed
 
@@ -108,26 +108,26 @@ Mitigations the interpreter paradigm requires:
 3. **Explicit context hygiene.** The prompt must forbid the orchestrator from quoting subagent outputs into its own messages. It should only reference paths and summaries.
 4. **Short-lived sessions.** If the workflow has natural chapter breaks, consider running the orchestrator in multiple separate sessions, each starting fresh from on-disk state — effectively hand-compiling chapter boundaries.
 
-The compiler paradigm **does not have this problem by construction.** Each `p` invocation is a fresh pi process with an empty context. The only "shared state" is stdout/stderr between pipes and the filesystem. Context rot is impossible because there is no accumulating context to rot.
+The compiler paradigm **does not have this problem by construction.** Each agent invocation is a fresh pi process with an empty context. The only "shared state" is stdout/stderr between pipes and the filesystem. Context rot is impossible because there is no accumulating context to rot.
 
 ## What "agentic if / while" actually means
 
-The novel primitive in the compiler paradigm is `p judge` — a filter whose meaningful output is its **exit code**, not its stdout. It is to LLMs what `test` is to shell: a predicate whose only job is to return true or false so the surrounding control flow can branch.
+The novel primitive in the compiler paradigm is `judge` — a filter whose meaningful output is its **exit code**, not its stdout. It is to LLMs what `test` is to shell: a predicate whose only job is to return true or false so the surrounding control flow can branch.
 
 | Unix | Agentic equivalent |
 |---|---|
-| `grep -q PATTERN file` | `p judge "does file contain PATTERN (semantically)?"` |
+| `grep -q PATTERN file` | `judge "does file contain PATTERN (semantically)?"` |
 | `[ -f report.md ]` | (keep as-is — structural checks don't need an LLM) |
-| `diff -q a b` | `p judge "are a and b substantively equivalent?"` |
-| `test $x -gt 3` | `p judge "is the content long enough to be a full draft?"` |
+| `diff -q a b` | `judge "are a and b substantively equivalent?"` |
+| `test $x -gt 3` | `judge "is the content long enough to be a full draft?"` |
 
-With `p judge` plus bash `if`, `while`, `until`, `&&`, `||`, you get the full control-flow vocabulary. You do **not** need a new "agentic scripting language" — shell already has every construct. You only need one new predicate primitive. That is the whole addition.
+With `judge` plus bash `if`, `while`, `until`, `&&`, `||`, you get the full control-flow vocabulary. You do **not** need a new "agentic scripting language" — shell already has every construct. You only need one new predicate primitive. That is the whole addition.
 
 ## Real tradeoffs
 
 | Concern | Compiler wins | Interpreter wins |
 |---|---|---|
-| **Reproducibility** | Script is deterministic; `p judge` is the only nondeterministic branch point | LLM retraces the prose differently each run |
+| **Reproducibility** | Script is deterministic; `judge` is the only nondeterministic branch point | LLM retraces the prose differently each run |
 | **Cost control** | N LLM calls visible in the script, capped loops | Orchestrator tokens scale with context rot |
 | **Debuggability** | `set -x`, per-step logs, inspect `$sources` between pipes | Session JSONL + subagent JSONL reassembly |
 | **Adaptability to novel failure modes** | Only handles branches you anticipated | Can improvise — notice the topic is malformed and reframe it |
@@ -149,20 +149,20 @@ Do not pick one paradigm. **They compose.**
 ```bash
 # Top-level: a compiled script
 topic="$1"
-echo "$topic" | p research | p scrape
+echo "$topic" | research | scrape
 
 # Mid-level: call a team (interpreter) for the hard adaptive part
-p deepresearch-synth > report.md    # team: writer + editor collaborate freely
+deepresearch-synth > report.md    # team: writer + editor collaborate freely
 
 # Post-check: compiled again
-p judge "does report.md meet our quality bar?" < report.md || exit 1
+judge "does report.md meet our quality bar?" < report.md || exit 1
 ```
 
 This is not a compromise — it is the right architecture. Use the compiler paradigm for the parts you understand well (find sources, scrape URLs, check quality gates). Use the interpreter paradigm inside one step where adaptive judgment is the point (writing and editing prose collaboratively). Let bash be the outer loop.
 
 Concretely for this repo:
 
-1. **Build the `p` primitives first.** `p research`, `p scrape`, `p summarize`, `p judge`, `p revise`. These are standalone agents with strict stdin/stdout contracts (per `piped-agents.md`). They are useful on their own, not just as deepresearch parts.
+1. **Build the agent primitives first.** `research`, `scrape`, `summarize`, `judge`, `revise`. These are standalone agents with strict stdin/stdout contracts (per `piped-agents.md`). They are useful on their own, not just as deepresearch parts.
 2. **Keep `teams/deepresearch` as-is** for interactive, exploratory use. It is the interpreter version, and it is good at what it does.
 3. **Add a `scripts/deepresearch.sh`** that wires the primitives into a compiled pipeline for batch / CI / scheduled use. Same workflow, different paradigm, different use cases.
 4. **Write the team prompts defensively** against context rot: forbid quoting subagent output, mandate artifact pointers, keep the orchestrator's job strictly clerical (dispatch, read final file, summarize).
@@ -172,11 +172,11 @@ Concretely for this repo:
 Ask, for the specific workflow:
 
 1. **Is the control flow stable?** If yes → compiler. If no → interpreter, but write the prompt as if it were code (named steps, explicit I/O, side effects declared).
-2. **Does a step need adaptive judgment that can't be reduced to a `p judge` predicate?** If yes → that step belongs inside an interpreter (a team or a single rich agent).
+2. **Does a step need adaptive judgment that can't be reduced to a `judge` predicate?** If yes → that step belongs inside an interpreter (a team or a single rich agent).
 3. **Is cost or reproducibility a hard constraint?** If yes → compiler.
 4. **Are you still discovering the workflow?** If yes → interpreter, and plan to compile it once it stabilizes.
 5. **Will this run unattended (cron, CI, webhook)?** If yes → compiler. Interpreters need a human in the loop to catch drift.
 
 ## Summary
 
-The compiler paradigm moves control flow out of the prompt and into bash. It requires one new primitive (`p judge`) and buys you determinism, cost control, and freedom from context rot. The interpreter paradigm keeps control flow in the prompt and requires rigorous "prompt as code" discipline plus aggressive subagent delegation to survive context rot. Neither is universally right. Build the `p` primitives, keep the teams, and let each workflow pick its layer — or mix both.
+The compiler paradigm moves control flow out of the prompt and into bash. It requires one new primitive (`judge`) and buys you determinism, cost control, and freedom from context rot. The interpreter paradigm keeps control flow in the prompt and requires rigorous "prompt as code" discipline plus aggressive subagent delegation to survive context rot. Neither is universally right. Build the agent primitives, keep the teams, and let each workflow pick its layer — or mix both.

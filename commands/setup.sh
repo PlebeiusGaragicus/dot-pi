@@ -31,6 +31,13 @@ _init_read_env_var() {
   fi
 }
 
+_init_read_json_api_key() {
+  local file="$1"
+  if [ -f "$file" ]; then
+    jq -r '.providers | to_entries[0].value.apiKey // ""' "$file" 2>/dev/null
+  fi
+}
+
 _init_prompt_key() {
   local varname="$1" current="$2" label="$3"
   local masked
@@ -88,19 +95,18 @@ echo ""
 echo "Re-run anytime. Press Enter to keep current values, type to replace, - to clear."
 echo ""
 
-# ── Step 1: Provider endpoint ──────────────────────────────────────────────
-echo "[1/5] Provider endpoint"
+# ── Step 1: Provider endpoint + API key ─────────────────────────────────────
+echo "[1/4] Provider endpoint"
 echo ""
 
-cur_base_url="" cur_api_type="" cur_api_key_var=""
+cur_base_url="" cur_api_type="" cur_api_key=""
 if [ -f "$SHARED_DIR/models.json" ]; then
   cur_base_url=$(jq -r '.providers | to_entries[0].value.baseUrl // ""' "$SHARED_DIR/models.json" 2>/dev/null)
   cur_api_type=$(jq -r '.providers | to_entries[0].value.api // ""' "$SHARED_DIR/models.json" 2>/dev/null)
-  cur_api_key_var=$(jq -r '.providers | to_entries[0].value.apiKey // ""' "$SHARED_DIR/models.json" 2>/dev/null)
+  cur_api_key=$(_init_read_json_api_key "$SHARED_DIR/models.json")
 fi
 cur_base_url="${cur_base_url%/}"
 cur_api_type="${cur_api_type:-openai}"
-cur_api_key_var="${cur_api_key_var:-PLEBCHAT_API_KEY}"
 
 base_url="$cur_base_url" api_type="$cur_api_type"
 
@@ -135,49 +141,11 @@ else
 fi
 
 echo ""
-
-# ── Step 2: API keys ──────────────────────────────────────────────────────
-echo "[2/5] API keys (.env)"
+provider_api_key="$(_init_prompt_key "API_KEY" "$cur_api_key" "API key")"
 echo ""
 
-env_file="$DOT_PI_DIR/.env"
-example_file="$DOT_PI_DIR/.env.example"
-
-key_names=()
-if [ -f "$example_file" ]; then
-  while IFS= read -r line || [ -n "$line" ]; do
-    [[ "$line" =~ ^export\ ([A-Za-z_][A-Za-z0-9_]*)= ]] && key_names+=("${BASH_REMATCH[1]}")
-  done < "$example_file"
-fi
-[ ${#key_names[@]} -eq 0 ] && key_names=(PLEBCHAT_API_KEY TAVILY_API_KEY XAI_API_KEY)
-
-env_vals=()
-for ki in "${!key_names[@]}"; do
-  kn="${key_names[$ki]}"
-  cur=$(_init_read_env_var "$env_file" "$kn")
-  env_vals+=("$(_init_prompt_key "$kn" "$cur" "$kn")")
-done
-
-provider_api_key_var="$cur_api_key_var"
-provider_api_key=""
-for ki in "${!key_names[@]}"; do
-  if [ "${key_names[$ki]}" = "$provider_api_key_var" ]; then
-    provider_api_key="${env_vals[$ki]}"
-    break
-  fi
-done
-
-{
-  for ki in "${!key_names[@]}"; do
-    echo "export ${key_names[$ki]}=${env_vals[$ki]}"
-  done
-} > "$env_file"
-echo ""
-echo "  Wrote $env_file"
-echo ""
-
-# ── Step 3: Fetch models ───────────────────────────────────────────────────
-echo "[3/5] Fetch models from $base_url"
+# ── Step 2: Fetch models ───────────────────────────────────────────────────
+echo "[2/4] Fetch models from $base_url"
 echo ""
 
 curl_args=(-s --connect-timeout 10 --max-time 20)
@@ -285,7 +253,7 @@ jq -n \
   --arg pname "$provider_name" \
   --arg baseUrl "$base_url/" \
   --arg api "$api_type" \
-  --arg apiKey "$provider_api_key_var" \
+  --arg apiKey "$provider_api_key" \
   --argjson models "$models_json_array" \
   '{providers: {($pname): {baseUrl: $baseUrl, api: $api, apiKey: $apiKey, models: $models}}}' \
   > "$SHARED_DIR/models.json"
@@ -294,8 +262,8 @@ echo ""
 echo "  Wrote $SHARED_DIR/models.json (${#model_ids[@]} models)"
 echo ""
 
-# ── Step 4: Model roles ───────────────────────────────────────────────────
-echo "[4/5] Model roles (model_roles)"
+# ── Step 3: Model roles ───────────────────────────────────────────────────
+echo "[3/4] Model roles (model_roles)"
 echo ""
 
 roles_file="$DOT_PI_DIR/model_roles"
@@ -321,22 +289,20 @@ done
 echo "  Wrote $roles_file"
 echo ""
 
-# ── Step 5: Verify ────────────────────────────────────────────────────────
-echo "[5/5] Summary"
+# ── Step 4: Summary ───────────────────────────────────────────────────────
+echo "[4/4] Summary"
 echo ""
 
 echo "  Provider:  $base_url ($api_type)"
+echo "  API key:   $(_init_mask "$provider_api_key")"
 echo "  Models:    ${#model_ids[@]} configured"
-for ki in "${!key_names[@]}"; do
-  echo "  ${key_names[$ki]}: $(_init_mask "${env_vals[$ki]}")"
-done
 for ri in "${!role_names[@]}"; do
   v="${role_vals[$ri]}"
   echo "  ${role_names[$ri]}: ${v:-(not set)}"
 done
 
 warnings=0
-[ -z "${env_vals[0]:-}" ] && echo "" && echo "  Warning: ${key_names[0]} is empty" && warnings=1
+[ -z "$provider_api_key" ] && echo "" && echo "  Warning: API key is empty" && warnings=1
 [ ${#model_ids[@]} -eq 0 ] && echo "  Warning: no models configured" && warnings=1
 
 echo ""
@@ -348,9 +314,11 @@ fi
 echo ""
 if [ -z "${DOT_PI_INSTALLED:-}" ]; then
   echo "  Next steps:"
-  echo "    1. Add to your shell profile:  source $DOT_PI_DIR/bash_aliases"
-  echo "    2. Start a session:            p talk"
+  echo "    1. Add to your shell profile:"
+  echo "       export PATH=\"\$HOME/.dot-pi/bin:\$PATH\""
+  echo "       source \"\$HOME/.dot-pi/env.sh\""
+  echo "    2. Start a session:  lm"
 else
-  echo "  Start a session:  p talk"
+  echo "  Start a session:  lm"
 fi
 echo ""

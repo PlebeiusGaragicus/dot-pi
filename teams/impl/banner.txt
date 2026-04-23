@@ -7,4 +7,4 @@
 Implementation & review team for writing and reviewing code.
 
 Agents: impl-worker (code generation), impl-reviewer (quality review)
-Usage:  p impl "implement the login feature"
+Usage:  impl "implement the login feature"

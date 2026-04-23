@@ -37,10 +37,9 @@ Iterative implementation workflow:
 ## Usage
 
 ```bash
-# Via p
-p impl "Fix the login bug in auth.ts"
+impl "Fix the login bug in auth.ts"
 
 # With the workflow prompt
-p impl
+impl
 > /implement-and-review refactor the database connection pool
 ```

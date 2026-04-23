@@ -3,15 +3,15 @@
 ## One-liner install
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/PlebeiusGaragicus/dot-pi/main/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/PlebeiusGaragicus/dot-pi/main/install)"
 ```
 
-The installer will check for required tools (`git`, `curl`, `jq`), install `pi` via npm if needed, clone the repo to `~/.dot-pi`, add `source ~/.dot-pi/bash_aliases` to your shell config, and run the interactive setup wizard.
+The installer will check for required tools (`git`, `curl`, `jq`), install `pi` via npm if needed, clone the repo to `~/.dot-pi`, add PATH and env.sh integration to your shell config, and run the interactive setup wizard.
 
 Override the install location with `DOT_PI_HOME`:
 
 ```bash
-DOT_PI_HOME=~/my-agents bash -c "$(curl -fsSL https://raw.githubusercontent.com/PlebeiusGaragicus/dot-pi/main/install.sh)"
+DOT_PI_HOME=~/my-agents bash -c "$(curl -fsSL https://raw.githubusercontent.com/PlebeiusGaragicus/dot-pi/main/install)"
 ```
 
 ## Requirements
@@ -24,27 +24,26 @@ DOT_PI_HOME=~/my-agents bash -c "$(curl -fsSL https://raw.githubusercontent.com/
 
 ```bash
 git clone https://github.com/PlebeiusGaragicus/dot-pi.git ~/.dot-pi
-echo 'source ~/.dot-pi/bash_aliases' >> ~/.zshrc
-source ~/.dot-pi/bash_aliases
+echo 'export PATH="$HOME/.dot-pi/bin:$PATH"' >> ~/.zshrc
+echo 'source "$HOME/.dot-pi/env.sh"' >> ~/.zshrc
+export PATH="$HOME/.dot-pi/bin:$PATH"
+source "$HOME/.dot-pi/env.sh"
 ~/.dot-pi/dotpi setup
 ```
 
-The repo can live at any path — `bash_aliases` auto-detects its own location at source time.
+The repo can live at any path — `env.sh` auto-detects its own location at source time.
 
 ## API Keys
 
-The `dotpi setup` wizard handles this interactively. Keys are stored in `.env` (gitignored) and sourced automatically by `bash_aliases`:
-
-```bash
-export PLEBCHAT_API_KEY=your-key-here
-```
+The `dotpi setup` wizard handles this interactively. API keys are stored in `shared/models.json` (gitignored). The template is `shared/models.example.json`.
 
 ## Shell setup
 
 The installer adds this automatically. If you installed manually, add to your `~/.zshrc` or `~/.bashrc`:
 
 ```bash
-source ~/.dot-pi/bash_aliases
+export PATH="$HOME/.dot-pi/bin:$PATH"
+source "$HOME/.dot-pi/env.sh"
 ```
 
 Then reload your shell:
@@ -53,13 +52,13 @@ Then reload your shell:
 source ~/.zshrc  # or source ~/.bashrc
 ```
 
-This gives you the `p` command for each team and standalone agent (`p <name>`).
+This puts all team and standalone agent commands on your PATH (e.g. `recon`, `blog`, `lm`).
 
-`DOT_PI_DIR` is auto-detected from the script's location, so the repo can live anywhere. If you need to override it for some reason, set `DOT_PI_DIR` before sourcing:
+`DOT_PI_DIR` is auto-detected from `env.sh`'s location, so the repo can live anywhere. If you need to override it for some reason, set `DOT_PI_DIR` before sourcing:
 
 ```bash
 export DOT_PI_DIR="/custom/path"
-source /custom/path/bash_aliases
+source /custom/path/env.sh
 ```
 
 ## Verify
@@ -76,7 +75,7 @@ Test a team:
 
 ```bash
 cd /any/project
-p recon "What does this project do?"
+recon "What does this project do?"
 ```
 
 ---
@@ -87,7 +86,7 @@ p recon "What does this project do?"
 
 ### `dotpi setup`
 
-Interactive wizard that configures API keys, model providers, model roles, and writes `.env`, `shared/models.json`, and `model_roles`. Re-run anytime to update.
+Interactive wizard that configures API keys, model providers, model roles, and writes `shared/models.json` and `model_roles`. Re-run anytime to update.
 
 ### `dotpi create <team-name>`
 
@@ -118,7 +117,7 @@ The `extensions/`, `models.json`, `settings.json`, and `bin/` are symlinks into 
 **Key files:**
 
 - `team-prompt.md` -- The subagent-teams extension parses its YAML frontmatter for orchestrator configuration (`name`, `description`, `tools`, `model`) and appends the body to the orchestrator's system prompt. Use the `tools` field to restrict the orchestrator (e.g. `tools: read,find,ls,grep` to force subagent delegation).
-- `workspace.conf` -- If present, `p` launches in workspace mode: creates a dated directory, pre-creates subdirectories listed in the file, and runs pi inside it.
+- `workspace.conf` -- If present, the command launches in workspace mode: creates a dated directory, pre-creates subdirectories listed in the file, and runs pi inside it.
 
 Example:
 
@@ -132,7 +131,7 @@ After creating a team, you need to:
 
 2. **Add prompts** (optional) -- create `.md` files in `teams/<team-name>/prompts/` that define chain/parallel workflows using `$@` as the user input placeholder.
 
-3. **Re-source** -- re-source `bash_aliases` in your shell so `p` picks up the new team (e.g. `p docs-team`).
+3. **Rebuild symlinks** -- run `dotpi sync` to rebuild bin/ symlinks so the new team is available as a command (e.g. `docs-team`).
 
 ### `dotpi create-agent <agent-name>`
 
@@ -157,14 +156,14 @@ agents/<agent-name>/
 └── models.json -> ../../shared/models.json
 ```
 
-Unlike teams, standalone agents do **not** get the `subagent-teams` extension or an `agents/` subdirectory. The main pi process IS the agent. Default scaffolds include **`SYSTEM.md`**, symlink **`say.ts`** (TTS/say) plus run-finish and startup branding, and do **not** create **`AGENT.md`** (add it yourself and symlink `agent-prompt.ts` if you want YAML frontmatter; see [Standalone Agents](standalone-agents.md)). `bash_aliases` wires each agent into `p <name>`.
+Unlike teams, standalone agents do **not** get the `subagent-teams` extension or an `agents/` subdirectory. The main pi process IS the agent. Default scaffolds include **`SYSTEM.md`**, symlink **`say.ts`** (TTS/say) plus run-finish and startup branding, and do **not** create **`AGENT.md`** (add it yourself and symlink `agent-prompt.ts` if you want YAML frontmatter; see [Standalone Agents](standalone-agents.md)). Run `dotpi sync` to add the new agent to bin/.
 
 Example:
 
 ```bash
 dotpi create-agent my-agent
-source ~/.dot-pi/bash_aliases
-p my-agent "hello"
+dotpi sync
+my-agent "hello"
 ```
 
 See [Standalone Agents](standalone-agents.md) for details on writing the extension.
@@ -194,7 +193,7 @@ Each team has its own `PI_CODING_AGENT_DIR`, which means separate `auth.json` fi
 
 ```bash
 # Authenticate via recon (pi prompts for API key on first run)
-p recon "hello"
+recon "hello"
 
 # Share that auth.json with other teams
 dotpi link-auth recon impl
@@ -210,11 +209,11 @@ This creates a symlink so all linked teams use the same credentials, and re-auth
 Re-running the installer on an existing install shows an "already installed" message. To pull upstream changes while preserving local edits:
 
 ```bash
-~/.dot-pi/install.sh --force-rebase
+~/.dot-pi/install --force-rebase
 ```
 
 ## Uninstall
 
 ```bash
-~/.dot-pi/install.sh --uninstall
+~/.dot-pi/install --uninstall
 ```

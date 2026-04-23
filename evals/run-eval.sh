@@ -20,7 +20,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOT_PI_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-source "$DOT_PI_DIR/bash_aliases"
+export PATH="$DOT_PI_DIR/bin:$PATH"
+source "$DOT_PI_DIR/env.sh"
 
 WITH_RETRO=false
 if [ "${1:-}" = "--with-retro" ]; then
@@ -70,7 +71,7 @@ while IFS= read -r prompt || [ -n "$prompt" ]; do
 
   start=$(date +%s)
   exit_code=0
-  p "$TEAM" -p "$prompt" < /dev/null \
+  "$TEAM" -p "$prompt" < /dev/null \
     > "$RESULTS_DIR/prompt-${prompt_num}-output.txt" 2>&1 \
     || exit_code=$?
   duration=$(( $(date +%s) - start ))

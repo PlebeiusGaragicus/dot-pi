@@ -4,10 +4,11 @@ This guide walks through concrete examples of how to use dot-pi day-to-day.
 
 ## Prerequisites
 
-You have pi installed, the repo cloned to `~/.dot-pi`, and aliases sourced:
+You have pi installed, the repo cloned to `~/.dot-pi`, and your shell configured:
 
 ```bash
-source ~/.dot-pi/bash_aliases
+export PATH="$HOME/.dot-pi/bin:$PATH"
+source "$HOME/.dot-pi/env.sh"
 ```
 
 ## 1. Recon a Codebase
@@ -16,7 +17,7 @@ You're dropped into an unfamiliar project and need to understand it fast.
 
 ```bash
 cd ~/projects/some-api
-p recon "Map the authentication flow -- which files handle login, session management, and token refresh?"
+recon "Map the authentication flow -- which files handle login, session management, and token refresh?"
 ```
 
 **What happens:** pi starts with only the recon team's agents (scout, planner) visible. The LLM can use the `subagent` tool to delegate to either agent. A typical flow:
@@ -30,7 +31,7 @@ p recon "Map the authentication flow -- which files handle login, session manage
 If you want the scout-plan chain in one shot:
 
 ```bash
-p recon
+recon
 > /implement add rate limiting to the /api/login endpoint
 ```
 
@@ -47,7 +48,7 @@ You know what needs to change and want the work done with a review pass.
 
 ```bash
 cd ~/projects/some-api
-p impl
+impl
 > /implement-and-review add input validation to all POST endpoints in src/routes/
 ```
 
@@ -60,7 +61,7 @@ This triggers:
 Or skip the prompt template and just talk to the team directly:
 
 ```bash
-p impl "Fix the race condition in src/queue/processor.ts -- the dequeue and ack aren't atomic"
+impl "Fix the race condition in src/queue/processor.ts -- the dequeue and ack aren't atomic"
 ```
 
 The LLM decides how to use the available agents. It might send the task straight to worker, or ask reviewer to inspect the area first.
@@ -71,7 +72,7 @@ You want to write a technical blog post about a project you're working on.
 
 ```bash
 cd ~/projects/my-cool-library
-p blog
+blog
 > /research-write-edit how this library's plugin system works and why we chose that architecture
 ```
 
@@ -84,7 +85,7 @@ This chains three agents:
 For a quicker loop when you already know the material:
 
 ```bash
-p blog
+blog
 > /write-and-edit 5 practical tips for writing maintainable TypeScript
 ```
 
@@ -95,7 +96,7 @@ This skips research and goes straight to write-review-revise.
 Workspace teams launch in a fresh dated directory so artifacts stay isolated.
 
 ```bash
-p deepresearch "What are the latest developments in WebTransport protocol?"
+deepresearch "What are the latest developments in WebTransport protocol?"
 ```
 
 **What happens:** `p` creates `workspaces/deepresearch/<timestamp>/` with `sources/`, `screenshots/`, `drafts/`, and `sessions/` subdirectories, then launches pi inside it. The orchestrator's tools are restricted to `read,find,ls,grep` via `team-prompt.md` frontmatter, so it cannot curl or bash its way through -- it must delegate all work to subagents. Both the orchestrator and all subagent sessions are stored in `sessions/` for unified trajectory analysis. The orchestrator runs a four-step pipeline:
@@ -110,7 +111,7 @@ p deepresearch "What are the latest developments in WebTransport protocol?"
 Each run creates a new workspace. To see past runs:
 
 ```bash
-p deepresearch --list
+deepresearch --list
 ```
 
 ```
@@ -122,13 +123,13 @@ Workspaces for deepresearch:
 To resume the most recent workspace session:
 
 ```bash
-p deepresearch --resume
+deepresearch --resume
 ```
 
 Or resume a specific one by prefix:
 
 ```bash
-p deepresearch --resume 2026-04-10-125602
+deepresearch --resume 2026-04-10-125602
 ```
 
 This cd's into the original workspace directory (so all files are present) and opens pi's session selector.
@@ -158,7 +159,7 @@ After running a workspace team, use the retro team to analyze session traces and
 
 ```bash
 cd workspaces/deepresearch/2026-04-12-150258
-p retro
+retro
 ```
 
 ### Non-interactive use (`run-retro`)
@@ -186,7 +187,7 @@ The retro report is designed to be concise and structured -- ideal input for a p
 
 ```bash
 # After retro writes retrospective-report.md, feed it to a stronger model
-p recon "Read retrospective-report.md and suggest specific prompt or code fixes for each issue"
+recon "Read retrospective-report.md and suggest specific prompt or code fixes for each issue"
 ```
 
 This two-step pattern keeps costs low: the bulk parsing runs for free on an open-source model, and only the compact report goes to a frontier model.
@@ -197,13 +198,13 @@ You don't always need prompt templates. Just describe what you want:
 
 ```bash
 # Quick recon question
-p recon "What ORM does this project use and how are migrations handled?"
+recon "What ORM does this project use and how are migrations handled?"
 
 # Direct implementation
-p impl "Rename the User model to Account everywhere"
+impl "Rename the User model to Account everywhere"
 
 # Blog with specific instructions
-p blog "Write a short post comparing our REST and GraphQL endpoints, keep it under 600 words"
+blog "Write a short post comparing our REST and GraphQL endpoints, keep it under 600 words"
 ```
 
 The LLM sees the team's agents and decides whether to delegate via subagent or handle the task directly.
@@ -245,12 +246,12 @@ EOF
 
 The `no-skills: true` + `skills: skills/searxng` combination means this agent loads only the searxng skill, ignoring any others in the team's `skills/` directory. Omit both fields to load all team skills, or set only `no-skills: true` to load none.
 
-Re-source aliases and use it -- `p` discovers teams by directory name:
+Rebuild symlinks and use it:
 
 ```bash
-source ~/.dot-pi/bash_aliases
+dotpi sync
 cd ~/projects/my-api
-p docs-team "Write API reference docs for all endpoints in src/routes/"
+docs-team "Write API reference docs for all endpoints in src/routes/"
 ```
 
 ## 8. Sharing Auth Across Teams
@@ -259,7 +260,7 @@ Each team has its own config root, including API authentication. After you authe
 
 ```bash
 # Authenticate via the recon team
-p recon
+recon
 # (pi prompts for API key on first run, saves to teams/recon/auth.json)
 
 # Share that auth with other teams
@@ -284,7 +285,7 @@ Teams:
   retro  (in-situ, 2 agents, 0 prompts, extensions linked: yes)
 
 Standalone agents:
-  talk              (in-situ, extensions: 0)
+  lm                (in-situ, extensions: 0)
   twenty-questions  (in-situ, extensions: 1)
   websearch         (in-situ, extensions: 2)
 ```

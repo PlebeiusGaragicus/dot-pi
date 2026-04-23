@@ -7,4 +7,4 @@
 Blog content production team for technical writing.
 
 Agents: blog-researcher, blog-writer, blog-editor
-Usage:  p blog "write a post about WebSockets"
+Usage:  blog "write a post about WebSockets"

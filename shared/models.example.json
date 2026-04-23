@@ -1,0 +1,10 @@
+{
+  "providers": {
+    "my-provider": {
+      "baseUrl": "https://localhost:1234/",
+      "api": "openai",
+      "apiKey": "your-api-key-here",
+      "models": []
+    }
+  }
+}

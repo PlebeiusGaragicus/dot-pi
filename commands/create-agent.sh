@@ -48,8 +48,23 @@ ln -sf "../../shared/models.json" "$agent_dir/models.json"
 
 ln -sf "../../shared/settings.json" "$agent_dir/settings.json"
 
+cat > "$agent_dir/README.md" <<README
+# $agent_name
+
+$agent_name standalone agent. Edit this file to describe what this agent does.
+
+## Usage
+
+\`\`\`
+$agent_name                     # interactive session
+$agent_name "your prompt"       # quick prompt
+echo "input" | $agent_name      # pipe input (batch mode)
+$agent_name -h                  # show this help
+\`\`\`
+README
+
 cat > "$agent_dir/pi-args" <<'PIARGS'
-# Optional default CLI flags for `p <name>` (read by bash_aliases). One flag per line; # starts a comment.
+# Default CLI flags (read by dispatch-agent). One flag per line; # starts a comment.
 #
 # IMPORTANT: must end with a newline (this comment also works) or last line will be ignored
 PIARGS
@@ -104,7 +119,9 @@ echo "  2. Edit $agent_dir/extensions/$agent_name/index.ts if you need custom to
 echo "  3. Link skills as needed: dotpi link-skill $agent_name <skill>"
 if [ "$workspace" = true ]; then
   echo "  4. Edit workspace.conf to list subdirectories for each run"
-  echo "  5. Source bash_aliases and invoke: p $agent_name \"your task\""
+  echo "  5. Run: $agent_name \"your task\""
 else
-  echo "  4. Source bash_aliases and invoke: p $agent_name \"your task\""
+  echo "  4. Run: $agent_name \"your task\""
 fi
+
+source "$COMMANDS_DIR/sync.sh"

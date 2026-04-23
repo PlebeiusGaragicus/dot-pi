@@ -25,7 +25,7 @@ agents/<name>/
 ├── AGENT.md                  # (optional) Requires agent-prompt.ts symlink — see below
 ├── SYSTEM.md                 # (optional) Replaces pi's default system prompt
 ├── APPEND_SYSTEM.md          # (optional) Appends to pi's default system prompt
-├── pi-args                   # (optional) Default CLI flags (read by p dispatcher)
+├── pi-args                   # (optional) Default CLI flags (read by dispatch-agent)
 ├── skills/                   # Add skills with dotpi link-skill <name> <skill>
 ├── themes/                   # Per-theme symlinks from shared/themes/
 ├── banner.txt                # Startup branding (ASCII art + usage text)
@@ -72,7 +72,7 @@ For tool restriction, use a **`pi-args`** file with CLI flags:
 --no-skills
 ```
 
-The `p` dispatcher reads this file and prepends the flags to every `pi` invocation. Lines starting with `#` are comments.
+The `dispatch-agent` script reads this file and prepends the flags to every `pi` invocation. Lines starting with `#` are comments.
 
 Available flags include `--tools <list>` (whitelist), `--no-tools` (disable all built-in tools), `--no-skills`, `--no-prompt-templates`, `--model <provider/id>`, etc. See `pi --help` for the full list.
 
@@ -94,11 +94,11 @@ Edit the stub extension to add custom tools and behavior. See [Writing Extension
 
 ### Running the Agent
 
-After sourcing `bash_aliases`, run standalone agents with `p <name>`:
+After running `dotpi sync`, standalone agents are available as direct commands:
 
 ```bash
-source ~/.dot-pi/bash_aliases
-p my-agent "hello"
+dotpi sync
+my-agent "hello"
 ```
 
 Or set the environment variable directly:
@@ -109,7 +109,7 @@ PI_CODING_AGENT_DIR=~/.dot-pi/agents/my-agent pi "hello"
 
 ## Examples
 
-### Talk (Method 2 — zero code)
+### LM (Method 2 — zero code)
 
 The simplest possible agent. Uses `SYSTEM.md` + `pi-args` with no custom extension code at all.
 
@@ -118,10 +118,10 @@ The simplest possible agent. Uses `SYSTEM.md` + `pi-args` with no custom extensi
 - No custom extension directory, no `AGENT.md`
 
 ```bash
-p talk "explain the difference between TCP and UDP"
+lm "explain the difference between TCP and UDP"
 ```
 
-### Websearch (Method 1 — AGENT.md + custom tool)
+### Web (Method 1 — AGENT.md + custom tool)
 
 A focused search agent using the `agent-prompt` extension and a custom `websearch` tool extension.
 
@@ -131,7 +131,7 @@ A focused search agent using the `agent-prompt` extension and a custom `websearc
 - `extensions/agent-prompt.ts` — shared extension that loads `AGENT.md`
 
 ```bash
-p websearch "latest developments in quantum computing"
+web "latest developments in quantum computing"
 ```
 
 ### Twenty Questions (extension-only)
@@ -143,7 +143,7 @@ Demonstrates a custom extension with a welcome overlay and system prompt injecti
 3. The agent plays 20 questions, asking yes/no questions to guess what the user is thinking of
 
 ```bash
-p twenty-questions
+twenty-questions
 ```
 
 Source: `agents/twenty-questions/extensions/twenty-questions/index.ts`

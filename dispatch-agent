@@ -1,0 +1,347 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# BusyBox-style dispatcher: behavior determined by $0 (the symlink name).
+# All agent/team symlinks in bin/ point here.
+
+AGENT_NAME="$(basename "$0")"
+
+# ── env bootstrap ─────────────────────────────────────────────────────────────
+# When invoked outside a shell that sourced env.sh (e.g. cron, scripts),
+# bootstrap DOT_PI_DIR from our own location.
+
+if [ -z "${DOT_PI_DIR:-}" ]; then
+  DOT_PI_DIR="$(cd "$(dirname "$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")")" && pwd)"
+  [ -f "$DOT_PI_DIR/env.sh" ] && source "$DOT_PI_DIR/env.sh"
+fi
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+_has_flag() {
+  local flag="$1"; shift
+  for arg in "$@"; do [ "$arg" = "$flag" ] && return 0; done
+  return 1
+}
+
+_pi() {
+  PI_SKIP_VERSION_CHECK=1 PI_OFFLINE=1 command pi "$@"
+}
+
+# JSON event stream filter for batch mode.
+# Progress lines -> stderr, final assistant text -> stdout.
+_json_filter() {
+  local turn=0 final_text=""
+  while IFS= read -r line; do
+    local type
+    type=$(printf '%s' "$line" | jq -r '.type // empty' 2>/dev/null) || continue
+    case "$type" in
+      turn_start)
+        turn=$((turn + 1))
+        ;;
+      tool_execution_start)
+        local tool_name
+        tool_name=$(printf '%s' "$line" | jq -r '.toolName // "?"')
+        printf '[turn %d] tool: %s\n' "$turn" "$tool_name" >&2
+        ;;
+      tool_execution_end)
+        local tool_name is_err
+        tool_name=$(printf '%s' "$line" | jq -r '.toolName // "?"')
+        is_err=$(printf '%s' "$line" | jq -r '.isError // false')
+        if [ "$is_err" = "true" ]; then
+          printf '[turn %d] tool: %s ERROR\n' "$turn" "$tool_name" >&2
+        fi
+        ;;
+      message_end)
+        local role text
+        role=$(printf '%s' "$line" | jq -r '.message.role // empty')
+        if [ "$role" = "assistant" ]; then
+          text=$(printf '%s' "$line" | jq -r '
+            [.message.content[]? | select(.type == "text") | .text]
+            | join("\n")' 2>/dev/null)
+          [ -n "$text" ] && final_text="$text"
+        fi
+        ;;
+      agent_end)
+        printf '[agent done]\n' >&2
+        ;;
+    esac
+  done
+  [ -n "$final_text" ] && printf '%s\n' "$final_text"
+}
+
+# ── help ──────────────────────────────────────────────────────────────────────
+
+_show_help() {
+  local config_dir="$1"
+  local readme="$config_dir/README.md"
+  if [ -f "$readme" ]; then
+    if command -v glow &>/dev/null; then
+      glow -p "$readme"
+    elif command -v bat &>/dev/null; then
+      bat --style=plain --paging=never "$readme"
+    else
+      cat "$readme"
+    fi
+  else
+    echo "No README.md for $AGENT_NAME"
+    echo "  config: $config_dir"
+  fi
+  exit 0
+}
+
+# ── workspace launcher ────────────────────────────────────────────────────────
+
+_workspace_launch() {
+  local name="$1" config_dir="$2"
+  shift 2
+  local ws_root="$DOT_PI_DIR/workspaces/$name"
+
+  if [ "${1:-}" = "--list" ]; then
+    if [ ! -d "$ws_root" ] || [ -z "$(ls -A "$ws_root" 2>/dev/null)" ]; then
+      echo "No workspaces for $name"
+      return 0
+    fi
+    echo "Workspaces for $name:"
+    for d in "$ws_root"/*/; do
+      [ -d "$d" ] || continue
+      local ts files
+      ts=$(basename "$d")
+      files=$(find "$d" -maxdepth 2 -type f 2>/dev/null | wc -l | tr -d ' ')
+      echo "  $ts  ($files files)"
+    done
+    return 0
+  fi
+
+  if [ "${1:-}" = "--resume" ]; then
+    shift
+    local target
+    if [ -n "${1:-}" ]; then
+      target=$(ls -d "$ws_root"/"$1"* 2>/dev/null | tail -1)
+      if [ -z "$target" ]; then
+        echo "No workspace matching '$1' in $ws_root"
+        return 1
+      fi
+      shift
+    else
+      target=$(ls -dt "$ws_root"/*/ 2>/dev/null | head -1)
+      if [ -z "$target" ]; then
+        echo "No workspaces to resume for $name"
+        return 1
+      fi
+    fi
+    echo "Resuming: $target" >&2
+    local _resume_args=()
+    [ -d "$target/sessions" ] && _resume_args+=(--session-dir "$target/sessions")
+    (cd "$target" && PI_CODING_AGENT_DIR="$config_dir" _pi "${_resume_args[@]}" --resume "$@")
+    return $?
+  fi
+
+  local ws="$ws_root/$(date +%Y-%m-%d-%H%M%S)"
+  mkdir -p "$ws"
+  while IFS= read -r subdir || [ -n "$subdir" ]; do
+    [[ -n "$subdir" && "$subdir" != \#* ]] && mkdir -p "$ws/$subdir"
+  done < "$config_dir/workspace.conf"
+  echo "Workspace: $ws" >&2
+  local _launch_args=()
+  [ -d "$ws/sessions" ] && _launch_args+=(--session-dir "$ws/sessions")
+  (cd "$ws" && PI_CODING_AGENT_DIR="$config_dir" _pi "${_launch_args[@]}" "$@")
+  return $?
+}
+
+# ── run-retro (special case) ──────────────────────────────────────────────────
+
+_run_retro() {
+  local ws_path="" hint="" team=""
+
+  if [ "${1:-}" = "--workspace-path" ]; then
+    [ -z "${2:-}" ] && { echo "Error: --workspace-path requires a path" >&2; return 1; }
+    ws_path="$2"
+    shift 2
+    team=$(basename "$(dirname "$ws_path")")
+    if [ "${1:-}" = "--" ]; then shift; hint="$*"; fi
+  else
+    team="${1:?Usage: run-retro <team> [--list|--pick] [date-prefix] [-- hint]}"
+    shift
+    local ws_root="$DOT_PI_DIR/workspaces/$team"
+
+    if [ "${1:-}" = "--list" ]; then
+      if [ ! -d "$ws_root" ] || [ -z "$(ls -A "$ws_root" 2>/dev/null)" ]; then
+        echo "No workspaces for $team"
+        return 0
+      fi
+      echo "Workspaces for $team:"
+      for d in "$ws_root"/*/; do
+        [ -d "$d" ] || continue
+        local ts files has_retro=""
+        ts=$(basename "$d")
+        files=$(find "$d" -maxdepth 2 -type f 2>/dev/null | wc -l | tr -d ' ')
+        [ -f "$d/retrospective-report.md" ] && has_retro="  [retro]"
+        echo "  $ts  ($files files)$has_retro"
+      done
+      return 0
+    fi
+
+    if [ "${1:-}" = "--pick" ]; then
+      shift
+      local pick_paths=() pick_labels=() _d
+      while IFS= read -r _d; do
+        [ -z "$_d" ] && continue
+        _d="${_d%/}"
+        [ ! -d "$_d" ] && continue
+        pick_paths+=("$_d")
+        local _ts _files _hr=""
+        _ts=$(basename "$_d")
+        _files=$(find "$_d" -maxdepth 2 -type f 2>/dev/null | wc -l | tr -d ' ')
+        [ -f "$_d/retrospective-report.md" ] && _hr=" [retro]"
+        pick_labels+=("$_ts  ($_files files)$_hr")
+      done < <(ls -dt "$ws_root"/*/ 2>/dev/null)
+      if [ ${#pick_paths[@]} -eq 0 ]; then
+        echo "No workspaces for $team" >&2
+        return 1
+      fi
+      echo "Select a workspace for $team:"
+      local PS3="Number: " _choice
+      select _choice in "${pick_labels[@]}" "Cancel"; do
+        if [ "$_choice" = "Cancel" ]; then echo "Cancelled." >&2; return 1; fi
+        if [ -z "$_choice" ]; then echo "Invalid choice; try again." >&2; continue; fi
+        local _idx=$((REPLY - 1))
+        if [ "$_idx" -ge 0 ] && [ "$_idx" -lt ${#pick_paths[@]} ]; then
+          ws_path="${pick_paths[$_idx]}"
+          break
+        fi
+        echo "Invalid choice; try again." >&2
+      done
+    elif [ -n "${1:-}" ] && [ "$1" != "--" ]; then
+      ws_path=$(ls -d "$ws_root/$1"* 2>/dev/null | tail -1)
+      [ -z "$ws_path" ] && { echo "No workspace matching '$1' in $ws_root" >&2; return 1; }
+      shift
+    else
+      ws_path=$(ls -dt "$ws_root"/*/ 2>/dev/null | head -1)
+      [ -z "$ws_path" ] && { echo "No workspaces for $team" >&2; return 1; }
+    fi
+
+    if [ "${1:-}" = "--" ]; then shift; hint="$*"; fi
+  fi
+
+  [ ! -d "$ws_path" ] && { echo "Error: workspace not found: $ws_path" >&2; return 1; }
+
+  local team_prompt="$DOT_PI_DIR/teams/$team/team-prompt.md"
+  if [ -f "$team_prompt" ] && [ ! -e "$ws_path/.source-team-prompt.md" ]; then
+    ln -s "$team_prompt" "$ws_path/.source-team-prompt.md"
+  fi
+
+  local prompt="Analyze this $team workspace."
+  [ -n "$hint" ] && prompt="$prompt Focus: $hint"
+
+  local retro_dir="$DOT_PI_DIR/teams/retro"
+  local retro_sessions="$retro_dir/sessions"
+  mkdir -p "$retro_sessions"
+  echo "Retro: $ws_path" >&2
+  (cd "$ws_path" && PI_CODING_AGENT_DIR="$retro_dir" pi --mode json \
+    --session-dir "$retro_sessions" -p "$prompt" < /dev/null) | _json_filter
+  return ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}
+}
+
+# ── list available agents ─────────────────────────────────────────────────────
+
+_list_available() {
+  echo "Available agents:" >&2
+  printf '  %-20s  %-8s  %s\n' "name" "kind" "mode" >&2
+  {
+    for d in "$DOT_PI_DIR"/teams/*/; do
+      [ -d "$d" ] || continue
+      local name mode
+      name=$(basename "$d")
+      mode=$([ -f "$d/workspace.conf" ] && echo workspace || echo in-situ)
+      printf '%s\tteam\t%s\n' "$name" "$mode"
+    done
+    for d in "$DOT_PI_DIR"/agents/*/; do
+      [ -d "$d" ] || continue
+      local name mode
+      name=$(basename "$d")
+      mode=$([ -f "$d/workspace.conf" ] && echo workspace || echo in-situ)
+      printf '%s\tagent\t%s\n' "$name" "$mode"
+    done
+  } | sort -t $'\t' -k1,1 | while IFS=$'\t' read -r name kind mode; do
+    printf '  %-20s  %-8s  %s\n' "$name" "$kind" "$mode" >&2
+  done
+}
+
+# ── main ──────────────────────────────────────────────────────────────────────
+
+# Special dispatch: run-retro
+if [ "$AGENT_NAME" = "run-retro" ]; then
+  _run_retro "$@"
+  exit $?
+fi
+
+# Special dispatch: dispatch-agent invoked directly (not via symlink)
+if [ "$AGENT_NAME" = "dispatch-agent" ]; then
+  echo "Usage: invoke via an agent symlink (e.g. lm, recon, blog)" >&2
+  echo ""
+  _list_available
+  exit 1
+fi
+
+# Resolve config directory
+config_dir=""
+if [ -d "$DOT_PI_DIR/teams/$AGENT_NAME" ]; then
+  config_dir="$DOT_PI_DIR/teams/$AGENT_NAME"
+elif [ -d "$DOT_PI_DIR/agents/$AGENT_NAME" ]; then
+  config_dir="$DOT_PI_DIR/agents/$AGENT_NAME"
+else
+  echo "Unknown agent or team: $AGENT_NAME" >&2
+  _list_available
+  exit 1
+fi
+
+# Help flag
+if _has_flag "-h" "$@" || _has_flag "--help" "$@"; then
+  _show_help "$config_dir"
+fi
+
+# Detect batch mode
+_batch=false
+if [ ! -t 0 ] || _has_flag "-p" "$@"; then
+  _batch=true
+fi
+
+# Stdin pipe: read and pass as -p
+if [ ! -t 0 ] && ! _has_flag "-p" "$@"; then
+  _stdin_prompt=$(cat)
+  set -- -p "$_stdin_prompt" "$@"
+fi
+
+if [ "$_batch" = true ]; then
+  set -- --mode json "$@"
+fi
+
+# Load default CLI flags from pi-args
+if [ -f "$config_dir/pi-args" ]; then
+  _pi_args=()
+  while IFS= read -r _line || [ -n "$_line" ]; do
+    [[ -n "$_line" && "$_line" != \#* ]] && _pi_args+=($_line)
+  done < <(envsubst < "$config_dir/pi-args")
+  if [ ${#_pi_args[@]} -gt 0 ]; then
+    set -- "${_pi_args[@]}" "$@"
+  fi
+fi
+
+# Dispatch: workspace or in-situ
+if [ -f "$config_dir/workspace.conf" ]; then
+  if [ "$_batch" = true ]; then
+    _workspace_launch "$AGENT_NAME" "$config_dir" "$@" | _json_filter
+    exit ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}
+  else
+    _workspace_launch "$AGENT_NAME" "$config_dir" "$@"
+    exit $?
+  fi
+else
+  if [ "$_batch" = true ]; then
+    PI_CODING_AGENT_DIR="$config_dir" _pi "$@" | _json_filter
+    exit ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}
+  else
+    PI_CODING_AGENT_DIR="$config_dir" _pi "$@"
+    exit $?
+  fi
+fi

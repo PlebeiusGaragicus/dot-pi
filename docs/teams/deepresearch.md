@@ -89,16 +89,16 @@ The body of `team-prompt.md` provides the orchestrator's system prompt with team
 
 ```bash
 # Start a new research run
-p deepresearch "What are the latest developments in WebTransport protocol?"
+deepresearch "What are the latest developments in WebTransport protocol?"
 
 # List past workspaces
-p deepresearch --list
+deepresearch --list
 
 # Resume the most recent workspace
-p deepresearch --resume
+deepresearch --resume
 
 # Resume a specific workspace by prefix
-p deepresearch --resume 2026-04-12
+deepresearch --resume 2026-04-12
 ```
 
 ## Running Evals

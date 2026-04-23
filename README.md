@@ -7,16 +7,14 @@ Manage multiple pi coding agent configurations without touching `~/.pi/`. Each t
 ## Quick Start
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/PlebeiusGaragicus/dot-pi/main/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/PlebeiusGaragicus/dot-pi/main/install)"
 ```
 
 Or install manually — see [INSTALL.md](INSTALL.md) for details.
 
-### Zsh tab completion for `p`
+### Shell integration
 
-When you use zsh, `bash_aliases` sources [p-completion.zsh](p-completion.zsh) at the end (skipped when the same file is sourced from bash). Put `autoload -Uz compinit && compinit` **before** `source …/bash_aliases` in `~/.zshrc` so `compdef` is available.
-
-`p b` + Tab completes to real directory names such as `blog` (case-insensitive matching; inserted text matches on-disk spelling). A bare `p ` + Tab does nothing so it does not duplicate the list from running `p` alone.
+Commands are available directly on `PATH` via symlinks in `bin/`. Run `dotpi sync` to rebuild symlinks after adding or removing teams/agents. Commands on PATH get native shell completion automatically.
 
 ## Create a Team
 

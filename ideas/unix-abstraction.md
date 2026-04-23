@@ -301,7 +301,7 @@ When running non-interactively, the final assistant message goes to stdout. `--m
 `workspace.conf` becomes a *default hint* — the alias uses it as the default behavior, but `--workspace`, `--in-situ`, and `--output-dir <path>` flags override. Any agent can run either way.
 
 **3. Exit codes must propagate.**
-The subshell wrappers in `bash_aliases` must capture and return pi's exit code. The subagent-teams extension already tracks `exitCode` per agent — this needs to bubble up to the shell level.
+The subshell wrappers in `dispatch-agent` must capture and return pi's exit code. The subagent-teams extension already tracks `exitCode` per agent — this needs to bubble up to the shell level.
 
 Once these three properties hold, the entire system — from tool calls inside agents, through subagent dispatches, up to shell-level composition — speaks the same protocol. The shell's existing `|`, `&&`, `$()`, `>`, and `xargs` operators handle all the wiring. No more bespoke glue functions.
 

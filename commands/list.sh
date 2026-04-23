@@ -35,3 +35,7 @@ done
 if [ "$agent_found" -eq 0 ]; then
   echo "  (none -- run 'dotpi create-agent <name>' to create one)"
 fi
+
+echo ""
+echo "Each entry above is a command on PATH (via ~/.dot-pi/bin/)."
+echo "Run 'dotpi sync' to refresh symlinks after manual changes."

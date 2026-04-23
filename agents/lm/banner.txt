@@ -6,6 +6,6 @@
 ---
 Chat-only agent. No tools, no skills — just conversation.
 
-Usage: p talk "your question"
+Usage: lm "your question"
 
 Moods: /mood <talk|rizz|plato|serious|uwu|casual|professional|off>

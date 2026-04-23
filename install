@@ -43,16 +43,16 @@ usage() {
 dot-pi installer
 
 Usage:
-  install.sh                Install dot-pi to $DOT_PI_HOME
-  install.sh --force-rebase Update an existing install (stash, rebase, pop)
-  install.sh --uninstall    Remove dot-pi and clean up shell config
-  install.sh --help         Show this help
+  install                   Install dot-pi to $DOT_PI_HOME
+  install --force-rebase    Update an existing install (stash, rebase, pop)
+  install --uninstall       Remove dot-pi and clean up shell config
+  install --help            Show this help
 
 Environment:
   DOT_PI_HOME   Override install location (default: ~/.dot-pi)
 
 One-liner:
-  bash -c "\$(curl -fsSL https://raw.githubusercontent.com/PlebeiusGaragicus/dot-pi/main/install.sh)"
+  bash -c "\$(curl -fsSL https://raw.githubusercontent.com/PlebeiusGaragicus/dot-pi/main/install)"
 EOF
   exit 0
 }
@@ -109,7 +109,7 @@ check_pi() {
       warn "pi was installed but not found on PATH — you may need to restart your shell"
     fi
   else
-    warn "Skipping pi install — the 'p' command won't work until pi is installed"
+    warn "Skipping pi install — agent commands won't work until pi is installed"
   fi
 }
 
@@ -152,9 +152,9 @@ do_install() {
       echo ""
       info "dot-pi is already installed at $(bold "$DOT_PI_HOME")"
       echo ""
-      echo "    To update:      install.sh --force-rebase"
+      echo "    To update:      install --force-rebase"
       echo "    To reconfigure: $DOT_PI_HOME/dotpi setup"
-      echo "    To remove:      install.sh --uninstall"
+      echo "    To remove:      install --uninstall"
       echo ""
       exit 0
     fi
@@ -177,18 +177,24 @@ do_install() {
       {
         echo ""
         echo "# dot-pi — pi agent launcher"
-        echo "source \"$DOT_PI_HOME/bash_aliases\""
+        echo "export PATH=\"\$HOME/.dot-pi/bin:\$PATH\""
+        echo "source \"\$HOME/.dot-pi/env.sh\""
       } >> "$rc"
       info "Added to $rc"
     else
       warn "Skipped — add this to your shell config manually:"
-      echo "    source \"$DOT_PI_HOME/bash_aliases\""
+      echo "    export PATH=\"\$HOME/.dot-pi/bin:\$PATH\""
+      echo "    source \"\$HOME/.dot-pi/env.sh\""
     fi
   fi
   echo ""
 
+  # Build bin/ symlinks
+  "$DOT_PI_HOME/dotpi" sync
+  echo ""
+
   # Run the interactive setup wizard (don't let a wizard abort kill our summary)
-  if confirm "Run interactive setup wizard? (API keys, models, roles)" "Y"; then
+  if confirm "Run interactive setup wizard? (API key, models, roles)" "Y"; then
     echo ""
     "$DOT_PI_HOME/dotpi" setup || true
   else
@@ -202,8 +208,10 @@ do_install() {
   echo "    source $rc"
   echo ""
   echo "  Then try:"
-  echo "    p              # list available agents"
-  echo "    p <name>       # launch an agent"
+  echo "    lm              # conversational LLM"
+  echo "    ask             # explain your codebase"
+  echo "    web             # search the web"
+  echo "    dotpi list      # all available agents"
   echo ""
 }
 

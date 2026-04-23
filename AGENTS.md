@@ -22,9 +22,8 @@ dot-pi/
 ├── README.md                 # Human-facing overview
 ├── dotpi                     # CLI: setup, create, create-agent, list, link-skill, link-auth
 ├── commands/                 # Subcommand scripts (sourced by dotpi)
-├── bash_aliases              # Shell functions: `p` command (source in .zshrc/.bashrc)
-├── p-completion.zsh          # Zsh tab completion for `p` (sourced from bash_aliases)
-├── .env.example              # API key template (copy to .env)
+├── env.sh                    # Shell environment (source in .zshrc/.bashrc)
+├── dispatch-agent            # Symlink target in bin/ (dispatches commands to teams/agents)
 ├── mkdocs.yml                # MkDocs config for docs site
 │
 ├── shared/                   # Reusable resources (never used as PI_CODING_AGENT_DIR directly)
@@ -56,7 +55,7 @@ teams/<name>/
 ├── skills/                   # Per-skill symlinks (add with dotpi link-skill)
 ├── themes/                   # Per-theme symlinks from shared/themes/
 ├── team-prompt.md            # Orchestrator config (frontmatter) + system prompt (body)
-├── pi-args                   # (optional) Default CLI flags for the orchestrator (read by `p`)
+├── pi-args                   # (optional) Default CLI flags for the orchestrator (read by dispatch-agent)
 ├── banner.txt                # Startup branding (ASCII art + usage text)
 ├── workspace.conf            # (optional) Marks as workspace agent; lists subdirs to pre-create
 ├── bin/                      # → shared/bin/
@@ -80,7 +79,7 @@ agents/<name>/
 ├── AGENT.md                  # (optional, not scaffolded) YAML + body — symlink agent-prompt.ts to load
 ├── SYSTEM.md                 # Starter system prompt (scaffolded by dotpi; replaces pi default)
 ├── APPEND_SYSTEM.md          # (optional) Appends to pi's default system prompt (pi-native)
-├── pi-args                   # (optional) Default CLI flags, one per line (read by `p`; end file per IMPORTANT line)
+├── pi-args                   # (optional) Default CLI flags, one per line (read by dispatch-agent; end file per IMPORTANT line)
 ├── skills/                   # Per-skill symlinks from shared/skills/ (use dotpi link-skill to add)
 ├── themes/                   # Per-theme symlinks from shared/themes/
 ├── banner.txt                # Startup branding (ASCII art + usage text)
@@ -97,7 +96,7 @@ No `agents/` subdirectory, no `team-prompt.md`. The main pi process IS the agent
 **Prompt and tool customization** (combine as needed):
 
 1. **`SYSTEM.md` / `APPEND_SYSTEM.md`** (pi-native): `SYSTEM.md` replaces pi's default system prompt entirely; `APPEND_SYSTEM.md` appends to it. No extension needed — pi discovers these from `PI_CODING_AGENT_DIR` at startup.
-2. **`pi-args`** (via `p` dispatcher): plain text file with default CLI flags (e.g. `--tools websearch`, `--no-tools`, `--no-skills`), one per line. The `p` function prepends these to the `pi` invocation. **End the file with a newline after the last flag** (or leave the scaffolded trailing comment line) so the last flag is not dropped; `bash_aliases` also defends against a missing final newline when reading this file.
+2. **`pi-args`** (via `dispatch-agent`): plain text file with default CLI flags (e.g. `--tools websearch`, `--no-tools`, `--no-skills`), one per line. The `dispatch-agent` script prepends these to the `pi` invocation. **End the file with a newline after the last flag** (or leave the scaffolded trailing comment line) so the last flag is not dropped; `dispatch-agent` also defends against a missing final newline when reading this file.
 3. **`AGENT.md`** (optional, legacy): YAML frontmatter sets `tools` and/or `model`; body appended to the system prompt. Requires symlink: `ln -sf ../../../shared/extensions/agent-prompt extensions/agent-prompt` — the `agent-prompt` shared extension reads `AGENT.md`. New `dotpi create-agent` scaffolds do not link this file by default.
 
 ## Key Concepts
@@ -217,9 +216,9 @@ Skills live in `shared/skills/` and are symlinked per-skill into each team/agent
 
 ### Workspace Agents
 
-Any team or standalone agent can run as a **workspace agent** by adding a `workspace.conf` file to its directory. When present, `p <name>` launches pi in a fresh dated directory (`workspaces/<name>/<timestamp>/`) inside a subshell, so the user's shell stays in its original directory after pi exits.
+Any team or standalone agent can run as a **workspace agent** by adding a `workspace.conf` file to its directory. When present, running the command (e.g. `deepresearch`) launches pi in a fresh dated directory (`workspaces/<name>/<timestamp>/`) inside a subshell, so the user's shell stays in its original directory after pi exits.
 
-**`workspace.conf` format**: one subdirectory name per line. Lines starting with `#` are comments. Each listed directory is pre-created in the workspace before pi starts. **End the file with a newline after the last directory name** (or keep the scaffolded trailing comment); `bash_aliases` also defends against a missing final newline when reading this file.
+**`workspace.conf` format**: one subdirectory name per line. Lines starting with `#` are comments. Each listed directory is pre-created in the workspace before pi starts. **End the file with a newline after the last directory name** (or keep the scaffolded trailing comment); `dispatch-agent` also defends against a missing final newline when reading this file.
 
 ```
 # teams/deepresearch/workspace.conf
@@ -239,11 +238,13 @@ dotpi create-agent --workspace my-scraper
 
 **Resuming a workspace session**: Workspace teams support `--resume` and `--list`:
 ```bash
-p deepresearch --list                       # show existing workspaces
-p deepresearch --resume                     # resume most recent workspace
-p deepresearch --resume 2026-04-10          # resume workspace matching prefix
+deepresearch --list                         # show existing workspaces
+deepresearch --resume                       # resume most recent workspace
+deepresearch --resume 2026-04-10            # resume workspace matching prefix
 ```
 `--resume` cd's into the existing workspace directory and passes `--resume` to pi, so the session selector opens with the original session available. `--list` shows each workspace with a file count.
+
+**Rebuilding symlinks**: Run `dotpi sync` to rebuild the `bin/` symlinks after adding or removing teams/agents.
 
 **Unified session logging**: When a workspace has a `sessions/` directory, both the orchestrator and all subagent sessions are stored there. The workspace launcher passes `--session-dir` to pi, and the `subagent-teams` extension detects the same directory for subagent sessions. This puts the complete run trajectory in one place for retrospective analysis. Legacy `subagent-sessions/` directories are also supported as a fallback.
 
@@ -332,12 +333,13 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `agents/*/AGENT.md` | Yes | Agent prompt config (frontmatter: tools, model; body: system prompt append) |
 | `agents/*/SYSTEM.md` | Yes | Replaces pi's default system prompt (pi-native) |
 | `agents/*/APPEND_SYSTEM.md` | Yes | Appends to pi's default system prompt (pi-native) |
-| `agents/*/pi-args` | Yes | Default CLI flags (read by `p` dispatcher) |
-| `teams/*/pi-args` | Yes | Optional default CLI flags for the team orchestrator (read by `p`) |
+| `agents/*/pi-args` | Yes | Default CLI flags (read by `dispatch-agent`) |
+| `teams/*/pi-args` | Yes | Optional default CLI flags for the team orchestrator (read by `dispatch-agent`) |
 | `agents/*/extensions/**/*.ts` | Yes | Custom agent extensions |
 | `dotpi` | Yes | CLI dispatcher (setup, create, list, link-skill, link-auth) |
 | `commands/*.sh` | Yes | Subcommand scripts (sourced by dotpi) |
-| `bash_aliases` | Yes | Shell functions: `p` command |
+| `env.sh` | Yes | Shell environment (sourced from .zshrc/.bashrc) |
+| `dispatch-agent` | Yes | Symlink target in bin/ (dispatches commands to teams/agents) |
 | `docs/**/*.md` | Yes | MkDocs documentation |
 | `teams/*/extensions/*` | **No** | Symlinks — edit `shared/extensions/` instead |
 | `teams/*/skills/*` | **No** | Symlinks — edit `shared/skills/` instead |

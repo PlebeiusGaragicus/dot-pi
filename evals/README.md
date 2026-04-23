@@ -68,4 +68,4 @@ For example, `./evals/run-eval.sh deepresearch evals/deepresearch-short.txt` wri
 ## Requirements
 
 - `jq` must be on PATH
-- `bash_aliases` must be sourceable (the script sources it to get team aliases)
+- `env.sh` must be sourceable and bin/ must be on PATH
