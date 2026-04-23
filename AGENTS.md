@@ -31,7 +31,8 @@ dot-pi/
 │   ├── skills/               # Shared skill definitions (each skill is a directory with SKILL.md)
 │   ├── themes/               # Shared themes (JSON)
 │   ├── bin/                  # Downloaded binaries (fd, rg) — gitignored contents
-│   └── models.json           # Custom model provider config
+│   ├── models.json           # Custom model provider config
+│   └── settings.json         # Pi settings (theme, defaults; symlinked from each team/agent)
 │
 ├── teams/                    # Multi-agent team directories
 ├── agents/                   # Standalone agent directories
@@ -60,7 +61,7 @@ teams/<name>/
 ├── bin/                      # → shared/bin/
 ├── models.json               # → shared/models.json
 ├── sessions/                 # Runtime (gitignored)
-├── settings.json             # Pi settings (theme, quietStartup; gitignored)
+├── settings.json             # → shared/settings.json
 └── auth.json                 # API auth (gitignored, may be symlinked)
 ```
 
@@ -86,7 +87,7 @@ agents/<name>/
 ├── bin/                      # → shared/bin/
 ├── models.json               # → shared/models.json
 ├── sessions/                 # Runtime (gitignored)
-├── settings.json             # Pi settings (theme, quietStartup; gitignored)
+├── settings.json             # → shared/settings.json
 └── auth.json                 # API auth (gitignored, may be symlinked)
 ```
 
@@ -266,6 +267,7 @@ Per-team orchestrator instructions, read by `subagent-teams` on startup and appe
 - **Themes**: Each theme JSON in `shared/themes/` is symlinked individually into `<dir>/themes/`.
 - **bin**: A single directory symlink (`bin → ../../shared/bin`) so pi downloads `fd`/`rg` once and all teams share them.
 - **models.json**: A single file symlink (`models.json → ../../shared/models.json`).
+- **settings.json**: A single file symlink (`settings.json → ../../shared/settings.json`) so all teams and standalone agents share Pi preferences (theme, defaults, etc.).
 
 All symlinks use relative paths (e.g. `../../../shared/extensions/...` for extensions under `teams/<name>/extensions/`).
 
@@ -320,6 +322,7 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `shared/skills/*/SKILL.md` | Yes | Shared skill definitions |
 | `shared/themes/*.json` | Yes | Shared themes |
 | `shared/models.json` | Yes | Model provider config |
+| `shared/settings.json` | Yes | Pi settings (theme, default model, quietStartup, etc.) |
 | `teams/*/agents/*.md` | Yes | Subagent definitions |
 | `teams/*/prompts/*.md` | Yes | Prompt templates |
 | `teams/*/team-prompt.md` | Yes | Team orchestrator instructions |
@@ -340,5 +343,5 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `*/models.json` (in teams/agents) | **No** | Symlink — edit `shared/models.json` |
 | `*/bin/` | **No** | Symlink — managed by pi runtime |
 | `*/sessions/` | **No** | Runtime data — gitignored |
-| `*/settings.json` | **No** | Pi settings (theme, quietStartup) — gitignored, scaffolded by `setup.sh` |
+| `*/settings.json` (in teams/agents) | **No** | Symlink — edit `shared/settings.json` |
 | `*/auth.json` | **No** | Credentials — gitignored |
