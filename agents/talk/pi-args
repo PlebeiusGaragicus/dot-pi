@@ -1,7 +1,10 @@
-# Chat only — no tools, no skills
 --no-tools
 --no-skills
 # --no-prompt-templates
+--model
+$FAST_MODEL
+--thinking
+off
 # Auto TTS on startup (say extension)
 --tts-enable
 # IMPORTANT: must end with a newline / or comment

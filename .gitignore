@@ -1,5 +1,6 @@
 .DS_Store
 .env
+model_roles
 
 # Runtime session data (each team gets its own sessions/ dir)
 teams/*/sessions/*

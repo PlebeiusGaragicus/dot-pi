@@ -23,6 +23,9 @@ fi
 # Load API keys if present
 [ -f "$DOT_PI_DIR/.env" ] && source "$DOT_PI_DIR/.env"
 
+# Load default model roles (AGENTIC_MODEL, FAST_MODEL, etc.)
+[ -f "$DOT_PI_DIR/model_roles" ] && source "$DOT_PI_DIR/model_roles"
+
 # pi when launched through `p` / workspace helpers only — skips npm + extension update toasts.
 # Plain `pi` in your shell is unchanged unless you export these yourself.
 _dotmi_pi() {
@@ -354,10 +357,14 @@ p() {
   # One flag (or flag + value) per line. Lines starting with # are comments.
   if [ -f "$config_dir/pi-args" ]; then
     local _pi_args=()
-    # `|| [ -n "$_line" ]` ensures the last line is processed if the file has no final newline.
+    # envsubst expands $VAR references (e.g. $FAST_MODEL) from model_roles.env.
+    # Alternative without envsubst (eval-based):
+    #   while IFS= read -r _line || [ -n "$_line" ]; do
+    #     [[ -n "$_line" && "$_line" != \#* ]] && _pi_args+=($(eval echo "$_line"))
+    #   done < "$config_dir/pi-args"
     while IFS= read -r _line || [ -n "$_line" ]; do
       [[ -n "$_line" && "$_line" != \#* ]] && _pi_args+=($_line)
-    done < "$config_dir/pi-args"
+    done < <(envsubst < "$config_dir/pi-args")
     if [ ${#_pi_args[@]} -gt 0 ]; then
       set -- "${_pi_args[@]}" "$@"
     fi

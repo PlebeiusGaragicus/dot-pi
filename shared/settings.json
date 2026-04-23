@@ -1,9 +1,12 @@
 {
   "lastChangelogVersion": "0.67.6",
+  "enableInstallTelemetry": false,
   "quietStartup": true,
+  "collapseChangelog": true,
+  "showHardwareCursor": true,
   "defaultProvider": "plebchat",
-  "defaultModel": "qwen3.5-122b-a10b",
-  "defaultThinkingLevel": "medium",
+  "defaultModel": "nvidia/nemotron-3-super",
+  "defaultThinkingLevel": "off",
   "hideThinkingBlock": false,
   "theme": "synthwave"
 }

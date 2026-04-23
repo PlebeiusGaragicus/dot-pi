@@ -11,6 +11,7 @@ dot-pi manager
 Usage: $(basename "$0") <command> [args]
 
 Commands:
+  init                                     Interactive setup wizard (API keys, models, roles)
   create [--workspace] <team-name>         Create a new team directory with shared extension symlinks
   create-agent [--workspace] <agent-name>  Create a standalone agent directory with a stub extension
   list                                     List existing teams and standalone agents
@@ -33,6 +34,361 @@ Examples:
   $(basename "$0") link-auth recon blog
 EOF
   exit 1
+}
+
+# ── init: interactive setup wizard ────────────────────────────────────────────
+
+_init_check_deps() {
+  local missing=()
+  command -v jq &>/dev/null || missing+=(jq)
+  command -v curl &>/dev/null || missing+=(curl)
+  if [ ${#missing[@]} -gt 0 ]; then
+    echo "Error: missing required tools: ${missing[*]}"
+    echo "  brew install ${missing[*]}  (macOS)"
+    echo "  apt install ${missing[*]}   (Debian/Ubuntu)"
+    exit 1
+  fi
+}
+
+_init_mask() {
+  local val="$1"
+  if [ -z "$val" ]; then
+    echo "(empty)"
+  elif [ ${#val} -le 8 ]; then
+    echo "****"
+  else
+    echo "${val:0:4}****${val: -2}"
+  fi
+}
+
+_init_read_env_var() {
+  local file="$1" varname="$2"
+  if [ -f "$file" ]; then
+    grep "^export ${varname}=" "$file" 2>/dev/null | head -1 | sed "s/^export ${varname}=//"
+  fi
+}
+
+_init_prompt_key() {
+  local varname="$1" current="$2" label="$3"
+  local masked
+  masked=$(_init_mask "$current")
+  local input
+  read -r -p "  ${label:-$varname} [$masked]: " input
+  if [ -z "$input" ]; then
+    echo "$current"
+  elif [ "$input" = "-" ]; then
+    echo ""
+  else
+    echo "$input"
+  fi
+}
+
+_init_select_model() {
+  local role="$1" current="$2"
+  shift 2
+  local models=("$@")
+
+  local hint=""
+  [ -n "$current" ] && hint=" (current: $current)"
+  echo "  $role$hint"
+
+  local i
+  for i in "${!models[@]}"; do
+    local marker="  "
+    [ "${models[$i]}" = "$current" ] && marker="> "
+    printf "    %s%d) %s\n" "$marker" "$((i + 1))" "${models[$i]}"
+  done
+  printf "    %s%d) %s\n" "  " "$((${#models[@]} + 1))" "(skip)"
+
+  local choice
+  read -r -p "    choice [Enter=keep]: " choice
+  if [ -z "$choice" ]; then
+    echo "$current"
+  elif [ "$choice" = "-" ]; then
+    echo ""
+  elif [ "$choice" -ge 1 ] 2>/dev/null && [ "$choice" -le "${#models[@]}" ]; then
+    echo "${models[$((choice - 1))]}"
+  elif [ "$choice" -eq "$((${#models[@]} + 1))" ] 2>/dev/null; then
+    echo ""
+  else
+    echo >&2 "    invalid choice, keeping current"
+    echo "$current"
+  fi
+}
+
+init_setup() {
+  _init_check_deps
+
+  echo ""
+  echo "dot-pi setup"
+  echo "============"
+  echo ""
+  echo "Re-run anytime. Press Enter to keep current values, type to replace, - to clear."
+  echo ""
+
+  # ── Step 1: Provider endpoint ──────────────────────────────────────────────
+  echo "[1/5] Provider endpoint"
+  echo ""
+
+  local cur_base_url cur_api_type cur_api_key_var
+  if [ -f "$SHARED_DIR/models.json" ]; then
+    cur_base_url=$(jq -r '.providers | to_entries[0].value.baseUrl // ""' "$SHARED_DIR/models.json" 2>/dev/null)
+    cur_api_type=$(jq -r '.providers | to_entries[0].value.api // ""' "$SHARED_DIR/models.json" 2>/dev/null)
+    cur_api_key_var=$(jq -r '.providers | to_entries[0].value.apiKey // ""' "$SHARED_DIR/models.json" 2>/dev/null)
+  fi
+  cur_base_url="${cur_base_url:-}"
+  cur_api_type="${cur_api_type:-openai}"
+  cur_api_key_var="${cur_api_key_var:-PLEBCHAT_API_KEY}"
+
+  local base_url api_type
+  read -r -p "  Base URL [${cur_base_url:-https://localhost:1234}]: " base_url
+  base_url="${base_url:-${cur_base_url:-https://localhost:1234}}"
+  # Strip trailing slash
+  base_url="${base_url%/}"
+
+  echo "  API compatibility:"
+  echo "    1) openai"
+  echo "    2) anthropic-messages"
+  local api_choice
+  local default_n=1
+  [ "$cur_api_type" = "anthropic-messages" ] && default_n=2
+  read -r -p "  choice [$default_n]: " api_choice
+  api_choice="${api_choice:-$default_n}"
+  if [ "$api_choice" = "2" ]; then
+    api_type="anthropic-messages"
+  else
+    api_type="openai"
+  fi
+
+  echo ""
+
+  # ── Step 2: API keys ──────────────────────────────────────────────────────
+  echo "[2/5] API keys (.env)"
+  echo ""
+
+  local env_file="$DOT_PI_DIR/.env"
+  local example_file="$DOT_PI_DIR/.env.example"
+
+  # Collect key names from .env.example
+  local key_names=()
+  if [ -f "$example_file" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+      [[ "$line" =~ ^export\ ([A-Za-z_][A-Za-z0-9_]*)= ]] && key_names+=("${BASH_REMATCH[1]}")
+    done < "$example_file"
+  fi
+  [ ${#key_names[@]} -eq 0 ] && key_names=(PLEBCHAT_API_KEY TAVILY_API_KEY XAI_API_KEY)
+
+  declare -A env_vals
+  local kn
+  for kn in "${key_names[@]}"; do
+    local cur
+    cur=$(_init_read_env_var "$env_file" "$kn")
+    env_vals[$kn]=$(_init_prompt_key "$kn" "$cur" "$kn")
+  done
+
+  # Determine which env var holds the provider API key
+  local provider_api_key_var="$cur_api_key_var"
+  local provider_api_key="${env_vals[$provider_api_key_var]:-}"
+
+  # Write .env
+  {
+    for kn in "${key_names[@]}"; do
+      echo "export ${kn}=${env_vals[$kn]}"
+    done
+  } > "$env_file"
+  echo ""
+  echo "  Wrote $env_file"
+  echo ""
+
+  # ── Step 3: Fetch models ───────────────────────────────────────────────────
+  echo "[3/5] Fetch models from $base_url"
+  echo ""
+
+  local curl_args=(-s --connect-timeout 10 --max-time 20)
+  if [ -n "$provider_api_key" ]; then
+    curl_args+=(-H "Authorization: Bearer $provider_api_key")
+  fi
+
+  local raw_response model_ids=() model_names=()
+  raw_response=$(curl "${curl_args[@]}" "$base_url/v1/models" 2>/dev/null) || true
+
+  if [ -n "$raw_response" ] && echo "$raw_response" | jq -e '.data' &>/dev/null; then
+    # OpenAI-compatible /v1/models response
+    local count
+    count=$(echo "$raw_response" | jq '.data | length')
+    echo "  Found $count model(s):"
+    echo ""
+
+    local idx=0
+    while IFS=$'\t' read -r mid mname; do
+      model_ids+=("$mid")
+      model_names+=("${mname:-$mid}")
+      idx=$((idx + 1))
+      printf "    %d) %s  (%s)\n" "$idx" "$mid" "${mname:-$mid}"
+    done < <(echo "$raw_response" | jq -r '.data[] | [.id, (.name // .id)] | @tsv')
+
+    echo ""
+    echo "  Enter model numbers to include (comma-separated), or Enter for all:"
+    local selection
+    read -r -p "  models [all]: " selection
+
+    if [ -n "$selection" ]; then
+      local selected_ids=() selected_names=()
+      IFS=',' read -ra sel_nums <<< "$selection"
+      for n in "${sel_nums[@]}"; do
+        n=$(echo "$n" | tr -d ' ')
+        if [ "$n" -ge 1 ] 2>/dev/null && [ "$n" -le "${#model_ids[@]}" ]; then
+          selected_ids+=("${model_ids[$((n - 1))]}")
+          selected_names+=("${model_names[$((n - 1))]}")
+        fi
+      done
+      model_ids=("${selected_ids[@]}")
+      model_names=("${selected_names[@]}")
+    fi
+  else
+    echo "  Could not fetch models from $base_url/v1/models"
+    if [ -n "$raw_response" ]; then
+      echo "  Response: $(echo "$raw_response" | head -c 200)"
+    fi
+    echo ""
+    echo "  Enter model IDs manually (comma-separated):"
+
+    local existing_ids=""
+    if [ -f "$SHARED_DIR/models.json" ]; then
+      existing_ids=$(jq -r '.providers | to_entries[0].value.models[]?.id' "$SHARED_DIR/models.json" 2>/dev/null | paste -sd, -)
+    fi
+
+    local manual
+    read -r -p "  models [${existing_ids:-}]: " manual
+    manual="${manual:-$existing_ids}"
+    if [ -n "$manual" ]; then
+      IFS=',' read -ra parts <<< "$manual"
+      for p in "${parts[@]}"; do
+        p=$(echo "$p" | xargs)
+        [ -n "$p" ] && model_ids+=("$p") && model_names+=("$p")
+      done
+    fi
+  fi
+
+  if [ ${#model_ids[@]} -eq 0 ]; then
+    echo "  No models configured. You can edit shared/models.json manually later."
+    echo ""
+  fi
+
+  # Derive a provider name from the base URL hostname
+  local provider_name
+  provider_name=$(echo "$base_url" | sed -E 's|https?://||; s|[/:].*||; s/\..*//; s/[^a-zA-Z0-9_-]/_/g')
+  [ -z "$provider_name" ] && provider_name="provider"
+
+  # Build models JSON array entries, preserving metadata from existing models.json
+  local models_json_array="["
+  local i
+  for i in "${!model_ids[@]}"; do
+    [ "$i" -gt 0 ] && models_json_array+=","
+    local mid="${model_ids[$i]}"
+    local mname="${model_names[$i]}"
+
+    # Try to pull existing metadata for this model
+    local reasoning="false" input='["text"]' ctx=131072
+    if [ -f "$SHARED_DIR/models.json" ]; then
+      local existing
+      existing=$(jq -r --arg id "$mid" \
+        '.providers | to_entries[0].value.models[] | select(.id == $id)' \
+        "$SHARED_DIR/models.json" 2>/dev/null)
+      if [ -n "$existing" ]; then
+        reasoning=$(echo "$existing" | jq -r '.reasoning // false')
+        input=$(echo "$existing" | jq -c '.input // ["text"]')
+        ctx=$(echo "$existing" | jq -r '.contextWindow // 131072')
+        mname=$(echo "$existing" | jq -r '.name // ""')
+        [ -z "$mname" ] && mname="${model_names[$i]}"
+      fi
+    fi
+
+    models_json_array+=$(jq -n \
+      --arg id "$mid" \
+      --arg name "$mname" \
+      --argjson reasoning "$reasoning" \
+      --argjson input "$input" \
+      --argjson ctx "$ctx" \
+      '{id: $id, name: $name, reasoning: $reasoning, input: $input, contextWindow: $ctx}')
+  done
+  models_json_array+="]"
+
+  # Write models.json
+  mkdir -p "$SHARED_DIR"
+  jq -n \
+    --arg pname "$provider_name" \
+    --arg baseUrl "$base_url/" \
+    --arg api "$api_type" \
+    --arg apiKey "$provider_api_key_var" \
+    --argjson models "$models_json_array" \
+    '{providers: {($pname): {baseUrl: $baseUrl, api: $api, apiKey: $apiKey, models: $models}}}' \
+    > "$SHARED_DIR/models.json"
+
+  echo ""
+  echo "  Wrote $SHARED_DIR/models.json (${#model_ids[@]} models)"
+  echo ""
+
+  # ── Step 4: Model roles ───────────────────────────────────────────────────
+  echo "[4/5] Model roles (model_roles)"
+  echo ""
+
+  local roles_file="$DOT_PI_DIR/model_roles"
+  local role_names=(AGENTIC_MODEL THINKING_MODEL CODING_MODEL VISION_MODEL FAST_MODEL)
+
+  # Prefix model IDs with provider name for pi's provider/model syntax
+  local prefixed_ids=()
+  for mid in "${model_ids[@]}"; do
+    prefixed_ids+=("${provider_name}/${mid}")
+  done
+
+  local role
+  declare -A role_vals
+  for role in "${role_names[@]}"; do
+    local cur
+    cur=$(_init_read_env_var "$roles_file" "$role")
+    role_vals[$role]=$(_init_select_model "$role" "$cur" "${prefixed_ids[@]}")
+    echo ""
+  done
+
+  # Write model_roles
+  {
+    for role in "${role_names[@]}"; do
+      echo "export ${role}=${role_vals[$role]}"
+    done
+  } > "$roles_file"
+  echo "  Wrote $roles_file"
+  echo ""
+
+  # ── Step 5: Verify ────────────────────────────────────────────────────────
+  echo "[5/5] Summary"
+  echo ""
+
+  echo "  Provider:  $base_url ($api_type)"
+  echo "  Models:    ${#model_ids[@]} configured"
+  for kn in "${key_names[@]}"; do
+    echo "  $kn: $(_init_mask "${env_vals[$kn]}")"
+  done
+  for role in "${role_names[@]}"; do
+    local v="${role_vals[$role]}"
+    echo "  $role: ${v:-(not set)}"
+  done
+
+  local warnings=0
+  [ -z "${env_vals[${key_names[0]}]:-}" ] && echo "" && echo "  Warning: ${key_names[0]} is empty" && warnings=1
+  [ ${#model_ids[@]} -eq 0 ] && echo "  Warning: no models configured" && warnings=1
+
+  echo ""
+  if [ "$warnings" -eq 0 ]; then
+    echo "  Setup complete!"
+  else
+    echo "  Setup complete (with warnings -- re-run to fix)."
+  fi
+  echo ""
+  echo "  Next steps:"
+  echo "    1. Add to your shell profile:  source $DOT_PI_DIR/bash_aliases"
+  echo "    2. Start a session:            p talk"
+  echo ""
 }
 
 create_team() {
@@ -383,6 +739,9 @@ link_auth() {
 [ $# -lt 1 ] && usage
 
 case "$1" in
+  init)
+    init_setup
+    ;;
   create)
     shift
     if [ "$1" = "--workspace" ]; then
