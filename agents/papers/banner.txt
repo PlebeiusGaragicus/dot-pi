@@ -1,9 +1,0 @@
-                             
- _ __  __ _ _ __  ___ _ _ ___
-| '_ \/ _` | '_ \/ -_) '_(_-<
-| .__/\__,_| .__/\___|_| /__/
-|_|        |_|               
----
-Read arXiv papers as native HTML
-
-Usage: use `/explain <URL, arxiv id>` to explain a paper.

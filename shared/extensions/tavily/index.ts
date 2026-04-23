@@ -21,35 +21,20 @@ const API_URL = "https://api.tavily.com/search";
 const USAGE_API_URL = "https://api.tavily.com/usage";
 const STATUS_KEY = "tavily-usage";
 
-/** Cached footer state: `searchUsed` is always a number for per-search increments. */
+/** Cached footer state for the simplified usage bar. */
 interface FooterUsageState {
     used: number;
     limit: number | null;
-    plan: string;
-    searchUsed: number;
-    /** Shown from bootstrap only; we do not increment PAYG per search (allocation ambiguous). */
-    paygo?: { used: number; limit: number };
 }
 
-/** Last snapshot for heuristic “quota may have reset” messaging (bootstrap / API only). */
-let lastUsageSnapshot: { used: number; limit: number | null } | null = null;
-
 /**
- * Footer totals after GET /usage at session start, then advanced by each search’s
+ * Footer totals after GET /usage at session start, then advanced by each search's
  * `usage.credits` (search does not return full quota — see plan). External API
  * usage outside this process is not reflected until the next bootstrap.
  */
 let cachedUsage: FooterUsageState | null = null;
 
-/** 
- * Calculate dynamic bar length based on terminal width.
- * Uses 80% of terminal width, clamped between 10-60 columns for readability.
- */
-function getBarLength(): number {
-    const termWidth = process.stdout.columns || 80;
-    // Use 80% of terminal width, clamped between 10-60 for readability
-    return Math.min(60, Math.max(10, Math.floor(termWidth * 0.8)));
-}
+const BAR_LEN = 10;
 
 interface TavilyResult {
     title: string;
@@ -139,37 +124,13 @@ function formatResults(results: TavilyResult[], answer?: string): string {
 }
 
 function buildBar(used: number, limit: number | null): string {
-    if (limit != null && limit > 0) {
-        const barLen = getBarLength();
-        const frac = Math.min(1, Math.max(0, used / limit));
-        const filled = Math.round(frac * barLen);
-        return "#".repeat(filled) + "-".repeat(barLen - filled);
-    }
-    const barLen = getBarLength();
-    return "?".repeat(barLen);
+    if (limit == null || limit <= 0) return "░".repeat(BAR_LEN);
+    const frac = Math.min(1, Math.max(0, used / limit));
+    const filled = Math.round(frac * BAR_LEN);
+    return "█".repeat(filled) + "░".repeat(BAR_LEN - filled);
 }
 
-interface PickedUsage {
-    used: number;
-    limit: number | null;
-    plan: string;
-    /** Search endpoint credits this billing cycle, when the API reports them. */
-    searchUsed?: number;
-    /** Pay-as-you-go bucket when `paygo_limit` is present. */
-    paygo?: { used: number; limit: number };
-}
-
-function usageStateFromApiPick(p: PickedUsage): FooterUsageState {
-    return {
-        used: p.used,
-        limit: p.limit,
-        plan: p.plan,
-        searchUsed: p.searchUsed ?? 0,
-        paygo: p.paygo,
-    };
-}
-
-function pickUsage(data: TavilyUsageResponse): PickedUsage {
+function pickUsage(data: TavilyUsageResponse): FooterUsageState {
     const acc = data.account;
     const keyBucket = data.key;
     const used =
@@ -178,30 +139,13 @@ function pickUsage(data: TavilyUsageResponse): PickedUsage {
             : typeof keyBucket?.usage === "number"
                 ? keyBucket.usage
                 : 0;
-    let limit: number | null =
+    const limit: number | null =
         typeof acc?.plan_limit === "number"
             ? acc.plan_limit
             : typeof keyBucket?.limit === "number"
                 ? keyBucket.limit
                 : null;
-    const plan = (acc?.current_plan && String(acc.current_plan).trim()) || "Tavily";
-
-    const searchUsed =
-        typeof acc?.search_usage === "number"
-            ? acc.search_usage
-            : typeof keyBucket?.search_usage === "number"
-                ? keyBucket.search_usage
-                : undefined;
-
-    let paygo: { used: number; limit: number } | undefined;
-    if (typeof acc?.paygo_limit === "number" && acc.paygo_limit > 0) {
-        paygo = {
-            used: typeof acc.paygo_usage === "number" ? acc.paygo_usage : 0,
-            limit: acc.paygo_limit,
-        };
-    }
-
-    return { used, limit, plan, searchUsed, paygo };
+    return { used, limit };
 }
 
 function formatRetryAfter(response: Response): string {
@@ -214,39 +158,12 @@ function formatRetryAfter(response: Response): string {
     return ` Retry-After: ${raw}.`;
 }
 
-function formatFooterLine(state: FooterUsageState, checkResetHeuristic: boolean): string {
-    const { used, limit, plan, searchUsed, paygo } = state;
+function formatFooterLine(state: FooterUsageState): string {
+    const { used, limit } = state;
     const bar = buildBar(used, limit);
-    const pct =
-        limit != null && limit > 0 ? `${((100 * used) / limit).toFixed(1)}%` : "";
-    const nums = limit != null ? `${used}/${limit}` : `${used} used`;
-    const pctPart = pct ? ` ${pct}` : "";
-
-    const extras: string[] = [];
-    extras.push(`srch ${searchUsed}`);
-    if (paygo) {
-        extras.push(`PAYG ${paygo.used}/${paygo.limit}`);
-    }
-    const extraPart = extras.length ? ` · ${extras.join(" · ")}` : "";
-
-    let resetHint = "";
-    if (
-        checkResetHeuristic &&
-        lastUsageSnapshot &&
-        limit != null &&
-        lastUsageSnapshot.limit === limit &&
-        lastUsageSnapshot.used >= 30 &&
-        used < lastUsageSnapshot.used * 0.35
-    ) {
-        resetHint = " · usage may have reset — verify at https://app.tavily.com";
-    }
-    if (checkResetHeuristic) {
-        lastUsageSnapshot = { used, limit };
-    }
-
-    const staticHint = " · app.tavily.com";
-
-    return `Tavily · ${plan} [${bar}] ${nums}${pctPart}${extraPart}${resetHint}${staticHint}`;
+    if (limit == null || limit <= 0) return `Tavily [${bar}] ${used} used`;
+    const pct = Math.round((100 * used) / limit);
+    return `Tavily [${bar}] ${used}/${limit} ${pct}%`;
 }
 
 /** GET /usage once; sets `cachedUsage` on success. Returns the status line to show. */
@@ -286,9 +203,8 @@ async function fetchUsageBootstrapLine(): Promise<string> {
         return `Tavily: HTTP ${res.status} ${err}`;
     }
 
-    const picked = pickUsage(data);
-    cachedUsage = usageStateFromApiPick(picked);
-    return formatFooterLine(cachedUsage, true);
+    cachedUsage = pickUsage(data);
+    return formatFooterLine(cachedUsage);
 }
 
 async function refreshFooterBootstrap(ctx: ExtensionContext): Promise<void> {
@@ -305,13 +221,11 @@ async function ensureFooterCache(ctx: ExtensionContext): Promise<void> {
 function applySearchCreditsToFooter(credits: number): void {
     if (!cachedUsage) return;
     cachedUsage.used += credits;
-    cachedUsage.searchUsed += credits;
 }
 
 function syncFooterFromCache(ctx: ExtensionContext): void {
     if (!ctx.hasUI || !cachedUsage) return;
-    ctx.ui.setStatus(STATUS_KEY, formatFooterLine(cachedUsage, false));
-    lastUsageSnapshot = { used: cachedUsage.used, limit: cachedUsage.limit };
+    ctx.ui.setStatus(STATUS_KEY, formatFooterLine(cachedUsage));
 }
 
 export default function (pi: ExtensionAPI) {
@@ -590,7 +504,6 @@ export default function (pi: ExtensionAPI) {
 
     pi.on("session_shutdown", async (_event, ctx) => {
         cachedUsage = null;
-        lastUsageSnapshot = null;
         if (ctx.hasUI) {
             ctx.ui.setStatus(STATUS_KEY, undefined);
         }

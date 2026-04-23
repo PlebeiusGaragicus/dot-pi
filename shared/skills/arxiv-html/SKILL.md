@@ -1,6 +1,6 @@
 ---
 name: arxiv-fetch
-description: "Fetch arXiv papers via arxiv.org for review"
+description: Fetch specific arXiv papers via arxiv.org for review
 argument-hint: "<URL or paper-id>"
 disable-model-invocation: false
 ---
@@ -12,7 +12,7 @@ Get the bare arXiv id from the user's input. Strip `https://arxiv.org/abs/`, `/p
 Run this command verbatim. Substitute `<ID>` only. Do not modify the User-Agent, the URL, the flags, or the output path:
 
 ```bash
-curl -fsSL -A "pi-papers-agent" "https://arxiv.org/html/<ID>" | pandoc -f html -t plain -o /tmp/arxiv-<ID>.txt
+curl -fsSL -A "pi-search-agent" "https://arxiv.org/html/<ID>" | pandoc -f html -t plain -o /tmp/arxiv-<ID>.txt
 ```
 
 ## Step 2 - Review material

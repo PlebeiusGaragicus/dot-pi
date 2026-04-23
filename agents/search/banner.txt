@@ -1,0 +1,11 @@
+                     _
+ ___ ___ __ _ _ _ __| |_
+(_-</ -_) _` | '_/ _| ' \
+/__/\___\__,_|_| \__|_||_|
+---
+arXiv papers and the live web, in one agent.
+
+Usage:
+  /paper-search <topic>        search arXiv
+  /explain <URL or arxiv id>   fetch and summarize a paper
+  ...or just ask in plain English.

@@ -1,6 +1,6 @@
 ---
 name: tavily-search
-description: Search the live web with the tavily_search tool. Use for non-arXiv sources, current events, vendor docs, blogs, and to triangulate claims found in papers.
+description: Search the web with for primary sources, news, events and information.
 allowed-tools: tavily_search
 ---
 

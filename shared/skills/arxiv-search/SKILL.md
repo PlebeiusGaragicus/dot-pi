@@ -1,6 +1,6 @@
 ---
 name: arxiv-search
-description: search arXiv with a precision query with a research topic and return list of candidate papers
+description: Search papers via arXiv
 disable-model-invocation: false
 ---
 
@@ -11,7 +11,7 @@ URL-encode the user's query into `<Q>` (spaces -> `+`, `:` -> `%3A`). Default `<
 Run this command verbatim. Substitute only `<Q>` and `<SORT>`. Do not modify the User-Agent, the URL, the flags, or the output paths:
 
 ```bash
-curl -fsSL -A "pi-papers-agent" \
+curl -fsSL -A "pi-search-agent" \
   "http://export.arxiv.org/api/query?search_query=<Q>&start=0&max_results=25&sortBy=<SORT>&sortOrder=descending" \
   -o /tmp/arxiv-search.xml
 python3 - <<'PY' > /tmp/arxiv-search.txt
