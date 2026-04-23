@@ -12,17 +12,22 @@ Direct Tavily REST-API access via a structured `tavily_search` tool. Avoids havi
 
 ## Tool: `tavily_search`
 
-Parameters mirror the Tavily `/search` endpoint:
+Deliberately narrow surface - the model can only set:
 
 - `query` (string, required)
-- `max_results` (number, optional)
-- `search_depth` -- `"basic" | "fast" | "advanced" | "ultra-fast"`
+- `max_results` (number, optional, 1-20, default 10)
 - `topic` -- `"general" | "news" | "finance"`
-- `include_answer` -- `boolean | "advanced"`
 - `time_range` -- `"day" | "week" | "month" | "year"`
-- (plus the rest of Tavily's documented options)
 
-Responses include `answer`, `results[]` with `title`/`url`/`content`/`score`, and a per-request `usage.credits` count.
+The following are **hard-enforced** in every request and intentionally not exposed to the model:
+
+- `search_depth: "basic"` -- `advanced` doubles credit cost; basic is the sane default.
+- `include_raw_content: true` -- the agent always synthesizes from raw page excerpts.
+- `include_answer: false` -- never trust Tavily's pre-canned summary; the agent does its own synthesis.
+
+`include_domains` / `exclude_domains` are not exposed; if domain scoping is needed, add it back deliberately.
+
+Responses include `results[]` with `title`/`url`/`content`/`raw_content`, and a per-request `usage.credits` count.
 
 ## Footer Usage
 

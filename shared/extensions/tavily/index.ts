@@ -74,13 +74,8 @@ interface TavilyResponse {
 interface SearchParams {
     query: string;
     max_results?: number;
-    search_depth?: "basic" | "fast" | "advanced" | "ultra-fast";
     topic?: "general" | "news" | "finance";
-    include_answer?: boolean | "advanced";
     time_range?: "day" | "week" | "month" | "year";
-    include_raw_content?: boolean;
-    include_domains?: string[];
-    exclude_domains?: string[];
 }
 
 interface TavilyAccount {
@@ -321,21 +316,14 @@ function syncFooterFromCache(ctx: ExtensionContext): void {
 
 export default function (pi: ExtensionAPI) {
     const SearchParamsSchema = Type.Object({
-        query: Type.String({ 
-            description: "Search query to look up on the web"
+        query: Type.String({
+            description: "Internet search query"
         }),
         max_results: Type.Optional(
             Type.Number({
-                description: "Maximum number of results to return (1-20). Default: 5",
+                description: "Maximum number of results to return (1-20). Default: 10",
                 minimum: 1,
                 maximum: 20
-            })
-        ),
-        search_depth: Type.Optional(
-            Type.String({
-                // enum: ["basic", "fast", "advanced", "ultra-fast"], // discourage fast and ultra-fast by excluding them
-                enum: ["basic", "advanced"],
-                description: "Search depth. 'advanced' uses more resources and costs 2 credits."
             })
         ),
         topic: Type.Optional(
@@ -344,33 +332,10 @@ export default function (pi: ExtensionAPI) {
                 description: "Topic category for the search"
             })
         ),
-        include_answer: Type.Optional(
-            Type.Union([
-                Type.Boolean(),
-                Type.Literal("advanced")
-            ], {
-                description: "Include an LLM-generated answer summary. Set to 'advanced' for better quality."
-            })
-        ),
         time_range: Type.Optional(
             Type.String({
                 enum: ["day", "week", "month", "year"],
                 description: "Time range for results"
-            })
-        ),
-        include_raw_content: Type.Optional(
-            Type.Boolean({
-                description: "Include raw cleaned page content in results (highly encouraged)"
-            })
-        ),
-        include_domains: Type.Optional(
-            Type.Array(Type.String(), {
-                description: "Array of domains to include in search"
-            })
-        ),
-        exclude_domains: Type.Optional(
-            Type.Array(Type.String(), {
-                description: "Array of domains to exclude from search"
             })
         )
     });
@@ -379,9 +344,8 @@ export default function (pi: ExtensionAPI) {
         name: "tavily_search",
         label: "Tavily Web Search",
         description: [
-            "Search the web using Tavily's API.",
-            "Returns structured results with titles, URLs, content snippets, and optionally an LLM-generated answer.",
-            "Use this tool whenever you need to look up current information or research topics online."
+            "Search the live web via Tavily for sources, news, and other information.",
+            "Read the `tavily-search` skill before first use this session for parameter guidance."
         ].join(" "),
         parameters: SearchParamsSchema,
 
@@ -401,17 +365,11 @@ export default function (pi: ExtensionAPI) {
 
             const requestParams: SearchParams = {
                 query: params.query,
-                max_results: params.max_results ?? 5,
-                search_depth: params.search_depth,
+                max_results: params.max_results ?? 10,
                 topic: params.topic,
-                include_answer: params.include_answer,
-                time_range: params.time_range,
-                include_raw_content: params.include_raw_content,
-                include_domains: params.include_domains,
-                exclude_domains: params.exclude_domains
+                time_range: params.time_range
             };
 
-            // Filter out undefined values for cleaner request
             const filteredParams = Object.fromEntries(
                 Object.entries(requestParams).filter(([_, v]) => v !== undefined)
             );
@@ -423,7 +381,13 @@ export default function (pi: ExtensionAPI) {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${apiKey}`
                     },
-                    body: JSON.stringify({ ...filteredParams, include_usage: true }),
+                    body: JSON.stringify({
+                        ...filteredParams,
+                        search_depth: "basic",
+                        include_raw_content: true,
+                        include_answer: false,
+                        include_usage: true
+                    }),
                     signal
                 });
 
