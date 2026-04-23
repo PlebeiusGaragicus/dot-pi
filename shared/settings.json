@@ -2,8 +2,8 @@
   "lastChangelogVersion": "0.67.6",
   "quietStartup": true,
   "defaultProvider": "plebchat",
-  "defaultModel": "nvidia/nemotron-3-super",
-  "defaultThinkingLevel": "off",
+  "defaultModel": "qwen3.5-122b-a10b",
+  "defaultThinkingLevel": "medium",
   "hideThinkingBlock": false,
   "theme": "synthwave"
 }
