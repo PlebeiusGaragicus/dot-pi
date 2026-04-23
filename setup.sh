@@ -130,34 +130,49 @@ init_setup() {
   echo "[1/5] Provider endpoint"
   echo ""
 
-  local cur_base_url cur_api_type cur_api_key_var
+  local cur_base_url="" cur_api_type="" cur_api_key_var=""
   if [ -f "$SHARED_DIR/models.json" ]; then
     cur_base_url=$(jq -r '.providers | to_entries[0].value.baseUrl // ""' "$SHARED_DIR/models.json" 2>/dev/null)
     cur_api_type=$(jq -r '.providers | to_entries[0].value.api // ""' "$SHARED_DIR/models.json" 2>/dev/null)
     cur_api_key_var=$(jq -r '.providers | to_entries[0].value.apiKey // ""' "$SHARED_DIR/models.json" 2>/dev/null)
   fi
-  cur_base_url="${cur_base_url:-}"
+  # Strip trailing slash from stored URL
+  cur_base_url="${cur_base_url%/}"
   cur_api_type="${cur_api_type:-openai}"
   cur_api_key_var="${cur_api_key_var:-PLEBCHAT_API_KEY}"
 
-  local base_url api_type
-  read -r -p "  Base URL [${cur_base_url:-https://localhost:1234}]: " base_url
-  base_url="${base_url:-${cur_base_url:-https://localhost:1234}}"
-  # Strip trailing slash
-  base_url="${base_url%/}"
+  local base_url="$cur_base_url" api_type="$cur_api_type"
 
-  echo "  API compatibility:"
-  echo "    1) openai"
-  echo "    2) anthropic-messages"
-  local api_choice
-  local default_n=1
-  [ "$cur_api_type" = "anthropic-messages" ] && default_n=2
-  read -r -p "  choice [$default_n]: " api_choice
-  api_choice="${api_choice:-$default_n}"
-  if [ "$api_choice" = "2" ]; then
-    api_type="anthropic-messages"
+  if [ -n "$cur_base_url" ]; then
+    echo "  Current: $cur_base_url ($cur_api_type)"
+    local edit_endpoint
+    read -r -p "  Change endpoint? [y/N]: " edit_endpoint
+    if [[ "$edit_endpoint" =~ ^[Yy] ]]; then
+      read -r -p "  Base URL [$cur_base_url]: " base_url
+      base_url="${base_url:-$cur_base_url}"
+      base_url="${base_url%/}"
+
+      echo "  API compatibility:"
+      echo "    1) openai"
+      echo "    2) anthropic-messages"
+      local api_choice default_n=1
+      [ "$cur_api_type" = "anthropic-messages" ] && default_n=2
+      read -r -p "  choice [$default_n]: " api_choice
+      api_choice="${api_choice:-$default_n}"
+      [ "$api_choice" = "2" ] && api_type="anthropic-messages" || api_type="openai"
+    fi
   else
-    api_type="openai"
+    read -r -p "  Base URL [https://localhost:1234]: " base_url
+    base_url="${base_url:-https://localhost:1234}"
+    base_url="${base_url%/}"
+
+    echo "  API compatibility:"
+    echo "    1) openai"
+    echo "    2) anthropic-messages"
+    local api_choice
+    read -r -p "  choice [1]: " api_choice
+    api_choice="${api_choice:-1}"
+    [ "$api_choice" = "2" ] && api_type="anthropic-messages" || api_type="openai"
   fi
 
   echo ""
@@ -178,22 +193,30 @@ init_setup() {
   fi
   [ ${#key_names[@]} -eq 0 ] && key_names=(PLEBCHAT_API_KEY TAVILY_API_KEY XAI_API_KEY)
 
-  declare -A env_vals
-  local kn
-  for kn in "${key_names[@]}"; do
+  # Use parallel indexed array for values (bash 3.x compat -- no declare -A)
+  local env_vals=()
+  local ki kn
+  for ki in "${!key_names[@]}"; do
+    kn="${key_names[$ki]}"
     local cur
     cur=$(_init_read_env_var "$env_file" "$kn")
-    env_vals[$kn]=$(_init_prompt_key "$kn" "$cur" "$kn")
+    env_vals+=("$(_init_prompt_key "$kn" "$cur" "$kn")")
   done
 
-  # Determine which env var holds the provider API key
+  # Find provider API key value by matching key_names to cur_api_key_var
   local provider_api_key_var="$cur_api_key_var"
-  local provider_api_key="${env_vals[$provider_api_key_var]:-}"
+  local provider_api_key=""
+  for ki in "${!key_names[@]}"; do
+    if [ "${key_names[$ki]}" = "$provider_api_key_var" ]; then
+      provider_api_key="${env_vals[$ki]}"
+      break
+    fi
+  done
 
   # Write .env
   {
-    for kn in "${key_names[@]}"; do
-      echo "export ${kn}=${env_vals[$kn]}"
+    for ki in "${!key_names[@]}"; do
+      echo "export ${key_names[$ki]}=${env_vals[$ki]}"
     done
   } > "$env_file"
   echo ""
@@ -213,7 +236,6 @@ init_setup() {
   raw_response=$(curl "${curl_args[@]}" "$base_url/v1/models" 2>/dev/null) || true
 
   if [ -n "$raw_response" ] && echo "$raw_response" | jq -e '.data' &>/dev/null; then
-    # OpenAI-compatible /v1/models response
     local count
     count=$(echo "$raw_response" | jq '.data | length')
     echo "  Found $count model(s):"
@@ -235,6 +257,7 @@ init_setup() {
     if [ -n "$selection" ]; then
       local selected_ids=() selected_names=()
       IFS=',' read -ra sel_nums <<< "$selection"
+      local n
       for n in "${sel_nums[@]}"; do
         n=$(echo "$n" | tr -d ' ')
         if [ "$n" -ge 1 ] 2>/dev/null && [ "$n" -le "${#model_ids[@]}" ]; then
@@ -263,6 +286,7 @@ init_setup() {
     manual="${manual:-$existing_ids}"
     if [ -n "$manual" ]; then
       IFS=',' read -ra parts <<< "$manual"
+      local p
       for p in "${parts[@]}"; do
         p=$(echo "$p" | xargs)
         [ -n "$p" ] && model_ids+=("$p") && model_names+=("$p")
@@ -288,7 +312,6 @@ init_setup() {
     local mid="${model_ids[$i]}"
     local mname="${model_names[$i]}"
 
-    # Try to pull existing metadata for this model
     local reasoning="false" input='["text"]' ctx=131072
     if [ -f "$SHARED_DIR/models.json" ]; then
       local existing
@@ -342,19 +365,21 @@ init_setup() {
     prefixed_ids+=("${provider_name}/${mid}")
   done
 
+  # Use parallel indexed array for role values (bash 3.x compat)
+  local role_vals=()
   local role
-  declare -A role_vals
   for role in "${role_names[@]}"; do
     local cur
     cur=$(_init_read_env_var "$roles_file" "$role")
-    role_vals[$role]=$(_init_select_model "$role" "$cur" "${prefixed_ids[@]}")
+    role_vals+=("$(_init_select_model "$role" "$cur" "${prefixed_ids[@]}")")
     echo ""
   done
 
   # Write model_roles
   {
-    for role in "${role_names[@]}"; do
-      echo "export ${role}=${role_vals[$role]}"
+    local ri
+    for ri in "${!role_names[@]}"; do
+      echo "export ${role_names[$ri]}=${role_vals[$ri]}"
     done
   } > "$roles_file"
   echo "  Wrote $roles_file"
@@ -366,16 +391,17 @@ init_setup() {
 
   echo "  Provider:  $base_url ($api_type)"
   echo "  Models:    ${#model_ids[@]} configured"
-  for kn in "${key_names[@]}"; do
-    echo "  $kn: $(_init_mask "${env_vals[$kn]}")"
+  for ki in "${!key_names[@]}"; do
+    echo "  ${key_names[$ki]}: $(_init_mask "${env_vals[$ki]}")"
   done
-  for role in "${role_names[@]}"; do
-    local v="${role_vals[$role]}"
-    echo "  $role: ${v:-(not set)}"
+  local ri
+  for ri in "${!role_names[@]}"; do
+    local v="${role_vals[$ri]}"
+    echo "  ${role_names[$ri]}: ${v:-(not set)}"
   done
 
   local warnings=0
-  [ -z "${env_vals[${key_names[0]}]:-}" ] && echo "" && echo "  Warning: ${key_names[0]} is empty" && warnings=1
+  [ -z "${env_vals[0]:-}" ] && echo "" && echo "  Warning: ${key_names[0]} is empty" && warnings=1
   [ ${#model_ids[@]} -eq 0 ] && echo "  Warning: no models configured" && warnings=1
 
   echo ""

@@ -1,6 +1,8 @@
 These repositories may help you in your journey and provide good reference:
 
 ```sh
+cd ./REFERENCES/
+
 ## pi-mono itself
 git clone https://github.com/PlebeiusGaragicus/pi-mono.git
 

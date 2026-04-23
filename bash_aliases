@@ -10,6 +10,8 @@
 # DOT_PI_DIR is auto-detected from this script's location.
 # Override by setting DOT_PI_DIR before sourcing.
 
+DOT_PI_INSTALLED=1
+
 # disable version telemetry (shell-local; export in your profile if you want it on bare `pi`)
 PI_TELEMETRY=0
 

@@ -7,15 +7,10 @@ Manage multiple pi coding agent configurations without touching `~/.pi/`. Each t
 ## Quick Start
 
 ```bash
-git clone git@github.com:PlebeiusGaragicus/dot-pi.git ~/dot-pi
-cd ~/dot-pi && git submodule update --init
-
-cp example.env .env
-# Edit .env with your API keys
-
-echo 'source ~/dot-pi/bash_aliases' >> ~/.zshrc
-source ~/dot-pi/bash_aliases
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/PlebeiusGaragicus/dot-pi/main/install.sh)"
 ```
+
+Or install manually — see [INSTALL.md](INSTALL.md) for details.
 
 ### Zsh tab completion for `p`
 
