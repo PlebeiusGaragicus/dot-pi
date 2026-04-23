@@ -10,16 +10,47 @@
  * TODO: https://docs.tavily.com/documentation/api-reference/introduction
  * TODO: https://docs.tavily.com/documentation/api-reference/endpoint/search
  *
- * Requires: TAVILY_API_KEY environment variable
+ * API key resolution (in priority order):
+ *   1. TAVILY_API_KEY environment variable
+ *   2. ~/.dot-pi/.tavily.env file (written by /tavily-api-key command)
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text, getMarkdownTheme } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 const API_URL = "https://api.tavily.com/search";
 const USAGE_API_URL = "https://api.tavily.com/usage";
 const STATUS_KEY = "tavily-usage";
+const TAVILY_KEY_FILE = ".tavily.env";
+
+function findDotPiRoot(): string {
+    let dir = getAgentDir();
+    for (let i = 0; i < 5; i++) {
+        if (fs.existsSync(path.join(dir, "env.sh"))) return dir;
+        dir = path.dirname(dir);
+    }
+    return path.dirname(getAgentDir());
+}
+
+function loadTavilyKey(): string | null {
+    const envKey = process.env.TAVILY_API_KEY?.trim();
+    if (envKey && envKey !== "$TAVILY_API_KEY") return envKey;
+    const keyPath = path.join(findDotPiRoot(), TAVILY_KEY_FILE);
+    if (!fs.existsSync(keyPath)) return null;
+    const content = fs.readFileSync(keyPath, "utf-8").trim();
+    const match = content.match(/^(?:TAVILY_API_KEY\s*=\s*)?(.+)$/m);
+    return match?.[1]?.trim() || null;
+}
+
+function saveTavilyKey(key: string): string {
+    const keyPath = path.join(findDotPiRoot(), TAVILY_KEY_FILE);
+    fs.writeFileSync(keyPath, `TAVILY_API_KEY=${key}\n`, "utf-8");
+    return keyPath;
+}
 
 /** Cached footer state for the simplified usage bar. */
 interface FooterUsageState {
@@ -168,10 +199,10 @@ function formatFooterLine(state: FooterUsageState): string {
 
 /** GET /usage once; sets `cachedUsage` on success. Returns the status line to show. */
 async function fetchUsageBootstrapLine(): Promise<string> {
-    const apiKey = process.env.TAVILY_API_KEY?.trim();
+    const apiKey = loadTavilyKey();
     if (!apiKey) {
         cachedUsage = null;
-        return "Tavily: set TAVILY_API_KEY to show plan usage";
+        return "Tavily: run /tavily-api-key to configure";
     }
 
     let res: Response;
@@ -264,14 +295,14 @@ export default function (pi: ExtensionAPI) {
         parameters: SearchParamsSchema,
 
         async execute(toolCallId, params, signal, onUpdate, ctx) {
-            const apiKey = process.env.TAVILY_API_KEY;
+            const apiKey = loadTavilyKey();
 
-            if (!apiKey || apiKey === "$TAVILY_API_KEY") {
+            if (!apiKey) {
                 return {
                     content: [{ 
                         type: "text", 
-                        text: "Error: TAVILY_API_KEY environment variable is not set or invalid.\n\n" +
-                              "Please ensure TAVILY_API_KEY is exported in your shell before launching pi." 
+                        text: "Error: Tavily API key is not configured.\n\n" +
+                              "Run /tavily-api-key to set it, or export TAVILY_API_KEY in your shell." 
                     }],
                     isError: true
                 };
@@ -497,7 +528,26 @@ export default function (pi: ExtensionAPI) {
         }
     });
 
-    // Usage status footer: bootstrap from GET /usage once per session; increments on each search.
+    pi.registerCommand("tavily-api-key", {
+        description: "Set or update your Tavily API key",
+        handler: async (_args, ctx) => {
+            if (!ctx.hasUI) return;
+            const current = loadTavilyKey();
+            const masked = current
+                ? `${current.slice(0, 4)}****${current.slice(-2)}`
+                : "(not set)";
+            ctx.ui.notify(`Current key: ${masked}`, "info");
+            const input = await ctx.ui.input("Paste your Tavily API key (from https://app.tavily.com)");
+            if (!input?.trim()) {
+                ctx.ui.notify("Cancelled", "info");
+                return;
+            }
+            const keyPath = saveTavilyKey(input.trim());
+            ctx.ui.notify(`Saved to ${keyPath}`, "success");
+            await refreshFooterBootstrap(ctx);
+        },
+    });
+
     pi.on("session_start", async (_event, ctx) => {
         await refreshFooterBootstrap(ctx);
     });
