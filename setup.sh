@@ -80,13 +80,8 @@ create_team() {
   # Symlink shared model provider config
   ln -sf "../../shared/models.json" "$team_dir/models.json"
 
-  # Scaffold default settings (theme + quiet startup)
-  cat > "$team_dir/settings.json" <<'SETTINGS'
-{
-  "theme": "synthwave",
-  "quietStartup": true
-}
-SETTINGS
+  # Symlink shared Pi settings (theme, defaults, etc.)
+  ln -sf "../../shared/settings.json" "$team_dir/settings.json"
 
   cat > "$team_dir/pi-args" <<'PIARGS'
 # Optional default CLI flags for `p <name>` (read by bash_aliases). One flag per line; # starts a comment.
@@ -145,7 +140,7 @@ WSCONF
   echo "    team-prompt.md       (orchestrator prompt with tools/model frontmatter)"
   echo "    banner.txt           (startup branding -- edit to customize)"
   echo "    models.json          (symlinked to shared)"
-  echo "    settings.json        (theme + quietStartup defaults)"
+  echo "    settings.json        (symlink → shared/settings.json)"
   echo "    pi-args              (optional default CLI flags; see IMPORTANT line inside)"
   [ "$workspace" = true ] && echo "    workspace.conf       (workspace subdirectory list)"
   echo ""
@@ -210,13 +205,8 @@ STUB
 
   ln -sf "../../shared/models.json" "$agent_dir/models.json"
 
-  # Scaffold default settings (theme + quiet startup)
-  cat > "$agent_dir/settings.json" <<'SETTINGS'
-{
-  "theme": "synthwave",
-  "quietStartup": true
-}
-SETTINGS
+  # Symlink shared Pi settings (theme, defaults, etc.)
+  ln -sf "../../shared/settings.json" "$agent_dir/settings.json"
 
   cat > "$agent_dir/pi-args" <<'PIARGS'
 # Optional default CLI flags for `p <name>` (read by bash_aliases). One flag per line; # starts a comment.
@@ -263,7 +253,7 @@ WSCONF
   echo "    bin/                     (symlinked to shared/bin, gitignored contents)"
   echo "    sessions/                (runtime session data, gitignored)"
   echo "    models.json              (symlinked to shared)"
-  echo "    settings.json            (theme + quietStartup defaults)"
+  echo "    settings.json            (symlink → shared/settings.json)"
   echo "    pi-args                  (optional default CLI flags; see IMPORTANT line inside)"
   echo "    SYSTEM.md                (system prompt — edit to customize)"
   echo "    banner.txt               (startup branding -- edit to customize)"

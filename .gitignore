@@ -1,7 +1,5 @@
 .DS_Store
 .env
-example-reports/
-exported-traces/
 
 # Runtime session data (each team gets its own sessions/ dir)
 teams/*/sessions/*
@@ -25,15 +23,12 @@ agents/*/.cache/
 evals/results/
 
 # Workspace team output (research artifacts are ephemeral)
-workspaces/*/
-!workspaces/.gitkeep
+workspaces/*
+!workspaces/README.md
 
 # Downloaded binaries (fd, rg) -- shared across teams via symlinks
 shared/bin/*
 !shared/bin/.gitkeep
-
-# Submodule build artifacts
-references/*
 
 REFERENCE/*
 !REFERENCE/README.md

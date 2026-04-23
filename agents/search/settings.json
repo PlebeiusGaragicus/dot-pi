@@ -1,8 +1,1 @@
-{
-  "theme": "synthwave",
-  "quietStartup": true,
-  "lastChangelogVersion": "0.67.6",
-  "defaultProvider": "plebchat",
-  "defaultModel": "qwen3.5-122b-a10b",
-  "defaultThinkingLevel": "off"
-}
+../../shared/settings.json

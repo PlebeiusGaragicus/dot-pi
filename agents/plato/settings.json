@@ -1,8 +1,1 @@
-{
-  "theme": "synthwave",
-  "quietStartup": true,
-  "lastChangelogVersion": "0.66.1",
-  "defaultProvider": "plebchat",
-  "defaultModel": "nvidia/nemotron-3-super",
-  "defaultThinkingLevel": "off"
-}
+../../shared/settings.json

@@ -1,9 +1,1 @@
-{
-  "theme": "synthwave",
-  "quietStartup": true,
-  "lastChangelogVersion": "0.66.1",
-  "defaultProvider": "plebchat",
-  "defaultModel": "google/gemma-4-26b-a4b",
-  "defaultThinkingLevel": "minimal",
-  "hideThinkingBlock": true
-}
+../../shared/settings.json
