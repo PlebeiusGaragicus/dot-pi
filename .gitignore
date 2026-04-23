@@ -34,3 +34,6 @@ shared/bin/*
 
 # Submodule build artifacts
 references/*
+
+REFERENCE/*
+!REFERENCE/README.md
