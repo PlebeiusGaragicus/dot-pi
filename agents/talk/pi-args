@@ -1,7 +1,7 @@
 # Chat only — no tools, no skills
 --no-tools
 --no-skills
---no-prompt-templates
+# --no-prompt-templates
 # Auto TTS on startup (say extension)
 --tts-enable
 # IMPORTANT: must end with a newline / or comment

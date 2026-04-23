@@ -1,5 +1,5 @@
 ---
-description: agent introduction
+description: agent explanation and introduction
 ---
 
 Please explain your instructions, purpose, goals, all tools and skills available to you and how you are expected to operate.

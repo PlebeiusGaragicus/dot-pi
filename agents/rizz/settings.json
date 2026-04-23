@@ -1,9 +1,9 @@
 {
   "theme": "synthwave",
   "quietStartup": true,
-  "lastChangelogVersion": "0.66.1",
+  "lastChangelogVersion": "0.67.6",
   "defaultProvider": "plebchat",
-  "defaultModel": "nvidia/nemotron-3-super",
+  "defaultModel": "qwen3.5-122b-a10b",
   "defaultThinkingLevel": "off",
   "hideThinkingBlock": true
 }

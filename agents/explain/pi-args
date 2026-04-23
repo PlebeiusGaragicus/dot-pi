@@ -4,6 +4,6 @@
 --tools
 grep,find,ls,read
 --no-skills
---no-prompt-templates
+# --no-prompt-templates
 # --tts-enable
 # IMPORTANT: must end with a newline / comment
