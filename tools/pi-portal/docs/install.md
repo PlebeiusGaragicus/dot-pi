@@ -3,8 +3,8 @@
 ## Requirements
 
 - **Node.js 20+**
-- A checkout of **dot-pi** (or any tree that contains `agents/`, `shared/`, and `setup.sh`).
-- For **Create agent** in the UI: **`bash`** and an executable **`setup.sh`** at the dot-pi root (the API runs `bash /path/to/dot-pi/setup.sh create-agent …`).
+- A checkout of **dot-pi** (or any tree that contains `agents/`, `shared/`, and `dotpi`).
+- For **Create agent** in the UI: **`bash`** and an executable **`dotpi`** at the dot-pi root (the API runs `bash /path/to/dot-pi/dotpi create-agent …`).
 
 ## Get the code
 

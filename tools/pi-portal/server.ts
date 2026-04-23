@@ -460,13 +460,13 @@ function createApiApp(root: string) {
 			if (!AGENT_NAME_RE.test(body.name)) {
 				return c.json({ error: "Invalid agent name" }, 400);
 			}
-			const setup = join(root, "setup.sh");
-			if (!existsSync(setup)) {
-				return c.json({ error: `setup.sh not found under ${root}` }, 500);
+			const dotpi = join(root, "dotpi");
+			if (!existsSync(dotpi)) {
+				return c.json({ error: `dotpi not found under ${root}` }, 500);
 			}
 			const args =
 				body.workspace === true ? ["create-agent", "--workspace", body.name] : ["create-agent", body.name];
-			await execFileAsync("bash", [setup, ...args], {
+			await execFileAsync("bash", [dotpi, ...args], {
 				cwd: root,
 				env: { ...process.env },
 			});

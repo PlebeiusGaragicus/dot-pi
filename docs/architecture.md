@@ -22,9 +22,10 @@ This is the mechanism dot-pi exploits for both team isolation and standalone age
 
 ```
 dot-pi/
-├── setup.sh                  # Team and agent bootstrapping script
+├── dotpi                     # CLI: setup, create, create-agent, list, link-skill, link-auth
+├── commands/                 # Subcommand scripts (sourced by dotpi)
 ├── bash_aliases              # Shell functions (source in .zshrc/.bashrc)
-├── example.env               # API key template
+├── .env.example              # API key template
 ├── AGENTS.md                 # LLM-readable project guide
 ├── shared/                   # Reusable resources (never loaded directly)
 │   ├── extensions/           # Shared extension source code
@@ -176,11 +177,11 @@ Each team and standalone agent directory is a complete pi config root. This prov
 - **Session isolation** -- separate conversation history per team
 - **Settings isolation** -- per-team model preferences and configuration
 
-Shared resources (extensions, themes, models, binaries) are symlinked from `shared/` when you scaffold a team or agent. **Skills are opt-in:** link them with `./setup.sh link-skill` (or `ln -sf`) into `skills/`. Downloaded binaries (`fd`, `rg`) are written once to `shared/bin/` through directory symlinks and shared across all teams automatically. Subagents can further restrict which skills they load via frontmatter. Orchestrator tools can be restricted per-team via the `tools` field in `team-prompt.md` frontmatter (e.g. restricting to `read,find,ls,grep` to force subagent delegation).
+Shared resources (extensions, themes, models, binaries) are symlinked from `shared/` when you scaffold a team or agent. **Skills are opt-in:** link them with `dotpi link-skill` (or `ln -sf`) into `skills/`. Downloaded binaries (`fd`, `rg`) are written once to `shared/bin/` through directory symlinks and shared across all teams automatically. Subagents can further restrict which skills they load via frontmatter. Orchestrator tools can be restricted per-team via the `tools` field in `team-prompt.md` frontmatter (e.g. restricting to `read,find,ls,grep` to force subagent delegation).
 
 For shared authentication across teams and agents, symlink `auth.json`:
 
 ```bash
-./setup.sh link-auth recon blog
-./setup.sh link-auth recon twenty-questions
+dotpi link-auth recon blog
+dotpi link-auth recon twenty-questions
 ```

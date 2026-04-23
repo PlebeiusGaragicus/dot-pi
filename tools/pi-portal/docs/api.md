@@ -12,7 +12,7 @@ All routes are served under **`/api`**. The dev proxy forwards browser requests 
 |--------|------|-------------|
 | `GET` | `/api/agents` | List standalone agents: `{ agents: [{ id, workspace }] }` |
 | `GET` | `/api/agents/:id` | Agent summary (path, optional file flags) |
-| `POST` | `/api/agents` | Body: `{ name, workspace?: boolean }` — runs `setup.sh create-agent` |
+| `POST` | `/api/agents` | Body: `{ name, workspace?: boolean }` — runs `dotpi create-agent` |
 | `DELETE` | `/api/agents/:id` | Body: `{ confirm: "<id>" }` — must match `:id`; removes `agents/<id>/` |
 
 ## Files

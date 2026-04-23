@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_URL="https://github.com/PlebeiusGaragicus/dot-pi.git"
 DOT_PI_HOME="${DOT_PI_HOME:-$HOME/.dot-pi}"
+FORCE_REBASE=false
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -42,9 +43,10 @@ usage() {
 dot-pi installer
 
 Usage:
-  install.sh              Install dot-pi to $DOT_PI_HOME
-  install.sh --uninstall  Remove dot-pi and clean up shell config
-  install.sh --help       Show this help
+  install.sh                Install dot-pi to $DOT_PI_HOME
+  install.sh --force-rebase Update an existing install (stash, rebase, pop)
+  install.sh --uninstall    Remove dot-pi and clean up shell config
+  install.sh --help         Show this help
 
 Environment:
   DOT_PI_HOME   Override install location (default: ~/.dot-pi)
@@ -125,10 +127,37 @@ do_install() {
   check_pi
   echo ""
 
-  # Clone or update
+  # Clone, update, or bail
   if [ -d "$DOT_PI_HOME/.git" ]; then
-    info "Existing installation found — updating"
-    git -C "$DOT_PI_HOME" pull --ff-only
+    if [ "$FORCE_REBASE" = true ]; then
+      info "Updating dot-pi (rebase)..."
+      local stashed=false
+      if ! git -C "$DOT_PI_HOME" diff --quiet 2>/dev/null || \
+         ! git -C "$DOT_PI_HOME" diff --cached --quiet 2>/dev/null; then
+        git -C "$DOT_PI_HOME" stash push -m "dotpi-installer-autostash"
+        stashed=true
+      fi
+      git -C "$DOT_PI_HOME" pull --rebase || {
+        warn "Rebase failed — resolve conflicts in $DOT_PI_HOME and run: git rebase --continue"
+        [ "$stashed" = true ] && warn "Your local changes are stashed. Run: git stash pop"
+        exit 1
+      }
+      if [ "$stashed" = true ]; then
+        git -C "$DOT_PI_HOME" stash pop || {
+          warn "Stash pop had conflicts — resolve them in $DOT_PI_HOME"
+        }
+      fi
+      info "Updated successfully"
+    else
+      echo ""
+      info "dot-pi is already installed at $(bold "$DOT_PI_HOME")"
+      echo ""
+      echo "    To update:      install.sh --force-rebase"
+      echo "    To reconfigure: $DOT_PI_HOME/dotpi setup"
+      echo "    To remove:      install.sh --uninstall"
+      echo ""
+      exit 0
+    fi
   elif [ -d "$DOT_PI_HOME" ]; then
     fail "$DOT_PI_HOME exists but is not a git repo. Remove it first or set DOT_PI_HOME."
   else
@@ -158,12 +187,12 @@ do_install() {
   fi
   echo ""
 
-  # Run the interactive setup wizard
+  # Run the interactive setup wizard (don't let a wizard abort kill our summary)
   if confirm "Run interactive setup wizard? (API keys, models, roles)" "Y"; then
     echo ""
-    "$DOT_PI_HOME/setup.sh" init
+    "$DOT_PI_HOME/dotpi" setup || true
   else
-    warn "Skipped — run it later with: $DOT_PI_HOME/setup.sh init"
+    warn "Skipped — run it later with: dotpi setup"
   fi
 
   echo ""
@@ -205,22 +234,18 @@ do_uninstall() {
   rc="$(shell_rc)"
 
   if [ -f "$rc" ] && grep -qF "dot-pi" "$rc" 2>/dev/null; then
-    # Remove the comment line and the source line
     local tmp
     tmp="$(mktemp)"
     grep -vF "dot-pi" "$rc" > "$tmp"
-    # Clean up any resulting double blank lines
     cat -s "$tmp" > "$rc"
     rm -f "$tmp"
     info "Removed dot-pi lines from $rc"
   fi
 
-  # Remove the directory
   rm -rf "$DOT_PI_HOME"
   info "Removed $DOT_PI_HOME"
   echo ""
 
-  # Optionally uninstall pi
   if command -v pi &>/dev/null; then
     if confirm "Also uninstall pi (npm global package)?" "N"; then
       npm uninstall -g @mariozechner/pi-coding-agent
@@ -237,8 +262,9 @@ do_uninstall() {
 # ── main ──────────────────────────────────────────────────────────────────────
 
 case "${1:-}" in
-  --uninstall) do_uninstall ;;
-  --help|-h)   usage ;;
-  "")          do_install ;;
-  *)           echo "Unknown option: $1"; usage ;;
+  --force-rebase) FORCE_REBASE=true; do_install ;;
+  --uninstall)    do_uninstall ;;
+  --help|-h)      usage ;;
+  "")             do_install ;;
+  *)              echo "Unknown option: $1"; usage ;;
 esac

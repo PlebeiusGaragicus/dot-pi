@@ -1,6 +1,6 @@
 # pi-portal
 
-**pi-portal** is a local web UI for managing **[dot-pi](https://github.com/PlebeiusGaragicus/dot-pi)** **standalone agents** (`agents/<name>/`): browse agents, edit `SYSTEM.md`, `pi-args`, and optional prompt files, add or remove symlinks to shared extensions and skills, and create or delete agents (aligned with `./setup.sh create-agent`).
+**pi-portal** is a local web UI for managing **[dot-pi](https://github.com/PlebeiusGaragicus/dot-pi)** **standalone agents** (`agents/<name>/`): browse agents, edit `SYSTEM.md`, `pi-args`, and optional prompt files, add or remove symlinks to shared extensions and skills, and create or delete agents (aligned with `dotpi create-agent`).
 
 ## Scope
 

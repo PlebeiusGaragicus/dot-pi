@@ -21,7 +21,7 @@ When you use zsh, `bash_aliases` sources [p-completion.zsh](p-completion.zsh) at
 ## Create a Team
 
 ```bash
-./setup.sh create my-team
+dotpi create my-team
 # Add agents to teams/my-team/agents/
 # Add prompts to teams/my-team/prompts/
 ```

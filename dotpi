@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DOT_PI_DIR="$(cd "$(dirname "$0")" && pwd)"
+COMMANDS_DIR="$DOT_PI_DIR/commands"
+
+source "$COMMANDS_DIR/_common.sh"
+
+usage() {
+  cat <<EOF
+dotpi — dot-pi management CLI
+
+Usage: dotpi <command> [args]
+
+Commands:
+  setup                                    Interactive setup wizard (API keys, models, roles)
+  create [--workspace] <team-name>         Create a new team directory with shared extension symlinks
+  create-agent [--workspace] <agent-name>  Create a standalone agent directory with a stub extension
+  list                                     List existing teams and standalone agents
+  link-skill <team-or-agent> <skill> [...] Symlink one or more shared skills into a team or agent
+  link-auth <src> <dst>                    Symlink auth.json from one team/agent (or path) into another
+
+Options:
+  --workspace   Mark as a workspace agent/team. Creates a workspace.conf file so the
+                auto-generated alias launches pi in a fresh dated directory instead of
+                the user's current directory. Edit workspace.conf to list subdirectories
+                that should be pre-created in each workspace run.
+
+Examples:
+  dotpi setup
+  dotpi create blog
+  dotpi create --workspace deepresearch
+  dotpi create-agent twenty-questions
+  dotpi create-agent --workspace my-researcher
+  dotpi list
+  dotpi link-skill my-agent searxng
+  dotpi link-auth recon blog
+EOF
+  exit 1
+}
+
+[ $# -lt 1 ] && usage
+
+cmd="$1"
+shift
+
+case "$cmd" in
+  setup)        source "$COMMANDS_DIR/setup.sh" "$@" ;;
+  create)       source "$COMMANDS_DIR/create.sh" "$@" ;;
+  create-agent) source "$COMMANDS_DIR/create-agent.sh" "$@" ;;
+  list)         source "$COMMANDS_DIR/list.sh" "$@" ;;
+  link-skill)   source "$COMMANDS_DIR/link-skill.sh" "$@" ;;
+  link-auth)    source "$COMMANDS_DIR/link-auth.sh" "$@" ;;
+  --help|-h)    usage ;;
+  *)            echo "Error: unknown command '$cmd'"; usage ;;
+esac

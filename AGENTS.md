@@ -20,10 +20,11 @@ Either kind can run **in-situ** (in the user's current directory) or as a **work
 dot-pi/
 ├── AGENTS.md                 # This file
 ├── README.md                 # Human-facing overview
-├── setup.sh                  # Scaffold teams and agents
+├── dotpi                     # CLI: setup, create, create-agent, list, link-skill, link-auth
+├── commands/                 # Subcommand scripts (sourced by dotpi)
 ├── bash_aliases              # Shell functions: `p` command (source in .zshrc/.bashrc)
 ├── p-completion.zsh          # Zsh tab completion for `p` (sourced from bash_aliases)
-├── example.env               # API key template (copy to .env)
+├── .env.example              # API key template (copy to .env)
 ├── mkdocs.yml                # MkDocs config for docs site
 │
 ├── shared/                   # Reusable resources (never used as PI_CODING_AGENT_DIR directly)
@@ -52,7 +53,7 @@ teams/<name>/
 ├── extensions/               # Symlinked from shared/extensions/ (see Symlink Patterns)
 ├── agents/                   # Subagent definitions (team-agentname.md)
 ├── prompts/                  # Prompt templates (slash-command workflows)
-├── skills/                   # Per-skill symlinks (add with ./setup.sh link-skill)
+├── skills/                   # Per-skill symlinks (add with dotpi link-skill)
 ├── themes/                   # Per-theme symlinks from shared/themes/
 ├── team-prompt.md            # Orchestrator config (frontmatter) + system prompt (body)
 ├── pi-args                   # (optional) Default CLI flags for the orchestrator (read by `p`)
@@ -77,10 +78,10 @@ agents/<name>/
 │   ├── run-finish-notify.ts, startup-branding.ts   # Shared (default scaffold)
 │   └── ...                   # Optional: e.g. agent-prompt.ts — symlink manually if you use AGENT.md
 ├── AGENT.md                  # (optional, not scaffolded) YAML + body — symlink agent-prompt.ts to load
-├── SYSTEM.md                 # Starter system prompt (scaffolded by setup.sh; replaces pi default)
+├── SYSTEM.md                 # Starter system prompt (scaffolded by dotpi; replaces pi default)
 ├── APPEND_SYSTEM.md          # (optional) Appends to pi's default system prompt (pi-native)
 ├── pi-args                   # (optional) Default CLI flags, one per line (read by `p`; end file per IMPORTANT line)
-├── skills/                   # Per-skill symlinks from shared/skills/ (use ./setup.sh link-skill to add)
+├── skills/                   # Per-skill symlinks from shared/skills/ (use dotpi link-skill to add)
 ├── themes/                   # Per-theme symlinks from shared/themes/
 ├── banner.txt                # Startup branding (ASCII art + usage text)
 ├── workspace.conf            # (optional) Marks as workspace agent; lists subdirs to pre-create
@@ -97,7 +98,7 @@ No `agents/` subdirectory, no `team-prompt.md`. The main pi process IS the agent
 
 1. **`SYSTEM.md` / `APPEND_SYSTEM.md`** (pi-native): `SYSTEM.md` replaces pi's default system prompt entirely; `APPEND_SYSTEM.md` appends to it. No extension needed — pi discovers these from `PI_CODING_AGENT_DIR` at startup.
 2. **`pi-args`** (via `p` dispatcher): plain text file with default CLI flags (e.g. `--tools websearch`, `--no-tools`, `--no-skills`), one per line. The `p` function prepends these to the `pi` invocation. **End the file with a newline after the last flag** (or leave the scaffolded trailing comment line) so the last flag is not dropped; `bash_aliases` also defends against a missing final newline when reading this file.
-3. **`AGENT.md`** (optional, legacy): YAML frontmatter sets `tools` and/or `model`; body appended to the system prompt. Requires symlink: `ln -sf ../../../shared/extensions/agent-prompt extensions/agent-prompt` — the `agent-prompt` shared extension reads `AGENT.md`. New `setup.sh create-agent` scaffolds do not link this file by default.
+3. **`AGENT.md`** (optional, legacy): YAML frontmatter sets `tools` and/or `model`; body appended to the system prompt. Requires symlink: `ln -sf ../../../shared/extensions/agent-prompt extensions/agent-prompt` — the `agent-prompt` shared extension reads `AGENT.md`. New `dotpi create-agent` scaffolds do not link this file by default.
 
 ## Key Concepts
 
@@ -230,10 +231,10 @@ sessions
 
 **To convert any existing team/agent to workspace mode**: create `workspace.conf` in its directory (can be empty for a bare workspace, or list subdirectories).
 
-**To scaffold a new workspace team/agent**: use the `--workspace` flag with `setup.sh`:
+**To scaffold a new workspace team/agent**: use the `--workspace` flag with `dotpi`:
 ```bash
-./setup.sh create --workspace my-research-team
-./setup.sh create-agent --workspace my-scraper
+dotpi create --workspace my-research-team
+dotpi create-agent --workspace my-scraper
 ```
 
 **Resuming a workspace session**: Workspace teams support `--resume` and `--list`:
@@ -258,12 +259,12 @@ Per-team orchestrator instructions, read by `subagent-teams` on startup and appe
 
 ## Symlink Patterns
 
-`setup.sh` wires shared resources into team/agent directories via relative symlinks. The canonical sources live in `shared/` and are never loaded directly by pi.
+`dotpi` wires shared resources into team/agent directories via relative symlinks. The canonical sources live in `shared/` and are never loaded directly by pi.
 
 **How it works:**
 
-- **Extensions**: `setup.sh create` symlinks a standard set of shared extensions into `<teamDir>/extensions/`. Teams get the `subagent-teams` directory extension plus individual file extensions; `setup.sh create-agent` symlinks `run-finish-notify.ts`, `startup-branding.ts`, and `say.ts` plus your stub under `extensions/<name>/`. Additional extensions from `shared/extensions/` can be manually symlinked as needed (including `agent-prompt.ts` if you use `AGENT.md`).
-- **Skills**: `skills/` starts empty. Add symlinks with `./setup.sh link-skill <team-or-agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
+- **Extensions**: `dotpi create` symlinks a standard set of shared extensions into `<teamDir>/extensions/`. Teams get the `subagent-teams` directory extension plus individual file extensions; `dotpi create-agent` symlinks `run-finish-notify.ts`, `startup-branding.ts`, and `say.ts` plus your stub under `extensions/<name>/`. Additional extensions from `shared/extensions/` can be manually symlinked as needed (including `agent-prompt.ts` if you use `AGENT.md`).
+- **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <team-or-agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
 - **Themes**: Each theme JSON in `shared/themes/` is symlinked individually into `<dir>/themes/`.
 - **bin**: A single directory symlink (`bin → ../../shared/bin`) so pi downloads `fd`/`rg` once and all teams share them.
 - **models.json**: A single file symlink (`models.json → ../../shared/models.json`).
@@ -285,8 +286,8 @@ All symlinks use relative paths (e.g. `../../../shared/extensions/...` for exten
 ### Create a new team
 
 ```bash
-./setup.sh create <team-name>
-./setup.sh create --workspace <team-name>   # workspace mode
+dotpi create <team-name>
+dotpi create --workspace <team-name>   # workspace mode
 ```
 
 Then: add agent `.md` files to `agents/`, write `team-prompt.md`, add prompt templates.
@@ -294,18 +295,18 @@ Then: add agent `.md` files to `agents/`, write `team-prompt.md`, add prompt tem
 ### Create a standalone agent
 
 ```bash
-./setup.sh create-agent <agent-name>
-./setup.sh create-agent --workspace <agent-name>   # workspace mode
+dotpi create-agent <agent-name>
+dotpi create-agent --workspace <agent-name>   # workspace mode
 ```
 
-**`setup.sh create-agent`** writes **`SYSTEM.md`** and **`pi-args`**; it does **not** create **`AGENT.md`**. Customize **`SYSTEM.md`**, **`pi-args`**, and/or your stub extension. Add **`AGENT.md`** + symlink **`agent-prompt.ts`** only if you want YAML-driven tools/model.
+**`dotpi create-agent`** writes **`SYSTEM.md`** and **`pi-args`**; it does **not** create **`AGENT.md`**. Customize **`SYSTEM.md`**, **`pi-args`**, and/or your stub extension. Add **`AGENT.md`** + symlink **`agent-prompt.ts`** only if you want YAML-driven tools/model.
 
 Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or lifecycle hooks.
 
 ### Add a shared skill
 
 1. Create `shared/skills/<name>/SKILL.md` with frontmatter (`name`, `description`)
-2. Link into a team or agent: `./setup.sh link-skill <team-or-agent> <name>` (or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`)
+2. Link into a team or agent: `dotpi link-skill <team-or-agent> <name>` (or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`)
 
 ### Write a custom extension
 
@@ -334,7 +335,8 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `agents/*/pi-args` | Yes | Default CLI flags (read by `p` dispatcher) |
 | `teams/*/pi-args` | Yes | Optional default CLI flags for the team orchestrator (read by `p`) |
 | `agents/*/extensions/**/*.ts` | Yes | Custom agent extensions |
-| `setup.sh` | Yes | Team/agent scaffolding |
+| `dotpi` | Yes | CLI dispatcher (setup, create, list, link-skill, link-auth) |
+| `commands/*.sh` | Yes | Subcommand scripts (sourced by dotpi) |
 | `bash_aliases` | Yes | Shell functions: `p` command |
 | `docs/**/*.md` | Yes | MkDocs documentation |
 | `teams/*/extensions/*` | **No** | Symlinks — edit `shared/extensions/` instead |

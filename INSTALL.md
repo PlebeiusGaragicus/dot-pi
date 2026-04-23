@@ -23,7 +23,7 @@ DOT_PI_HOME=~/my-agents bash -c "$(curl -fsSL https://raw.githubusercontent.com/
 git clone https://github.com/PlebeiusGaragicus/dot-pi.git ~/.dot-pi
 echo 'source ~/.dot-pi/bash_aliases' >> ~/.zshrc
 source ~/.dot-pi/bash_aliases
-~/.dot-pi/setup.sh init
+~/.dot-pi/dotpi setup
 ```
 
 ## Uninstall

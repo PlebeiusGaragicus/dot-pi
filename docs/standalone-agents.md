@@ -26,7 +26,7 @@ agents/<name>/
 ├── SYSTEM.md                 # (optional) Replaces pi's default system prompt
 ├── APPEND_SYSTEM.md          # (optional) Appends to pi's default system prompt
 ├── pi-args                   # (optional) Default CLI flags (read by p dispatcher)
-├── skills/                   # Add skills with ./setup.sh link-skill <name> <skill>
+├── skills/                   # Add skills with dotpi link-skill <name> <skill>
 ├── themes/                   # Per-theme symlinks from shared/themes/
 ├── banner.txt                # Startup branding (ASCII art + usage text)
 ├── bin/                      # → shared/bin/ (fd, rg)
@@ -50,7 +50,7 @@ The directory is a complete `PI_CODING_AGENT_DIR` root, just like a team directo
 ### Scaffolding
 
 ```bash
-./setup.sh create-agent my-agent
+dotpi create-agent my-agent
 ```
 
 This creates the directory structure with shared symlinks and a stub extension at `agents/my-agent/extensions/my-agent/index.ts`.
@@ -78,7 +78,7 @@ Available flags include `--tools <list>` (whitelist), `--no-tools` (disable all 
 
 **Optional: `AGENT.md` (via manually linked `agent-prompt` extension)**
 
-YAML frontmatter + markdown body, similar to `team-prompt.md` for teams. **`setup.sh create-agent` does not symlink `agent-prompt`.** To use it:
+YAML frontmatter + markdown body, similar to `team-prompt.md` for teams. **`dotpi create-agent` does not symlink `agent-prompt`.** To use it:
 
 ```bash
 ln -sf ../../../shared/extensions/agent-prompt agents/<name>/extensions/agent-prompt
@@ -97,14 +97,14 @@ Edit the stub extension to add custom tools and behavior. See [Writing Extension
 After sourcing `bash_aliases`, run standalone agents with `p <name>`:
 
 ```bash
-source ~/dot-pi/bash_aliases
+source ~/.dot-pi/bash_aliases
 p my-agent "hello"
 ```
 
 Or set the environment variable directly:
 
 ```bash
-PI_CODING_AGENT_DIR=~/dot-pi/agents/my-agent pi "hello"
+PI_CODING_AGENT_DIR=~/.dot-pi/agents/my-agent pi "hello"
 ```
 
 ## Examples
@@ -155,7 +155,7 @@ Source: `agents/twenty-questions/extensions/twenty-questions/index.ts`
 `skills/` starts empty. Add shared skills:
 
 ```bash
-./setup.sh link-skill my-agent searxng
+dotpi link-skill my-agent searxng
 ```
 
 Remove a symlink to drop a skill:
@@ -178,5 +178,5 @@ const myFile = path.join(agentDir, "my-config.json");
 To reuse authentication from a team:
 
 ```bash
-./setup.sh link-auth recon my-agent
+dotpi link-auth recon my-agent
 ```

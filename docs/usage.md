@@ -4,10 +4,10 @@ This guide walks through concrete examples of how to use dot-pi day-to-day.
 
 ## Prerequisites
 
-You have pi installed, the repo cloned to `~/dot-pi`, and aliases sourced:
+You have pi installed, the repo cloned to `~/.dot-pi`, and aliases sourced:
 
 ```bash
-source ~/dot-pi/bash_aliases
+source ~/.dot-pi/bash_aliases
 ```
 
 ## 1. Recon a Codebase
@@ -214,16 +214,16 @@ Say you want a team for writing documentation:
 
 ```bash
 # Scaffold the team directory (in-situ mode)
-./setup.sh create docs-team
+dotpi create docs-team
 
 # Or as a workspace team (creates workspace.conf)
-./setup.sh create --workspace docs-team
+dotpi create --workspace docs-team
 ```
 
-This creates `teams/docs-team/` with extensions and models symlinked; **`skills/` is empty** until you run `./setup.sh link-skill docs-team <skill>`. Now add agents:
+This creates `teams/docs-team/` with extensions and models symlinked; **`skills/` is empty** until you run `dotpi link-skill docs-team <skill>`. Now add agents:
 
 ```bash
-cat > ~/dot-pi/teams/docs-team/agents/docs-writer.md << 'EOF'
+cat > ~/.dot-pi/teams/docs-team/agents/docs-writer.md << 'EOF'
 ---
 name: writer
 description: Writes clear technical documentation from code and context
@@ -248,7 +248,7 @@ The `no-skills: true` + `skills: skills/searxng` combination means this agent lo
 Re-source aliases and use it -- `p` discovers teams by directory name:
 
 ```bash
-source ~/dot-pi/bash_aliases
+source ~/.dot-pi/bash_aliases
 cd ~/projects/my-api
 p docs-team "Write API reference docs for all endpoints in src/routes/"
 ```
@@ -263,8 +263,8 @@ p recon
 # (pi prompts for API key on first run, saves to teams/recon/auth.json)
 
 # Share that auth with other teams
-./setup.sh link-auth recon impl
-./setup.sh link-auth recon blog
+dotpi link-auth recon impl
+dotpi link-auth recon blog
 ```
 
 ## 9. Check Your Setup
@@ -272,7 +272,7 @@ p recon
 See what teams are configured and whether their extensions are properly linked:
 
 ```bash
-./setup.sh list
+dotpi list
 ```
 
 ```

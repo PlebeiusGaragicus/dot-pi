@@ -11,18 +11,14 @@ The `p` command sets `PI_CODING_AGENT_DIR` to the right directory, and you get a
 ## Quick Start
 
 ```bash
-# Clone the repo
-git clone git@github.com:PlebeiusGaragicus/dot-pi.git ~/dot-pi
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/PlebeiusGaragicus/dot-pi/main/install.sh)"
+```
 
-# Source bash_aliases (defines `p`)
-echo 'source ~/dot-pi/bash_aliases' >> ~/.zshrc
-source ~/dot-pi/bash_aliases
+Or install manually — see [Installation & Setup](install.md) for details.
 
-# Set up API keys
-cp ~/dot-pi/example.env ~/dot-pi/.env
-# Edit .env with your API keys
+Then use a team from any project:
 
-# Use a team
+```bash
 cd /any/project
 p recon "Find all authentication code"
 p blog "Write a post about this project's architecture"
@@ -39,9 +35,9 @@ Standalone agents are single-purpose configurations with custom extensions inste
 ## Creating New Configurations
 
 ```bash
-./setup.sh create my-team                        # new team
-./setup.sh create --workspace my-research-team   # new workspace team
-./setup.sh create-agent my-agent                 # new standalone agent
+dotpi create my-team                        # new team
+dotpi create --workspace my-research-team   # new workspace team
+dotpi create-agent my-agent                 # new standalone agent
 ```
 
 All configurations are invokable via `p <name>` after re-sourcing `bash_aliases`. Workspace agents (those with a `workspace.conf` file) launch in a fresh dated directory under `workspaces/` and support `--list` and `--resume`. See the [Usage Guide](usage.md) for details.

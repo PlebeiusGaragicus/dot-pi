@@ -2,20 +2,20 @@
 
 **Documentation:** [pi-portal on GitHub Pages](https://PlebeiusGaragicus.github.io/pi-portal/) (built from `docs/` via MkDocs).
 
-Local web UI for managing **[dot-pi](https://github.com/PlebeiusGaragicus/dot-pi)** **standalone agents** (`agents/<name>/`): browse agents, edit `SYSTEM.md`, `pi-args`, and optional files, add or remove symlinks to shared extensions and skills, and create or delete agents (same behavior as `./setup.sh create-agent`).
+Local web UI for managing **[dot-pi](https://github.com/PlebeiusGaragicus/dot-pi)** **standalone agents** (`agents/<name>/`): browse agents, edit `SYSTEM.md`, `pi-args`, and optional files, add or remove symlinks to shared extensions and skills, and create or delete agents (same behavior as `dotpi create-agent`).
 
 **Scope (v1):** standalone agents only. Teams under `teams/` are not managed here.
 
 ## Requirements
 
 - Node.js 20+
-- For **Create agent** from the UI: `bash` and the dot-pi `setup.sh` must be executable (the API runs `bash /path/to/dot-pi/setup.sh create-agent …`).
+- For **Create agent** from the UI: `bash` and the dot-pi `dotpi` script must be executable (the API runs `bash /path/to/dot-pi/dotpi create-agent …`).
 
 ## Configuration
 
 | Variable | Description |
 |----------|-------------|
-| `DOT_PI_DIR` or `DOT_PI_ROOT` | Absolute path to the **dot-pi** repository root (contains `agents/`, `shared/`, `setup.sh`). If unset, defaults to two levels above this package (when `pi-portal` is the submodule at `dot-pi/tools/pi-portal`). |
+| `DOT_PI_DIR` or `DOT_PI_ROOT` | Absolute path to the **dot-pi** repository root (contains `agents/`, `shared/`, `dotpi`). If unset, defaults to two levels above this package (when `pi-portal` is the submodule at `dot-pi/tools/pi-portal`). |
 | `PI_PORTAL_API_PORT` | API port (default **8790**). The Vite dev server proxies `/api` to this port. |
 | `PI_PORTAL_SERVE_STATIC` | Set to `1` for production mode so the Node server serves the built `dist/` SPA in addition to `/api`. |
 
