@@ -442,6 +442,7 @@ create_team() {
   ln -sf "../../../shared/extensions/subagent-teams" "$team_dir/extensions/subagent-teams"
   ln -sf "../../../shared/extensions/run-finish-notify" "$team_dir/extensions/run-finish-notify"
   ln -sf "../../../shared/extensions/startup-branding" "$team_dir/extensions/startup-branding"
+  ln -sf "../../../shared/extensions/save" "$team_dir/extensions/save"
 
   # skills/ is created empty — add symlinks with: ./setup.sh link-skill <team-name> <skill>
   # pi auto-discovers skills from <agentDir>/skills/. Per-subagent control: frontmatter (skills, no-skills).
@@ -563,6 +564,7 @@ create_agent() {
   ln -sf "../../../shared/extensions/run-finish-notify" "$agent_dir/extensions/run-finish-notify"
   ln -sf "../../../shared/extensions/startup-branding" "$agent_dir/extensions/startup-branding"
   ln -sf "../../../shared/extensions/say" "$agent_dir/extensions/say"
+  ln -sf "../../../shared/extensions/save" "$agent_dir/extensions/save"
 
   # Create a stub extension for the agent to customize
   cat > "$agent_dir/extensions/$agent_name/index.ts" <<'STUB'
