@@ -5,8 +5,8 @@
   "collapseChangelog": true,
   "showHardwareCursor": true,
   "defaultProvider": "plebchat",
-  "defaultModel": "nvidia/nemotron-3-super",
-  "defaultThinkingLevel": "off",
+  "defaultModel": "google/gemma-4-31b",
+  "defaultThinkingLevel": "minimal",
   "hideThinkingBlock": false,
   "theme": "synthwave"
 }

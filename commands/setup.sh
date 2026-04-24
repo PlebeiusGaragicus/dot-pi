@@ -300,6 +300,10 @@ for ri in "${!role_names[@]}"; do
   v="${role_vals[$ri]}"
   echo "  ${role_names[$ri]}: ${v:-(not set)}"
 done
+echo ""
+echo "  Local config (gitignored, safe to edit by hand):"
+echo "    $SHARED_DIR/models.json   (provider + API key + model list)"
+echo "    $roles_file               (role -> model env vars; sourced by env.sh)"
 
 warnings=0
 [ -z "$provider_api_key" ] && echo "" && echo "  Warning: API key is empty" && warnings=1

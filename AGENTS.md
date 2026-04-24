@@ -38,10 +38,24 @@ dot-pi/
 ├── agents/                   # Standalone agent directories
 ├── workspaces/               # Ephemeral workspace directories (gitignored contents)
 ├── docs/                     # MkDocs documentation source
-└── references/               # Reference submodules (not loaded as PI_CODING_AGENT_DIR)
-    ├── pi-mono/              # Read-only git submodule of upstream pi
-    └── qmd/                  # Additional reference (see .gitmodules)
+└── REFERENCES/               # Local-only sibling checkouts for agent context (gitignored).
+                              # Optional manual `git clone`s of related projects (pi-mono,
+                              # gstack, qmd, plannotator, etc.) so agents working in this
+                              # repo can read their source. See DEV-REFERENCE-CODE.md.
+                              # Never loaded as PI_CODING_AGENT_DIR; never managed by dotpi.
 ```
+
+### Local Config Files (gitignored, per-machine)
+
+These files are **never tracked**. They're created locally by the installer or `dotpi setup`, edited like a `.env`, and persist across pulls. If any are missing, bootstrap from the `.example` sibling.
+
+| File | Source | Purpose |
+|------|--------|---------|
+| `model_roles` | `cp model_roles.example model_roles` (or `dotpi setup`) | Per-role model env vars (`AGENTIC_MODEL`, `THINKING_MODEL`, …). Sourced by `env.sh`. |
+| `shared/settings.json` | `cp shared/settings.json.example shared/settings.json` (auto on `install` / `dotpi sync`) | Pi runtime settings (theme, defaults). Symlinked into every team/agent. |
+| `shared/models.json` | `dotpi setup` writes it | Provider config + API key. |
+| `*/auth.json` | `dotpi link-auth` or set up by pi on first run | Per-agent credentials. |
+| `REFERENCES/*` | Optional manual `git clone`s; see `DEV-REFERENCE-CODE.md` | Sibling project source for agents to read. |
 
 ### Team Directory Layout (`teams/<name>/`)
 
@@ -349,3 +363,7 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `*/sessions/` | **No** | Runtime data — gitignored |
 | `*/settings.json` (in teams/agents) | **No** | Symlink — edit `shared/settings.json` |
 | `*/auth.json` | **No** | Credentials — gitignored |
+| `REFERENCES/**` | **No** | Local-only sibling checkouts; gitignored. Cloned manually for agent context (see `DEV-REFERENCE-CODE.md`). |
+| `model_roles` | Local | Per-machine config; gitignored. Written by `dotpi setup`, sourced by `env.sh`. Bootstrap manually with `cp model_roles.example model_roles`. |
+| `shared/settings.json` | Local | Bootstrapped from `shared/settings.json.example` by `install` / `dotpi sync`; gitignored thereafter. Edit freely; not tracked. |
+| `VERSION` | Yes | Bump on releases. Surfaced via `dotpi --version`. |

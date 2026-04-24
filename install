@@ -155,6 +155,13 @@ do_install() {
   local rc
   rc="$(shell_rc)"
 
+  # Bootstrap local-only config from examples (gitignored; safe to edit)
+  if [ ! -f "$DOT_PI_HOME/shared/settings.json" ] && \
+     [ -f "$DOT_PI_HOME/shared/settings.json.example" ]; then
+    cp "$DOT_PI_HOME/shared/settings.json.example" "$DOT_PI_HOME/shared/settings.json"
+    info "Created shared/settings.json from example"
+  fi
+
   # Build bin/ symlinks
   "$DOT_PI_HOME/dotpi" sync
   echo ""

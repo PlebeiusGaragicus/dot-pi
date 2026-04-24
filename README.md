@@ -24,6 +24,14 @@ dotpi create my-team
 # Add prompts to teams/my-team/prompts/
 ```
 
+## Version
+
+```bash
+dotpi --version
+```
+
+Tracked in [VERSION](VERSION); bump on releases.
+
 ## Docs
 
 See the [documentation site](https://PlebeiusGaragicus.github.io/dot-pi/) for architecture, usage, extension API, and per-team details.

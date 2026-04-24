@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  shellcheck:
+    name: shellcheck (bash linter)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Run shellcheck
+        run: |
+          shellcheck \
+            --shell=bash \
+            --severity=warning \
+            --external-sources \
+            dotpi \
+            install \
+            dispatch-agent \
+            env.sh \
+            commands/*.sh
+
+  smoke:
+    name: smoke tests (entry scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: dotpi --version
+        run: ./dotpi --version
+      - name: dotpi --help (parse only; usage() exits 1 by design)
+        run: |
+          set +e
+          ./dotpi --help
+          rc=$?
+          set -e
+          if [ "$rc" -gt 1 ]; then
+            echo "Unexpected exit code: $rc (expected 0 or 1)"
+            exit 1
+          fi
+      - name: install --help
+        run: bash install --help
+      - name: bash syntax check (all shell scripts)
+        run: |
+          bash -n dotpi
+          bash -n install
+          bash -n dispatch-agent
+          bash -n env.sh
+          for f in commands/*.sh; do bash -n "$f"; done
+
+  gitignore-guard:
+    name: gitignore vs tracked guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure no gitignored file is also tracked
+        run: |
+          set -e
+          fail=0
+          while IFS= read -r pattern; do
+            [ -z "$pattern" ] && continue
+            case "$pattern" in \#*) continue;; esac
+            # Strip leading negation; only check positive patterns
+            case "$pattern" in !*) continue;; esac
+            # Only check concrete file patterns (skip directory globs we expect symlinks under)
+            case "$pattern" in */) continue;; esac
+            while IFS= read -r tracked; do
+              [ -z "$tracked" ] && continue
+              # Symlinks under teams/* and agents/* are intentionally tracked even if
+              # the underlying target file matches an ignore pattern; skip them.
+              if [ -L "$tracked" ]; then continue; fi
+              echo "ERROR: $tracked is tracked but matches gitignore pattern '$pattern'"
+              fail=1
+            done < <(git ls-files -- "$pattern" 2>/dev/null || true)
+          done < .gitignore
+          exit "$fail"
+
+  docs:
+    name: mkdocs --strict
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install mkdocs-material
+        run: pip install mkdocs-material
+      - name: Build docs (strict)
+        run: mkdocs build --strict

@@ -1,4 +1,4 @@
-These repositories may help you in your journey and provide good reference:
+These repositories are **optional local-only context** for agents working in this repo. Clone any of them into `REFERENCES/` so agents (Cursor, pi, etc.) can read their source while answering questions about dot-pi internals or related tools. Nothing here is required, nothing is tracked, and these are **not git submodules** — just sibling checkouts that happen to live under a gitignored directory.
 
 ```sh
 cd ./REFERENCES/

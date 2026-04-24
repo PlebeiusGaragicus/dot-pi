@@ -20,6 +20,7 @@ Commands:
   link-skill <team-or-agent> <skill> [...] Symlink one or more shared skills into a team or agent
   link-auth <src> <dst>                    Symlink auth.json from one team/agent (or path) into another
   sync                                     Rebuild bin/ symlinks from agents/ and teams/
+  version | --version | -v                 Print dotpi version (from VERSION file) and exit
 
 Options:
   --workspace   Mark as a workspace agent/team. Creates a workspace.conf file so the
@@ -53,6 +54,11 @@ case "$cmd" in
   link-skill)   source "$COMMANDS_DIR/link-skill.sh" "$@" ;;
   link-auth)    source "$COMMANDS_DIR/link-auth.sh" "$@" ;;
   sync)         source "$COMMANDS_DIR/sync.sh" "$@" ;;
+  version|--version|-v)
+                v="unknown"
+                [ -f "$DOT_PI_DIR/VERSION" ] && v="$(cat "$DOT_PI_DIR/VERSION")"
+                echo "dotpi $v"
+                exit 0 ;;
   --help|-h)    usage ;;
   *)            echo "Error: unknown command '$cmd'"; usage ;;
 esac

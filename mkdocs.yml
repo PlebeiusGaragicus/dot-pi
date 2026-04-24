@@ -53,3 +53,4 @@ nav:
   - Reference:
     - Writing Extensions: reference/extensions.md
     - Subagent Extension: reference/subagent-teams.md
+    - Continuous Integration: ci.md
