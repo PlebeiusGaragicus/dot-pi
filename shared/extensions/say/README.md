@@ -4,10 +4,9 @@ Speaks streaming assistant output through macOS `say(1)` or Linux `espeak-ng`. S
 
 ## Files
 
-- `index.ts` -- Streaming line buffer, child-process queue, commands, and shortcuts
-- `backends/types.ts` -- `TtsBackend` interface
-- `backends/macos.ts` -- macOS backend (`say -r WPM -f -`)
-- `backends/linux.ts` -- Linux backend (`espeak-ng -s WPM -f -`); exports `null` when `espeak-ng` is not installed
+- `index.ts` -- Streaming line buffer, child-process queue, platform backend selection, commands, and shortcuts
+
+> **Why single-file?** This extension is symlinked into every agent (`extensions/say -> ../../../shared/extensions/say`). Pi's jiti loader with `moduleCache: false` can fail to resolve cross-file imports through symlinks. Per-agent custom extensions (real directories, not symlinks) are safe for multi-file splits.
 
 ## Behavior
 
@@ -26,7 +25,7 @@ Speaks streaming assistant output through macOS `say(1)` or Linux `espeak-ng`. S
 - **Linux**: uses `espeak-ng`. Install with `sudo apt install espeak-ng` (Debian/Ubuntu) or the equivalent for your distro. Voice quality is robotic but startup is fast, making it well-suited to the streaming prewarm model. If `espeak-ng` is not on `PATH` the extension loads silently and all TTS hooks no-op.
 - **Other platforms**: TTS is unavailable; the extension loads but does nothing.
 
-Future backends (piper, mimic3, etc.) can be added by dropping a new file in `backends/`.
+Future backends (piper, mimic3, etc.) can be added to the `resolveBackend()` function in `index.ts`.
 
 ## Tunables
 

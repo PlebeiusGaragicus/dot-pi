@@ -124,7 +124,9 @@ No `agents/` subdirectory, no `team-prompt.md`. The main pi process IS the agent
 
 TypeScript modules in `<agentDir>/extensions/`. Auto-discovered by pi on startup.
 
-**Shape**: Default-exported function `(pi: ExtensionAPI) => void`.
+**Shape**: Default-exported function `(pi: ExtensionAPI) => void`. Can be a single file (`extensions/foo.ts`) or a directory with an entry point (`extensions/foo/index.ts`).
+
+**Multi-file extensions**: An `index.ts` can import sibling `.ts` modules via `./name.js` specifiers (standard Node ESM convention). Example: `subagent-teams/index.ts` imports from `./agents.js`. **Caveat**: multi-file imports may fail in **symlinked** shared extensions (jiti's `moduleCache: false` + symlink resolution can cause "Reflect.get called on non-object"). Keep shared extensions (`shared/extensions/`) as single `index.ts` files. Multi-file splits are safe in per-agent custom extensions (`agents/<name>/extensions/<name>/`) which are real directories, not symlinks.
 
 **Imports**:
 ```typescript

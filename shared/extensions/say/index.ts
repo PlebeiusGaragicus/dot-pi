@@ -23,14 +23,55 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import type { ChildProcess } from "node:child_process";
-import type { TtsBackend } from "./backends/types.js";
-import macosBackend from "./backends/macos.js";
-import linuxBackend from "./backends/linux.js";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 
-const backend: TtsBackend | null =
-	process.platform === "darwin" ? macosBackend :
-	process.platform === "linux"  ? linuxBackend  : null;
+interface TtsBackend {
+	name: string;
+	spawn(text: string, rateWpm: number, paused: boolean): ChildProcess;
+}
+
+function spawnTtsChild(bin: string, rateFlag: string, text: string, rateWpm: number, paused: boolean): ChildProcess {
+	const child = spawn(bin, [rateFlag, String(rateWpm), "-f", "-"], {
+		stdio: ["pipe", "ignore", "inherit"],
+	});
+	try {
+		child.stdin?.end(text);
+	} catch {
+		/* child may have died before we could write */
+	}
+	if (paused) {
+		try {
+			child.kill("SIGSTOP");
+		} catch {
+			/* ignore */
+		}
+	}
+	return child;
+}
+
+function resolveBackend(): TtsBackend | null {
+	if (process.platform === "darwin") {
+		return {
+			name: "macos-say",
+			spawn: (text, rateWpm, paused) => spawnTtsChild("say", "-r", text, rateWpm, paused),
+		};
+	}
+	if (process.platform === "linux") {
+		try {
+			if (spawnSync("which", ["espeak-ng"], { stdio: "ignore" }).status === 0) {
+				return {
+					name: "linux-espeak-ng",
+					spawn: (text, rateWpm, paused) => spawnTtsChild("espeak-ng", "-s", text, rateWpm, paused),
+				};
+			}
+		} catch {
+			/* espeak-ng not available */
+		}
+	}
+	return null;
+}
+
+const backend = resolveBackend();
 
 const URL_REDACTED = "URL redacted";
 const MAX_CHARS = 32_000;
