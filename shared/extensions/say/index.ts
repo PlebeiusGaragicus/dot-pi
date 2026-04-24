@@ -30,8 +30,8 @@ interface TtsBackend {
 	spawn(text: string, rateWpm: number, paused: boolean): ChildProcess;
 }
 
-function spawnTtsChild(bin: string, rateFlag: string, text: string, rateWpm: number, paused: boolean): ChildProcess {
-	const child = spawn(bin, [rateFlag, String(rateWpm), "-f", "-"], {
+function spawnTtsChild(bin: string, args: string[], text: string, paused: boolean): ChildProcess {
+	const child = spawn(bin, args, {
 		stdio: ["pipe", "ignore", "inherit"],
 	});
 	try {
@@ -53,7 +53,7 @@ function resolveBackend(): TtsBackend | null {
 	if (process.platform === "darwin") {
 		return {
 			name: "macos-say",
-			spawn: (text, rateWpm, paused) => spawnTtsChild("say", "-r", text, rateWpm, paused),
+			spawn: (text, rateWpm, paused) => spawnTtsChild("say", ["-r", String(rateWpm), "-f", "-"], text, paused),
 		};
 	}
 	if (process.platform === "linux") {
@@ -61,7 +61,7 @@ function resolveBackend(): TtsBackend | null {
 			if (spawnSync("which", ["espeak-ng"], { stdio: "ignore" }).status === 0) {
 				return {
 					name: "linux-espeak-ng",
-					spawn: (text, rateWpm, paused) => spawnTtsChild("espeak-ng", "-s", text, rateWpm, paused),
+					spawn: (text, rateWpm, paused) => spawnTtsChild("espeak-ng", ["-s", String(rateWpm), "--stdin"], text, paused),
 				};
 			}
 		} catch {
