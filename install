@@ -152,6 +152,16 @@ do_install() {
       echo ""
       info "dot-pi is already installed at $(bold "$DOT_PI_HOME")"
       echo ""
+      local rc
+      rc="$(shell_rc)"
+      if ! grep -qF "dot-pi" "$rc" 2>/dev/null; then
+        warn "Shell not configured yet. Add the following to $(bold "$rc"):"
+        echo ""
+        echo "    $(green '# dot-pi — pi agent launcher')"
+        echo "    $(green "export PATH=\"\$HOME/.dot-pi/bin:\$PATH\"")"
+        echo "    $(green "source \"\$HOME/.dot-pi/env.sh\"")"
+        echo ""
+      fi
       echo "    To update:      install --force-rebase"
       echo "    To reconfigure: $DOT_PI_HOME/dotpi setup"
       echo "    To remove:      install --uninstall"
@@ -170,48 +180,24 @@ do_install() {
   local rc
   rc="$(shell_rc)"
 
-  if grep -qF "dot-pi" "$rc" 2>/dev/null; then
-    info "Shell config already set up in $rc"
-  else
-    if confirm "Add dot-pi to $rc?" "Y"; then
-      {
-        echo ""
-        echo "# dot-pi — pi agent launcher"
-        echo "export PATH=\"\$HOME/.dot-pi/bin:\$PATH\""
-        echo "source \"\$HOME/.dot-pi/env.sh\""
-      } >> "$rc"
-      info "Added to $rc"
-    else
-      warn "Skipped — add this to your shell config manually:"
-      echo "    export PATH=\"\$HOME/.dot-pi/bin:\$PATH\""
-      echo "    source \"\$HOME/.dot-pi/env.sh\""
-    fi
-  fi
-  echo ""
-
   # Build bin/ symlinks
   "$DOT_PI_HOME/dotpi" sync
   echo ""
 
-  # Run the interactive setup wizard (don't let a wizard abort kill our summary)
-  if confirm "Run interactive setup wizard? (API key, models, roles)" "Y"; then
-    echo ""
-    "$DOT_PI_HOME/dotpi" setup || true
-  else
-    warn "Skipped — run it later with: dotpi setup"
-  fi
-
-  echo ""
   echo "  $(bold "Done!")"
   echo ""
-  echo "  Restart your shell or run:"
-  echo "    source $rc"
-  echo ""
-  echo "  Then try:"
-  echo "    lm              # conversational LLM"
-  echo "    ask             # explain your codebase"
-  echo "    web             # search the web"
-  echo "    dotpi list      # all available agents"
+
+  if grep -qF "dot-pi" "$rc" 2>/dev/null; then
+    info "Shell already configured — restart your shell or run: source $rc"
+  else
+    echo "  Add the following to $(bold "$rc"):"
+    echo ""
+    echo "    $(green '# dot-pi — pi agent launcher')"
+    echo "    $(green "export PATH=\"\$HOME/.dot-pi/bin:\$PATH\"")"
+    echo "    $(green "source \"\$HOME/.dot-pi/env.sh\"")"
+    echo ""
+    echo "  Then run $(bold "dotpi setup") to configure your API key and models."
+  fi
   echo ""
 }
 
@@ -241,15 +227,6 @@ do_uninstall() {
   local rc
   rc="$(shell_rc)"
 
-  if [ -f "$rc" ] && grep -qF "dot-pi" "$rc" 2>/dev/null; then
-    local tmp
-    tmp="$(mktemp)"
-    grep -vF "dot-pi" "$rc" > "$tmp"
-    cat -s "$tmp" > "$rc"
-    rm -f "$tmp"
-    info "Removed dot-pi lines from $rc"
-  fi
-
   rm -rf "$DOT_PI_HOME"
   info "Removed $DOT_PI_HOME"
   echo ""
@@ -263,6 +240,15 @@ do_uninstall() {
 
   echo ""
   echo "  $(bold "dot-pi has been removed.")"
+  echo ""
+  if [ -f "$rc" ] && grep -qF "dot-pi" "$rc" 2>/dev/null; then
+    echo "  Remove these lines from $(bold "$rc"):"
+    echo ""
+    grep -n "dot-pi" "$rc" | while IFS= read -r line; do
+      echo "    $line"
+    done
+    echo ""
+  fi
   echo "  Restart your shell to complete cleanup."
   echo ""
 }
