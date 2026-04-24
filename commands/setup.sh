@@ -26,15 +26,15 @@ _setup_select_model() {
 
   local hint=""
   [ -n "$current" ] && hint=" (current: $current)"
-  echo "  $role$hint"
+  echo "  $role$hint" >&2
 
   local i
   for i in "${!models[@]}"; do
     local marker="  "
     [ "${models[$i]}" = "$current" ] && marker="> "
-    printf "    %s%d) %s\n" "$marker" "$((i + 1))" "${models[$i]}"
+    printf "    %s%d) %s\n" "$marker" "$((i + 1))" "${models[$i]}" >&2
   done
-  printf "    %s%d) %s\n" "  " "$((${#models[@]} + 1))" "(skip)"
+  printf "    %s%d) %s\n" "  " "$((${#models[@]} + 1))" "(skip)" >&2
 
   local choice
   read -r -p "    choice [Enter=keep]: " choice
