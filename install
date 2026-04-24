@@ -82,9 +82,26 @@ check_deps() {
 check_pi() {
   if command -v pi &>/dev/null; then
     info "pi found: $(command -v pi)"
+    return
+  fi
+
+  warn "pi (coding agent) not found on PATH"
+  echo ""
+  if command -v npm &>/dev/null; then
+    if confirm "  Install pi with npm now?" "Y"; then
+      echo ""
+      npm install -g @mariozechner/pi-coding-agent || {
+        fail "npm install failed. Install pi manually: npm install -g @mariozechner/pi-coding-agent"
+      }
+      info "pi installed: $(command -v pi)"
+    else
+      echo ""
+      warn "Skipped. Install pi before running any agent:"
+      echo "    npm install -g @mariozechner/pi-coding-agent"
+    fi
   else
-    warn "pi (coding agent) not found on PATH"
-    echo "    Install it with: npm install -g @mariozechner/pi-coding-agent"
+    warn "npm not found — install Node.js first, then:"
+    echo "    npm install -g @mariozechner/pi-coding-agent"
   fi
 }
 
@@ -137,9 +154,9 @@ do_install() {
         echo "$(green "source \"\$HOME/.dot-pi/env.sh\"")"
         echo ""
       fi
-      echo "    To update:      $DOT_PI_HOME/install --force-rebase"
-      echo "    To reconfigure: $DOT_PI_HOME/dotpi setup"
-      echo "    To remove:      $DOT_PI_HOME/install --uninstall"
+      echo "    To update:         $DOT_PI_HOME/install --force-rebase"
+      echo "    To add providers:  dotpi setup"
+      echo "    To remove:         $DOT_PI_HOME/install --uninstall"
       echo ""
       exit 0
     fi
@@ -162,6 +179,12 @@ do_install() {
     info "Created shared/settings.json from bootstrap/settings.json.example"
   fi
 
+  if [ ! -f "$DOT_PI_HOME/model_roles" ] && \
+     [ -f "$DOT_PI_HOME/bootstrap/model_roles.example" ]; then
+    cp "$DOT_PI_HOME/bootstrap/model_roles.example" "$DOT_PI_HOME/model_roles"
+    info "Created model_roles from bootstrap/model_roles.example"
+  fi
+
   # Build bin/ symlinks
   "$DOT_PI_HOME/dotpi" sync
   echo ""
@@ -178,8 +201,11 @@ do_install() {
     echo "$(green "export PATH=\"\$HOME/.dot-pi/bin:\$PATH\"")"
     echo "$(green "source \"\$HOME/.dot-pi/env.sh\"")"
     echo ""
-    echo "  Then run $(bold "dotpi setup") to configure your API key and models."
   fi
+  echo ""
+  echo "  Then:"
+  echo "    $(bold "dotpi setup")   Configure model providers and role assignments"
+  echo "    $(bold "lm")            Start a session (use /login for first-party auth)"
   echo ""
 }
 

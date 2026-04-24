@@ -6,7 +6,13 @@
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/PlebeiusGaragicus/dot-pi/main/install)"
 ```
 
-The installer will check for required tools (`git`, `curl`, `jq`), install `pi` via npm if needed, clone the repo to `~/.dot-pi`, add PATH and env.sh integration to your shell config, and run the interactive setup wizard.
+The installer will:
+
+1. Check for required tools (`git`, `curl`, `jq`)
+2. Offer to install `pi` via npm if not already present
+3. Clone dot-pi to `~/.dot-pi`
+4. Bootstrap local config files (`shared/settings.json`, `model_roles`)
+5. Build `bin/` symlinks so agent commands are on your PATH
 
 Override the install location with `DOT_PI_HOME`:
 
@@ -20,26 +26,9 @@ DOT_PI_HOME=~/my-agents bash -c "$(curl -fsSL https://raw.githubusercontent.com/
 - bash or zsh
 - git, curl, jq
 
-## Manual install
-
-```bash
-git clone https://github.com/PlebeiusGaragicus/dot-pi.git ~/.dot-pi
-echo 'export PATH="$HOME/.dot-pi/bin:$PATH"' >> ~/.zshrc
-echo 'source "$HOME/.dot-pi/env.sh"' >> ~/.zshrc
-export PATH="$HOME/.dot-pi/bin:$PATH"
-source "$HOME/.dot-pi/env.sh"
-~/.dot-pi/dotpi setup
-```
-
-The repo can live at any path — `env.sh` auto-detects its own location at source time.
-
-## API Keys
-
-The `dotpi setup` wizard handles this interactively. API keys are stored in `shared/models.json` (gitignored). For a reference catalogue of known plebchat models you might want to add, see `bootstrap/plebchat-models.json`.
-
 ## Shell setup
 
-The installer adds this automatically. If you installed manually, add to your `~/.zshrc` or `~/.bashrc`:
+The installer prints the two lines to add to your shell config. If you installed manually, add to your `~/.zshrc` or `~/.bashrc`:
 
 ```bash
 export PATH="$HOME/.dot-pi/bin:$PATH"
@@ -54,11 +43,67 @@ source ~/.zshrc  # or source ~/.bashrc
 
 This puts all team and standalone agent commands on your PATH (e.g. `recon`, `blog`, `lm`).
 
-`DOT_PI_DIR` is auto-detected from `env.sh`'s location, so the repo can live anywhere. If you need to override it for some reason, set `DOT_PI_DIR` before sourcing:
+`DOT_PI_DIR` is auto-detected from `env.sh`'s location, so the repo can live anywhere.
+
+## Provider setup (`dotpi setup`)
+
+Run `dotpi setup` to configure where your models come from. The wizard supports multiple providers — re-run anytime to add, edit, or remove one.
+
+### Presets
+
+The wizard offers quick presets for common setups:
+
+| Preset | URL | Use case |
+|--------|-----|----------|
+| Ollama | `http://localhost:11434` | Local models on your own machine |
+| LM Studio | `http://localhost:1234` | Local models via LM Studio |
+| Custom OpenAI-compatible | (you provide) | Any OpenAI-API-compatible endpoint |
+| Custom Anthropic-compatible | (you provide) | Anthropic-style endpoints |
+
+For each provider, the wizard fetches available models (with an Ollama `/api/tags` fallback), lets you pick which to include, and saves them to `shared/models.json`.
+
+### Model roles
+
+After configuring providers, the wizard lets you assign a default model to each role:
+
+- `AGENTIC_MODEL` — primary agent model
+- `THINKING_MODEL` — reasoning-heavy tasks
+- `CODING_MODEL` — code generation
+- `VISION_MODEL` — image understanding
+- `FAST_MODEL` — quick/cheap completions
+
+These are exported as env vars via `model_roles` (sourced by `env.sh`) and can be referenced in `pi-args` files. All roles are optional.
+
+### First-party auth
+
+For pi's built-in providers, use `/login` inside any agent session. Share that auth across teams with `dotpi link-auth`:
 
 ```bash
-export DOT_PI_DIR="/custom/path"
-source /custom/path/env.sh
+lm                          # start a session, use /login to authenticate
+dotpi link-auth lm recon    # share auth.json from lm to recon
+```
+
+### Multi-provider
+
+`shared/models.json` supports multiple providers side-by-side. Each `dotpi setup` run adds or edits one provider without disturbing others. The role picker shows models from all providers.
+
+## Local one-device setup
+
+For a fully local setup (no API keys needed):
+
+1. Install [Ollama](https://ollama.com) and pull a model: `ollama pull llama3.2`
+2. Run `dotpi setup`, pick the **Ollama** preset, accept defaults
+3. Assign roles, then `lm` to start chatting
+
+## Manual install
+
+```bash
+git clone https://github.com/PlebeiusGaragicus/dot-pi.git ~/.dot-pi
+echo 'export PATH="$HOME/.dot-pi/bin:$PATH"' >> ~/.zshrc
+echo 'source "$HOME/.dot-pi/env.sh"' >> ~/.zshrc
+export PATH="$HOME/.dot-pi/bin:$PATH"
+source "$HOME/.dot-pi/env.sh"
+dotpi setup
 ```
 
 ## Verify
@@ -78,132 +123,6 @@ cd /any/project
 recon "What does this project do?"
 ```
 
----
-
-## The `dotpi` CLI
-
-`dotpi` manages team and standalone agent directories. It handles setup, scaffolding, listing, and auth sharing.
-
-### `dotpi setup`
-
-Interactive wizard that configures API keys, model providers, model roles, and writes `shared/models.json` and `model_roles`. Re-run anytime to update.
-
-### `dotpi create <team-name>`
-
-Creates a new team directory at `teams/<team-name>/` with the following structure:
-
-```
-teams/<team-name>/
-├── extensions/
-│   ├── subagent-teams -> ../../../shared/extensions/subagent-teams
-│   ├── run-finish-notify -> ../../../shared/extensions/run-finish-notify
-│   └── startup-branding -> ../../../shared/extensions/startup-branding
-├── agents/              (empty -- add your agent .md files here)
-├── prompts/             (empty -- add prompt templates here)
-├── team-prompt.md       (orchestrator config + system prompt, see Architecture)
-├── banner.txt           (startup branding -- generated by figlet, edit to customize)
-├── skills/              (empty — add with dotpi link-skill <team-name> <skill>)
-├── themes/              (individual themes symlinked from shared)
-│   └── synthwave.json -> ../../../shared/themes/synthwave.json
-├── bin -> ../../shared/bin  (shared binaries -- fd, rg downloaded on first run)
-├── sessions/            (runtime session storage, gitignored)
-├── settings.json -> ../../shared/settings.json
-├── pi-args              (optional default CLI flags; keep trailing IMPORTANT comment line)
-└── models.json -> ../../shared/models.json
-```
-
-The `extensions/`, `models.json`, `settings.json`, and `bin/` are symlinks into `shared/`. **`skills/` starts empty** — use `dotpi link-skill` to add shared skills. Themes are symlinked individually. The `bin/` symlink means pi downloads `fd` and `rg` once into `shared/bin/` and all teams share them. Edit `shared/settings.json` for global Pi preferences (theme, defaults). Agents and prompts are per-team. Subagents can further restrict skills via frontmatter (`skills`, `no-skills`).
-
-**Key files:**
-
-- `team-prompt.md` -- The subagent-teams extension parses its YAML frontmatter for orchestrator configuration (`name`, `description`, `tools`, `model`) and appends the body to the orchestrator's system prompt. Use the `tools` field to restrict the orchestrator (e.g. `tools: read,find,ls,grep` to force subagent delegation).
-- `workspace.conf` -- If present, the command launches in workspace mode: creates a dated directory, pre-creates subdirectories listed in the file, and runs pi inside it.
-
-Example:
-
-```bash
-dotpi create docs-team
-```
-
-After creating a team, you need to:
-
-1. **Add agents** -- create `.md` files in `teams/<team-name>/agents/` with YAML frontmatter (`name`, `description`, optionally `tools`, `skills`, `no-skills`, `model`, `team`) and a system prompt body.
-
-2. **Add prompts** (optional) -- create `.md` files in `teams/<team-name>/prompts/` that define chain/parallel workflows using `$@` as the user input placeholder.
-
-3. **Rebuild symlinks** -- run `dotpi sync` to rebuild bin/ symlinks so the new team is available as a command (e.g. `docs-team`).
-
-### `dotpi create-agent <agent-name>`
-
-Creates a standalone agent directory at `agents/<agent-name>/` with a stub extension and shared symlinks:
-
-```
-agents/<agent-name>/
-├── extensions/
-│   ├── <agent-name>/
-│   │   └── index.ts         (stub -- your custom extension)
-│   ├── run-finish-notify -> ../../../shared/extensions/run-finish-notify
-│   ├── startup-branding -> ../../../shared/extensions/startup-branding
-│   └── say -> ../../../shared/extensions/say
-├── skills/              (empty — add with dotpi link-skill <agent-name> <skill>)
-├── themes/              (individual themes symlinked from shared)
-├── banner.txt           (startup branding -- generated by figlet, edit to customize)
-├── bin -> ../../shared/bin
-├── sessions/            (runtime, gitignored)
-├── settings.json -> ../../shared/settings.json
-├── pi-args              (optional default CLI flags; keep trailing IMPORTANT comment line)
-├── SYSTEM.md            (starter system prompt — edit to customize; no AGENT.md scaffold)
-└── models.json -> ../../shared/models.json
-```
-
-Unlike teams, standalone agents do **not** get the `subagent-teams` extension or an `agents/` subdirectory. The main pi process IS the agent. Default scaffolds include **`SYSTEM.md`**, symlink **`say.ts`** (TTS/say) plus run-finish and startup branding, and do **not** create **`AGENT.md`** (add it yourself and symlink `agent-prompt.ts` if you want YAML frontmatter; see [Standalone Agents](standalone-agents.md)). Run `dotpi sync` to add the new agent to bin/.
-
-Example:
-
-```bash
-dotpi create-agent my-agent
-dotpi sync
-my-agent "hello"
-```
-
-See [Standalone Agents](standalone-agents.md) for details on writing the extension.
-
-### `dotpi list`
-
-Shows all teams and standalone agents with their counts and status:
-
-```bash
-dotpi list
-```
-
-If `extensions linked` shows `no` for any team, the symlinks are broken -- re-run `create` or manually fix them.
-
-### `dotpi link-skill <team-or-agent> <skill> [<skill> ...]`
-
-Symlink one or more directories from `shared/skills/` into a team or standalone agent's `skills/` folder (created if missing). Example:
-
-```bash
-dotpi link-skill docs-team searxng
-dotpi link-skill my-agent playwright tavily
-```
-
-### `dotpi link-auth <source> <destination>`
-
-Each team has its own `PI_CODING_AGENT_DIR`, which means separate `auth.json` files. After authenticating pi through one team, share that auth with others:
-
-```bash
-# Authenticate via recon (pi prompts for API key on first run)
-recon "hello"
-
-# Share that auth.json with other teams
-dotpi link-auth recon impl
-dotpi link-auth recon blog
-```
-
-The `<source>` can be a team name, a standalone agent name, or a direct file path. The destination can be any team or agent name.
-
-This creates a symlink so all linked teams use the same credentials, and re-authenticating in any one of them updates all of them.
-
 ## Update
 
 Re-running the installer on an existing install shows an "already installed" message. To pull upstream changes while preserving local edits:
@@ -217,3 +136,43 @@ Re-running the installer on an existing install shows an "already installed" mes
 ```bash
 ~/.dot-pi/install --uninstall
 ```
+
+---
+
+## The `dotpi` CLI
+
+`dotpi` manages team and standalone agent directories. It handles setup, scaffolding, listing, and auth sharing.
+
+### `dotpi setup`
+
+Interactive wizard that configures model providers, fetches available models, and assigns model roles. Supports multiple providers (Ollama, LM Studio, custom endpoints). Re-run anytime to add, edit, or remove providers.
+
+### `dotpi create <team-name>`
+
+Creates a new team directory at `teams/<team-name>/` with shared extension symlinks, theme symlinks, and a starter `team-prompt.md`. Use `--workspace` for workspace mode.
+
+After creating a team, you need to:
+
+1. **Add agents** -- create `.md` files in `teams/<team-name>/agents/` with YAML frontmatter (`name`, `description`, optionally `tools`, `skills`, `no-skills`, `model`, `team`) and a system prompt body.
+2. **Add prompts** (optional) -- create `.md` files in `teams/<team-name>/prompts/` that define chain/parallel workflows.
+3. **Rebuild symlinks** -- run `dotpi sync` to rebuild bin/ symlinks so the new team is available as a command.
+
+### `dotpi create-agent <agent-name>`
+
+Creates a standalone agent directory at `agents/<agent-name>/` with a stub extension and shared symlinks. Use `--workspace` for workspace mode. Run `dotpi sync` to add the new agent to bin/.
+
+### `dotpi list`
+
+Shows all teams and standalone agents with their counts and status.
+
+### `dotpi link-skill <team-or-agent> <skill> [<skill> ...]`
+
+Symlink shared skills into a team or agent's `skills/` folder.
+
+### `dotpi link-auth <source> <destination>`
+
+Share `auth.json` from one team/agent to another via symlink. Useful after authenticating via `/login` in one agent.
+
+### `dotpi sync`
+
+Rebuild `bin/` symlinks from `agents/` and `teams/` directories. Called automatically after `dotpi create` / `create-agent`.

@@ -31,7 +31,7 @@ dot-pi/
 │   ├── skills/               # Shared skill definitions (each skill is a directory with SKILL.md)
 │   ├── themes/               # Shared themes (JSON)
 │   ├── bin/                  # Downloaded binaries (fd, rg) — gitignored contents
-│   ├── models.json           # Custom model provider config (gitignored; written by `dotpi setup`)
+│   ├── models.json           # Multi-provider model config (gitignored; managed by `dotpi setup`)
 │   └── settings.json         # Pi settings (gitignored; bootstrapped from bootstrap/settings.json.example)
 │
 ├── bootstrap/                # Tracked seed/template files (copied into place on first run)
@@ -58,7 +58,7 @@ These files are **never tracked**. They're created locally by the installer or `
 |------|--------|---------|
 | `model_roles` | `cp bootstrap/model_roles.example model_roles` (or `dotpi setup`) | Per-role model env vars (`AGENTIC_MODEL`, `THINKING_MODEL`, …). Sourced by `env.sh`. |
 | `shared/settings.json` | `cp bootstrap/settings.json.example shared/settings.json` (auto on `install` / `dotpi sync`) | Pi runtime settings (theme, defaults). Symlinked into every team/agent. |
-| `shared/models.json` | `dotpi setup` writes it | Provider config + API key. |
+| `shared/models.json` | `dotpi setup` writes it | Multi-provider model config (supports Ollama, LM Studio, custom endpoints). Re-run `dotpi setup` to add/edit/remove providers. |
 | `*/auth.json` | `dotpi link-auth` or set up by pi on first run | Per-agent credentials. |
 | `REFERENCES/*` | Optional manual `git clone`s; see REFERENCE-REPOS.md` | Sibling project source for agents to read. |
 
@@ -287,7 +287,7 @@ Per-team orchestrator instructions, read by `subagent-teams` on startup and appe
 - **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <team-or-agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
 - **Themes**: Each theme JSON in `shared/themes/` is symlinked individually into `<dir>/themes/`.
 - **bin**: A single directory symlink (`bin → ../../shared/bin`) so pi downloads `fd`/`rg` once and all teams share them.
-- **models.json**: A single file symlink (`models.json → ../../shared/models.json`).
+- **models.json**: A single file symlink (`models.json → ../../shared/models.json`). The file supports multiple providers side-by-side; `dotpi setup` adds/edits/removes one provider at a time without disturbing others.
 - **settings.json**: A single file symlink (`settings.json → ../../shared/settings.json`) so all teams and standalone agents share Pi preferences (theme, defaults, etc.).
 
 All symlinks use relative paths (e.g. `../../../shared/extensions/...` for extensions under `teams/<name>/extensions/`).
@@ -362,7 +362,7 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `teams/*/skills/*` | **No** | Symlinks — edit `shared/skills/` instead |
 | `teams/*/themes/*` | **No** | Symlinks — edit `shared/themes/` instead |
 | `*/models.json` (in teams/agents) | **No** | Symlink — edit `shared/models.json` (itself gitignored; managed by `dotpi setup`) |
-| `shared/models.json` | Local | Provider config + API key. Gitignored; written by `dotpi setup`. |
+| `shared/models.json` | Local | Multi-provider model config. Gitignored; managed by `dotpi setup`. |
 | `*/bin/` | **No** | Symlink — managed by pi runtime |
 | `*/sessions/` | **No** | Runtime data — gitignored |
 | `*/settings.json` (in teams/agents) | **No** | Symlink — edit `shared/settings.json` |
