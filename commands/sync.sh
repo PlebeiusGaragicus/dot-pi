@@ -7,9 +7,9 @@ mkdir -p "$BIN_DIR"
 
 # Bootstrap shared/settings.json from example if missing (gitignored, local-only)
 if [ ! -f "$DOT_PI_DIR/shared/settings.json" ] && \
-   [ -f "$DOT_PI_DIR/shared/settings.json.example" ]; then
-  cp "$DOT_PI_DIR/shared/settings.json.example" "$DOT_PI_DIR/shared/settings.json"
-  echo "sync: created shared/settings.json from example"
+   [ -f "$DOT_PI_DIR/bootstrap/settings.json.example" ]; then
+  cp "$DOT_PI_DIR/bootstrap/settings.json.example" "$DOT_PI_DIR/shared/settings.json"
+  echo "sync: created shared/settings.json from bootstrap/settings.json.example"
 fi
 
 added=0 removed=0

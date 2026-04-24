@@ -35,7 +35,7 @@ The repo can live at any path — `env.sh` auto-detects its own location at sour
 
 ## API Keys
 
-The `dotpi setup` wizard handles this interactively. API keys are stored in `shared/models.json` (gitignored). The template is `shared/models.example.json`.
+The `dotpi setup` wizard handles this interactively. API keys are stored in `shared/models.json` (gitignored). For a reference catalogue of known plebchat models you might want to add, see `bootstrap/plebchat-models.json`.
 
 ## Shell setup
 

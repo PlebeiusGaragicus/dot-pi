@@ -157,9 +157,9 @@ do_install() {
 
   # Bootstrap local-only config from examples (gitignored; safe to edit)
   if [ ! -f "$DOT_PI_HOME/shared/settings.json" ] && \
-     [ -f "$DOT_PI_HOME/shared/settings.json.example" ]; then
-    cp "$DOT_PI_HOME/shared/settings.json.example" "$DOT_PI_HOME/shared/settings.json"
-    info "Created shared/settings.json from example"
+     [ -f "$DOT_PI_HOME/bootstrap/settings.json.example" ]; then
+    cp "$DOT_PI_HOME/bootstrap/settings.json.example" "$DOT_PI_HOME/shared/settings.json"
+    info "Created shared/settings.json from bootstrap/settings.json.example"
   fi
 
   # Build bin/ symlinks

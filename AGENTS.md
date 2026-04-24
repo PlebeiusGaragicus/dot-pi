@@ -31,8 +31,13 @@ dot-pi/
 │   ├── skills/               # Shared skill definitions (each skill is a directory with SKILL.md)
 │   ├── themes/               # Shared themes (JSON)
 │   ├── bin/                  # Downloaded binaries (fd, rg) — gitignored contents
-│   ├── models.json           # Custom model provider config
-│   └── settings.json         # Pi settings (theme, defaults; symlinked from each team/agent)
+│   ├── models.json           # Custom model provider config (gitignored; written by `dotpi setup`)
+│   └── settings.json         # Pi settings (gitignored; bootstrapped from bootstrap/settings.json.example)
+│
+├── bootstrap/                # Tracked seed/template files (copied into place on first run)
+│   ├── model_roles.example   # Template for per-role model env vars (-> ./model_roles)
+│   ├── settings.json.example # Template for shared/settings.json (auto-copied by install / dotpi sync)
+│   └── plebchat-models.json  # Reference catalogue of known plebchat models (manual lookup)
 │
 ├── teams/                    # Multi-agent team directories
 ├── agents/                   # Standalone agent directories
@@ -41,7 +46,7 @@ dot-pi/
 └── REFERENCES/               # Local-only sibling checkouts for agent context (gitignored).
                               # Optional manual `git clone`s of related projects (pi-mono,
                               # gstack, qmd, plannotator, etc.) so agents working in this
-                              # repo can read their source. See DEV-REFERENCE-CODE.md.
+                              # repo can read their source. See REFERENCE-REPOS.md.
                               # Never loaded as PI_CODING_AGENT_DIR; never managed by dotpi.
 ```
 
@@ -51,11 +56,11 @@ These files are **never tracked**. They're created locally by the installer or `
 
 | File | Source | Purpose |
 |------|--------|---------|
-| `model_roles` | `cp model_roles.example model_roles` (or `dotpi setup`) | Per-role model env vars (`AGENTIC_MODEL`, `THINKING_MODEL`, …). Sourced by `env.sh`. |
-| `shared/settings.json` | `cp shared/settings.json.example shared/settings.json` (auto on `install` / `dotpi sync`) | Pi runtime settings (theme, defaults). Symlinked into every team/agent. |
+| `model_roles` | `cp bootstrap/model_roles.example model_roles` (or `dotpi setup`) | Per-role model env vars (`AGENTIC_MODEL`, `THINKING_MODEL`, …). Sourced by `env.sh`. |
+| `shared/settings.json` | `cp bootstrap/settings.json.example shared/settings.json` (auto on `install` / `dotpi sync`) | Pi runtime settings (theme, defaults). Symlinked into every team/agent. |
 | `shared/models.json` | `dotpi setup` writes it | Provider config + API key. |
 | `*/auth.json` | `dotpi link-auth` or set up by pi on first run | Per-agent credentials. |
-| `REFERENCES/*` | Optional manual `git clone`s; see `DEV-REFERENCE-CODE.md` | Sibling project source for agents to read. |
+| `REFERENCES/*` | Optional manual `git clone`s; see REFERENCE-REPOS.md` | Sibling project source for agents to read. |
 
 ### Team Directory Layout (`teams/<name>/`)
 
@@ -337,8 +342,6 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `shared/extensions/**/*.ts` | Yes | Shared extension source code |
 | `shared/skills/*/SKILL.md` | Yes | Shared skill definitions |
 | `shared/themes/*.json` | Yes | Shared themes |
-| `shared/models.json` | Yes | Model provider config |
-| `shared/settings.json` | Yes | Pi settings (theme, default model, quietStartup, etc.) |
 | `teams/*/agents/*.md` | Yes | Subagent definitions |
 | `teams/*/prompts/*.md` | Yes | Prompt templates |
 | `teams/*/team-prompt.md` | Yes | Team orchestrator instructions |
@@ -358,12 +361,14 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `teams/*/extensions/*` | **No** | Symlinks — edit `shared/extensions/` instead |
 | `teams/*/skills/*` | **No** | Symlinks — edit `shared/skills/` instead |
 | `teams/*/themes/*` | **No** | Symlinks — edit `shared/themes/` instead |
-| `*/models.json` (in teams/agents) | **No** | Symlink — edit `shared/models.json` |
+| `*/models.json` (in teams/agents) | **No** | Symlink — edit `shared/models.json` (itself gitignored; managed by `dotpi setup`) |
+| `shared/models.json` | Local | Provider config + API key. Gitignored; written by `dotpi setup`. |
 | `*/bin/` | **No** | Symlink — managed by pi runtime |
 | `*/sessions/` | **No** | Runtime data — gitignored |
 | `*/settings.json` (in teams/agents) | **No** | Symlink — edit `shared/settings.json` |
 | `*/auth.json` | **No** | Credentials — gitignored |
-| `REFERENCES/**` | **No** | Local-only sibling checkouts; gitignored. Cloned manually for agent context (see `DEV-REFERENCE-CODE.md`). |
-| `model_roles` | Local | Per-machine config; gitignored. Written by `dotpi setup`, sourced by `env.sh`. Bootstrap manually with `cp model_roles.example model_roles`. |
-| `shared/settings.json` | Local | Bootstrapped from `shared/settings.json.example` by `install` / `dotpi sync`; gitignored thereafter. Edit freely; not tracked. |
+| `REFERENCES/**` | **No** | Local-only sibling checkouts; gitignored. Cloned manually for agent context (see `REFERENCE-REPOS.md`). |
+| `model_roles` | Local | Per-machine config; gitignored. Written by `dotpi setup`, sourced by `env.sh`. Bootstrap manually with `cp bootstrap/model_roles.example model_roles`. |
+| `shared/settings.json` | Local | Bootstrapped from `bootstrap/settings.json.example` by `install` / `dotpi sync`; gitignored thereafter. Edit freely; not tracked. |
+| `bootstrap/*.example`, `bootstrap/plebchat-models.json` | Yes | Tracked seed/template files used to bootstrap local config. Edit to change defaults seen by new installs. |
 | `VERSION` | Yes | Bump on releases. Surfaced via `dotpi --version`. |
