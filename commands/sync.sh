@@ -19,6 +19,18 @@ if [ ! -f "$DOT_PI_DIR/model_roles" ] && \
   echo "sync: created model_roles from bootstrap/model_roles.example"
 fi
 
+# Symlink shared/models.json to system pi config if missing
+_dotpi_models="$DOT_PI_DIR/shared/models.json"
+_pi_system_models="$HOME/.pi/agent/models.json"
+if [ ! -e "$_dotpi_models" ] && [ ! -L "$_dotpi_models" ]; then
+  if [ -f "$_pi_system_models" ]; then
+    ln -sf "$_pi_system_models" "$_dotpi_models"
+    echo "sync: symlinked shared/models.json -> $_pi_system_models"
+  else
+    echo "sync: shared/models.json missing and ~/.pi/agent/models.json not found — run 'dotpi setup' or 'pi' first"
+  fi
+fi
+
 added=0 removed=0
 
 # Create symlinks for every agent and team

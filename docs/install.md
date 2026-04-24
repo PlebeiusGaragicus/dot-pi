@@ -60,7 +60,7 @@ The wizard offers quick presets for common setups:
 | Custom OpenAI-compatible | (you provide) | Any OpenAI-API-compatible endpoint |
 | Custom Anthropic-compatible | (you provide) | Anthropic-style endpoints |
 
-For each provider, the wizard fetches available models (with an Ollama `/api/tags` fallback), lets you pick which to include, and saves them to `shared/models.json`.
+For each provider, the wizard fetches available models (with an Ollama `/api/tags` fallback), lets you pick which to include, and saves them to `~/.pi/agent/models.json` (pi's system config). dot-pi symlinks `shared/models.json` to this file so all teams and agents share the same provider configuration as bare `pi`.
 
 ### Model roles
 
@@ -85,7 +85,7 @@ dotpi link-auth lm recon    # share auth.json from lm to recon
 
 ### Multi-provider
 
-`shared/models.json` supports multiple providers side-by-side. Each `dotpi setup` run adds or edits one provider without disturbing others. The role picker shows models from all providers.
+`~/.pi/agent/models.json` supports multiple providers side-by-side. Each `dotpi setup` run adds or edits one provider without disturbing others. The role picker shows models from all providers. dot-pi's `shared/models.json` is a symlink to this system file — there is only one copy.
 
 ## Local one-device setup
 
@@ -136,6 +136,8 @@ Re-running the installer on an existing install shows an "already installed" mes
 ```bash
 ~/.dot-pi/install --uninstall
 ```
+
+The uninstaller removes `~/.dot-pi` and attempts to clean dot-pi lines from your shell rc file. If it can't write to the rc file (e.g. permissions), it will show the lines to remove manually. Your system `~/.pi/agent/` directory (including `models.json` and `auth.json`) is not touched.
 
 ---
 

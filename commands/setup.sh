@@ -61,7 +61,19 @@ for _cmd in jq curl; do
   }
 done
 
-MODELS_FILE="$SHARED_DIR/models.json"
+_resolve_models_file() {
+  local dotpi_models="$SHARED_DIR/models.json"
+  local system_models="$HOME/.pi/agent/models.json"
+  if [ -L "$dotpi_models" ]; then
+    readlink -f "$dotpi_models" 2>/dev/null || echo "$dotpi_models"
+  elif [ -f "$system_models" ]; then
+    echo "$system_models"
+  else
+    mkdir -p "$HOME/.pi/agent"
+    echo "$system_models"
+  fi
+}
+MODELS_FILE="$(_resolve_models_file)"
 mkdir -p "$SHARED_DIR"
 
 echo ""
@@ -443,6 +455,14 @@ else
   echo ""
 fi
 
+# Ensure shared/models.json symlink exists after setup creates the system file
+_dotpi_models="$SHARED_DIR/models.json"
+if [ ! -e "$_dotpi_models" ] && [ ! -L "$_dotpi_models" ] && [ -f "$MODELS_FILE" ]; then
+  ln -sf "$MODELS_FILE" "$_dotpi_models"
+  echo "  ✓ Symlinked shared/models.json -> $MODELS_FILE"
+  echo ""
+fi
+
 # ── Summary ──────────────────────────────────────────────────────────────────
 
 echo "Summary"
@@ -471,14 +491,28 @@ echo "    $MODELS_FILE    (providers, API keys, model lists)"
 echo "    $roles_file              (role → model env vars; sourced by env.sh)"
 echo ""
 
-if [ -z "${DOT_PI_INSTALLED:-}" ]; then
-  echo "  Next steps:"
-  echo "    1. Add to your shell profile:"
-  echo "       export PATH=\"\$HOME/.dot-pi/bin:\$PATH\""
-  echo "       source \"\$HOME/.dot-pi/env.sh\""
-  echo "    2. Start a session:  lm"
-else
+_setup_shell_rc() {
+  local sh
+  sh="$(basename "${SHELL:-/bin/bash}")"
+  case "$sh" in
+    zsh)  echo "$HOME/.zshrc" ;;
+    bash) echo "$HOME/.bashrc" ;;
+    *)    echo "$HOME/.${sh}rc" ;;
+  esac
+}
+
+_rc="$(_setup_shell_rc)"
+if grep -qF "dot-pi" "$_rc" 2>/dev/null; then
+  echo "  Shell: already configured in $_rc"
+  echo ""
   echo "  Re-run 'dotpi setup' anytime to add, edit, or remove providers."
   echo "  Start a session:  lm"
+else
+  echo "  Shell: not configured yet. Add to $(basename "$_rc"):"
+  echo ""
+  echo "       export PATH=\"\$HOME/.dot-pi/bin:\$PATH\""
+  echo "       source \"\$HOME/.dot-pi/env.sh\""
+  echo ""
+  echo "  Then restart your shell and run:  lm"
 fi
 echo ""

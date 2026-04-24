@@ -185,6 +185,22 @@ do_install() {
     info "Created model_roles from bootstrap/model_roles.example"
   fi
 
+  # Symlink shared/models.json to system pi config
+  local pi_system_models="$HOME/.pi/agent/models.json"
+  local dotpi_models="$DOT_PI_HOME/shared/models.json"
+  if [ -L "$dotpi_models" ]; then
+    info "shared/models.json already symlinked"
+  elif [ -f "$dotpi_models" ]; then
+    warn "shared/models.json is a regular file (legacy)"
+    warn "Back it up and re-run, or manually: ln -sf ~/.pi/agent/models.json shared/models.json"
+  elif [ -f "$pi_system_models" ]; then
+    ln -sf "$pi_system_models" "$dotpi_models"
+    info "Symlinked shared/models.json -> $pi_system_models"
+  else
+    warn "~/.pi/agent/models.json not found"
+    warn "Run 'pi' once or 'dotpi setup' to create it, then: dotpi sync"
+  fi
+
   # Build bin/ symlinks
   "$DOT_PI_HOME/dotpi" sync
   echo ""
@@ -231,25 +247,36 @@ do_uninstall() {
   fi
   echo ""
 
-  # Remove source line from shell RC
+  # Attempt to remove dot-pi lines from shell RC
   local rc
   rc="$(shell_rc)"
 
+  if [ -f "$rc" ] && grep -qF "dot-pi" "$rc" 2>/dev/null; then
+    echo "  Removing dot-pi lines from $(bold "$rc")..."
+    local tmp_rc
+    tmp_rc=$(mktemp)
+    grep -v "dot-pi" "$rc" > "$tmp_rc"
+    if cp "$tmp_rc" "$rc" 2>/dev/null; then
+      rm -f "$tmp_rc"
+      info "Cleaned $rc"
+    else
+      rm -f "$tmp_rc"
+      warn "Could not write to $rc (may need sudo)"
+      echo ""
+      echo "  Remove these lines manually from $(bold "$rc"):"
+      echo ""
+      grep -n "dot-pi" "$rc" | while IFS= read -r line; do
+        echo "    $line"
+      done
+      echo ""
+    fi
+  fi
+
   rm -rf "$DOT_PI_HOME"
   info "Removed $DOT_PI_HOME"
-  echo ""
 
   echo ""
   echo "  $(bold "dot-pi has been removed.")"
-  echo ""
-  if [ -f "$rc" ] && grep -qF "dot-pi" "$rc" 2>/dev/null; then
-    echo "  Remove these lines from $(bold "$rc"):"
-    echo ""
-    grep -n "dot-pi" "$rc" | while IFS= read -r line; do
-      echo "    $line"
-    done
-    echo ""
-  fi
   echo "  Restart your shell to complete cleanup."
   echo ""
 }
