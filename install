@@ -157,14 +157,14 @@ do_install() {
       if ! grep -qF "dot-pi" "$rc" 2>/dev/null; then
         warn "Shell not configured yet. Add the following to $(bold "$rc"):"
         echo ""
-        echo "    $(green '# dot-pi — pi agent launcher')"
-        echo "    $(green "export PATH=\"\$HOME/.dot-pi/bin:\$PATH\"")"
-        echo "    $(green "source \"\$HOME/.dot-pi/env.sh\"")"
+        echo "$(green '# dot-pi — pi agent launcher')"
+        echo "$(green "export PATH=\"\$HOME/.dot-pi/bin:\$PATH\"")"
+        echo "$(green "source \"\$HOME/.dot-pi/env.sh\"")"
         echo ""
       fi
-      echo "    To update:      install --force-rebase"
+      echo "    To update:      $DOT_PI_HOME/install --force-rebase"
       echo "    To reconfigure: $DOT_PI_HOME/dotpi setup"
-      echo "    To remove:      install --uninstall"
+      echo "    To remove:      $DOT_PI_HOME/install --uninstall"
       echo ""
       exit 0
     fi
@@ -192,9 +192,9 @@ do_install() {
   else
     echo "  Add the following to $(bold "$rc"):"
     echo ""
-    echo "    $(green '# dot-pi — pi agent launcher')"
-    echo "    $(green "export PATH=\"\$HOME/.dot-pi/bin:\$PATH\"")"
-    echo "    $(green "source \"\$HOME/.dot-pi/env.sh\"")"
+    echo "  $(green '# dot-pi — pi agent launcher')"
+    echo "  $(green "export PATH=\"\$HOME/.dot-pi/bin:\$PATH\"")"
+    echo "  $(green "source \"\$HOME/.dot-pi/env.sh\"")"
     echo ""
     echo "  Then run $(bold "dotpi setup") to configure your API key and models."
   fi
