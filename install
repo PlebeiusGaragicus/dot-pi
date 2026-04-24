@@ -105,6 +105,35 @@ check_pi() {
   fi
 }
 
+check_espeak() {
+  [[ "$OSTYPE" == darwin* ]] && return 0
+
+  if command -v espeak-ng &>/dev/null; then
+    info "espeak-ng found: $(command -v espeak-ng)"
+    return 0
+  fi
+
+  warn "espeak-ng not found (used by the 'say' extension for Linux TTS)"
+  echo ""
+
+  local installer="" pkg="espeak-ng"
+  if   command -v apt-get &>/dev/null; then installer="sudo apt-get install -y $pkg"
+  elif command -v apt     &>/dev/null; then installer="sudo apt install -y $pkg"
+  elif command -v dnf     &>/dev/null; then installer="sudo dnf install -y $pkg"
+  elif command -v pacman  &>/dev/null; then installer="sudo pacman -S --noconfirm $pkg"
+  fi
+
+  if [ -n "$installer" ] && confirm "Install espeak-ng now? ($installer)" "Y"; then
+    echo ""
+    eval "$installer" || warn "Install failed. You can install it later: $installer"
+    command -v espeak-ng &>/dev/null && info "espeak-ng installed: $(command -v espeak-ng)"
+  else
+    echo ""
+    warn "Skipped. TTS will be unavailable until espeak-ng is installed."
+    [ -n "$installer" ] && echo "    To install later: $installer"
+  fi
+}
+
 # ── install ───────────────────────────────────────────────────────────────────
 
 do_install() {
@@ -117,6 +146,7 @@ do_install() {
 
   check_deps
   check_pi
+  check_espeak
   echo ""
 
   # Clone, update, or bail

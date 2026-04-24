@@ -1,5 +1,5 @@
 /**
- * macOS TTS — speaks assistant text with `say`.
+ * TTS — speaks assistant text with macOS `say` or Linux `espeak-ng`.
  *
  * - Auto TTS: off by default, or pass `--tts-enable` (e.g. in `pi-args`) for auto TTS on. On every
  *   `session_start` (startup, `/new`, `/resume`, etc.), auto TTS is re-read from that flag so it
@@ -7,25 +7,34 @@
  *   the next `session_start`, when the CLI default wins again.
  * - Streaming: when auto TTS is on, text is split on NEWLINES only (not sentence punctuation) and
  *   each line is queued and spoken as soon as it arrives during assistant streaming. This keeps
- *   multi-sentence paragraphs gap-free (one `say` call per paragraph) while still starting speech
- *   before the full reply is generated. Bullet items, table rows, and paragraph breaks still get
- *   a gap between them because each is its own line in the source text.
+ *   multi-sentence paragraphs gap-free (one `say`/`espeak-ng` call per paragraph) while still
+ *   starting speech before the full reply is generated. Bullet items, table rows, and paragraph
+ *   breaks still get a gap between them because each is its own line in the source text.
  * - Manual: `/say` speaks the last assistant reply in the session; `/stop-speaking` halts it.
  * - Replaces URLs with "URL redacted"; strips Markdown `*`, `#`, blockquote `>` prefixes, and
- *   Unicode box-drawing / tree characters so `say` does not read them aloud.
+ *   Unicode box-drawing / tree characters so the synthesizer does not read them aloud.
  * - Fenced code blocks (```) are omitted from speech entirely; exception: ```txt and ```markdown
  *   fences have their content spoken (fence lines themselves are always omitted).
- * - Only runs when `ctx.hasUI` (interactive TUI) on macOS.
- * - Speech rate: `say -r` (words per minute), see SAY_RATE_WPM.
+ * - Only runs when `ctx.hasUI` (interactive TUI) and a TTS backend is available.
+ * - Speech rate: words per minute, see SAY_RATE_WPM.
  * - A new user prompt, `/stop-speaking`, `/tts-toggle off`, or pi exiting all cancel speech.
+ *
+ * Backends live in ./backends/ — one per platform. Currently: macOS `say`, Linux `espeak-ng`.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { type ChildProcess, spawn } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
+import type { TtsBackend } from "./backends/types";
+import macosBackend from "./backends/macos";
+import linuxBackend from "./backends/linux";
+
+const backend: TtsBackend | null =
+	process.platform === "darwin" ? macosBackend :
+	process.platform === "linux"  ? linuxBackend  : null;
 
 const URL_REDACTED = "URL redacted";
 const MAX_CHARS = 32_000;
-/** Words per minute for `say -r` */
+/** Words per minute passed to the TTS backend */
 const SAY_RATE_WPM = 320;
 
 /** In-memory; synced from `--tts-enable` on every session_start; `/tts-toggle` until next session_start */
@@ -202,41 +211,6 @@ function extractLines(buf: string): { lines: string[]; rest: string } {
 	return { lines, rest: buf.slice(last) };
 }
 
-/** Start a `say` child for `text`. Text is fed via stdin (`-f -`) rather than argv so
- *  that messages beginning with `-` or containing `--` aren't mis-parsed as CLI options
- *  by `say`. The pipe is closed immediately so `say` sees EOF and speaks the buffered
- *  text in a single shot. Returns the spawned child.
- *
- *  If `paused` is true, SIGSTOP is sent immediately so the child can initialize in the
- *  background without grabbing the audio device; resume with SIGCONT when ready. The
- *  text is written to the pipe buffer before the SIGSTOP can affect reading, so when
- *  the child is later SIGCONT'd it reads the buffered bytes and starts speaking.
- *
- *  stderr is inherited so any `say` errors (missing voice, audio device busy, etc.) are
- *  visible in the pi log instead of being silently swallowed. */
-function spawnSay(text: string, paused: boolean): ChildProcess {
-	const child = spawn("say", ["-r", String(SAY_RATE_WPM), "-f", "-"], {
-		stdio: ["pipe", "ignore", "inherit"],
-	});
-	try {
-		child.stdin?.end(text);
-	} catch {
-		/* ignore — child may have died before we could write */
-	}
-	if (paused) {
-		// Fire SIGSTOP immediately. There is a small race where `say` may have already
-		// opened the audio device before the signal arrives; in practice the window is
-		// short enough that any overlap is a blip, and the parallel fork/exec/voice-load
-		// is what we're here to pay for.
-		try {
-			child.kill("SIGSTOP");
-		} catch {
-			/* ignore */
-		}
-	}
-	return child;
-}
-
 function startSpeaking(text: string): void {
 	// Reuse the pre-warmed child if its text matches what we intend to speak next.
 	if (pendingSay) {
@@ -255,7 +229,7 @@ function startSpeaking(text: string): void {
 			/* ignore */
 		}
 	} else {
-		const child = spawnSay(text, false);
+		const child = backend!.spawn(text, SAY_RATE_WPM, false);
 		currentSay = child;
 		const clear = (): void => {
 			if (currentSay === child) currentSay = null;
@@ -270,10 +244,10 @@ function startSpeaking(text: string): void {
 
 function prewarmNext(): void {
 	if (pendingSay) return;
-	if (process.platform !== "darwin" || !autoTtsEnabled) return;
+	if (backend === null || !autoTtsEnabled) return;
 	const next = speechQueue[0];
 	if (next === undefined) return;
-	const child = spawnSay(next, true);
+	const child = backend!.spawn(next, SAY_RATE_WPM, true);
 	pendingSay = { child };
 	// If the pre-warmed child dies unexpectedly (e.g. SIGKILL from stopSay during a
 	// reset), clear the slot so we don't try to SIGCONT a zombie later.
@@ -303,7 +277,7 @@ function enqueueSpeech(text: string): boolean {
 	if (!cleaned) return false;
 	const capped = cleaned.length > MAX_CHARS ? cleaned.slice(0, MAX_CHARS) : cleaned;
 
-	if (process.platform !== "darwin" || !autoTtsEnabled) return false;
+	if (backend === null || !autoTtsEnabled) return false;
 
 	if (currentSay === null) {
 		// Nothing playing: speak immediately and start pre-warming from the queue head
@@ -361,7 +335,7 @@ export default function (pi: ExtensionAPI) {
 	pi.registerFlag("tts-enable", {
 		type: "boolean",
 		default: false,
-		description: "Enable automatic TTS after each assistant reply (macOS say)",
+		description: "Enable automatic TTS after each assistant reply (macOS say / Linux espeak-ng)",
 	});
 
 	pi.on("session_start", async () => {
@@ -373,7 +347,7 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.on("message_update", async (event) => {
-		if (process.platform !== "darwin" || !autoTtsEnabled) return;
+		if (backend === null || !autoTtsEnabled) return;
 		const e = event.assistantMessageEvent;
 		if (e.type === "text_delta") {
 			const prev = pendingByIndex.get(e.contentIndex) ?? "";
@@ -410,7 +384,7 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.on("agent_end", async (event, ctx) => {
-		if (process.platform !== "darwin" || !ctx.hasUI || !autoTtsEnabled) {
+		if (backend === null || !ctx.hasUI || !autoTtsEnabled) {
 			streamedThisTurn = false;
 			return;
 		}
@@ -453,11 +427,16 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("say", {
-		description: "Speak the last assistant reply (macOS say)",
+		description: "Speak the last assistant reply",
 		handler: async (_args, ctx) => {
 			if (!ctx.hasUI) return;
-			if (process.platform !== "darwin") {
-				ctx.ui.notify("TTS is only available on macOS", "warning");
+			if (backend === null) {
+				ctx.ui.notify(
+					process.platform === "linux"
+						? "TTS unavailable — install espeak-ng (apt install espeak-ng)"
+						: "TTS is not available on this platform",
+					"warning",
+				);
 				return;
 			}
 
@@ -478,7 +457,7 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("stop-speaking", {
-		description: "Stop any in-flight macOS `say` speech and clear the TTS queue",
+		description: "Stop any in-flight TTS speech and clear the queue",
 		handler: async (_args, ctx) => {
 			if (!ctx.hasUI) return;
 			const hadSomething = currentSay !== null || pendingSay !== null || speechQueue.length > 0;
