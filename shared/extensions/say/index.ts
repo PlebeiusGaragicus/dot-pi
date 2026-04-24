@@ -24,9 +24,9 @@
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import type { ChildProcess } from "node:child_process";
-import type { TtsBackend } from "./backends/types";
-import macosBackend from "./backends/macos";
-import linuxBackend from "./backends/linux";
+import type { TtsBackend } from "./backends/types.js";
+import macosBackend from "./backends/macos.js";
+import linuxBackend from "./backends/linux.js";
 
 const backend: TtsBackend | null =
 	process.platform === "darwin" ? macosBackend :

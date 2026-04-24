@@ -1,4 +1,4 @@
-import type { TtsBackend } from "./types";
+import type { TtsBackend } from "./types.js";
 import { spawn } from "node:child_process";
 
 const backend: TtsBackend | null =

@@ -1,4 +1,4 @@
-import type { TtsBackend } from "./types";
+import type { TtsBackend } from "./types.js";
 import { spawn, spawnSync } from "node:child_process";
 
 function hasEspeakNg(): boolean {
