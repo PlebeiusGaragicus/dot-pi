@@ -82,34 +82,9 @@ check_deps() {
 check_pi() {
   if command -v pi &>/dev/null; then
     info "pi found: $(command -v pi)"
-    return
-  fi
-
-  warn "pi (coding agent) not found on PATH"
-  echo ""
-
-  if ! command -v node &>/dev/null || ! command -v npm &>/dev/null; then
-    red "  Node.js/npm not found — cannot auto-install pi."; echo ""
-    echo "  Install Node.js first (https://nodejs.org), then:"
-    echo "    npm install -g @mariozechner/pi-coding-agent"
-    echo ""
-    if ! confirm "Continue without pi?" "Y"; then
-      exit 1
-    fi
-    return
-  fi
-
-  if confirm "Install pi via npm? (npm install -g @mariozechner/pi-coding-agent)" "Y"; then
-    echo ""
-    npm install -g @mariozechner/pi-coding-agent
-    echo ""
-    if command -v pi &>/dev/null; then
-      info "pi installed successfully"
-    else
-      warn "pi was installed but not found on PATH — you may need to restart your shell"
-    fi
   else
-    warn "Skipping pi install — agent commands won't work until pi is installed"
+    warn "pi (coding agent) not found on PATH"
+    echo "    Install it with: npm install -g @mariozechner/pi-coding-agent"
   fi
 }
 
@@ -230,13 +205,6 @@ do_uninstall() {
   rm -rf "$DOT_PI_HOME"
   info "Removed $DOT_PI_HOME"
   echo ""
-
-  if command -v pi &>/dev/null; then
-    if confirm "Also uninstall pi (npm global package)?" "N"; then
-      npm uninstall -g @mariozechner/pi-coding-agent
-      info "pi uninstalled"
-    fi
-  fi
 
   echo ""
   echo "  $(bold "dot-pi has been removed.")"
