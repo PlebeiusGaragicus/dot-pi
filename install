@@ -105,6 +105,18 @@ check_pi() {
   fi
 }
 
+install_node_modules() {
+  if [ ! -f "$DOT_PI_HOME/package.json" ]; then return; fi
+  if ! command -v npm &>/dev/null; then
+    warn "npm not found — extension dependencies (typebox) not installed."
+    echo "    Install Node.js, then run:  cd $DOT_PI_HOME && npm install"
+    return
+  fi
+  info "Installing extension dependencies (npm install)..."
+  ( cd "$DOT_PI_HOME" && npm install --silent ) || \
+    warn "npm install failed. Run manually: cd $DOT_PI_HOME && npm install"
+}
+
 check_espeak() {
   [[ "$OSTYPE" == darwin* ]] && return 0
 
@@ -233,6 +245,9 @@ do_install() {
 
   # Build bin/ symlinks
   "$DOT_PI_HOME/dotpi" sync
+
+  # Install extension runtime dependencies (typebox, etc.)
+  install_node_modules
   echo ""
 
   echo "  $(bold "Done!")"

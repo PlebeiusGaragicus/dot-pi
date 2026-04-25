@@ -6,6 +6,7 @@ model_roles
 shared/models.json
 shared/settings.json
 bin/
+.ssh
 
 # Runtime session data (each team gets its own sessions/ dir)
 teams/*/sessions/*

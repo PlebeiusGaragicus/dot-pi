@@ -27,6 +27,17 @@ _pi() {
   PI_SKIP_VERSION_CHECK=1 PI_OFFLINE=1 command pi "$@"
 }
 
+_expand_env_vars() {
+  local s="$1" out="" var name
+  while [[ "$s" =~ \$\{?([A-Za-z_][A-Za-z0-9_]*)\}? ]]; do
+    name="${BASH_REMATCH[1]}"
+    var="${BASH_REMATCH[0]}"
+    out+="${s%%"$var"*}${!name-}"
+    s="${s#*"$var"}"
+  done
+  printf '%s' "$out$s"
+}
+
 # JSON event stream filter for batch mode.
 # Progress lines -> stderr, final assistant text -> stdout.
 _json_filter() {
@@ -324,9 +335,11 @@ fi
 if [ -f "$config_dir/pi-args" ]; then
   _pi_args=()
   while IFS= read -r _line || [ -n "$_line" ]; do
+    [[ -z "$_line" || "$_line" == \#* ]] && continue
+    _line="$(_expand_env_vars "$_line")"
     # shellcheck disable=SC2206  # intentional word-splitting so multi-word flags expand
-    [[ -n "$_line" && "$_line" != \#* ]] && _pi_args+=($_line)
-  done < <(envsubst < "$config_dir/pi-args")
+    _pi_args+=($_line)
+  done < "$config_dir/pi-args"
   if [ ${#_pi_args[@]} -gt 0 ]; then
     set -- "${_pi_args[@]}" "$@"
   fi
