@@ -350,16 +350,13 @@ _configure_provider() {
 echo "[1/2] Providers"
 echo ""
 
-# shellcheck disable=SC2034
-provider_changed=false
-
 while true; do
   count=$(_provider_count)
 
   if [ "$count" -eq 0 ]; then
     echo "  No providers configured yet."
     echo ""
-    _configure_provider && provider_changed=true || true
+    _configure_provider || true
     count=$(_provider_count)
     [ "$count" -eq 0 ] && break
     continue
@@ -383,12 +380,12 @@ while true; do
 
   case "$action" in
     a|A)
-      _configure_provider && provider_changed=true || true
+      _configure_provider || true
       ;;
     e|E)
       read -r -p "  Edit which provider? [1-$idx]: " edit_num
       if [ "$edit_num" -ge 1 ] 2>/dev/null && [ "$edit_num" -le "$idx" ]; then
-        _configure_provider "${prov_names[$((edit_num - 1))]}" && provider_changed=true || true
+        _configure_provider "${prov_names[$((edit_num - 1))]}" || true
       else
         echo "  Invalid selection."
       fi
@@ -399,7 +396,6 @@ while true; do
         del_name="${prov_names[$((del_num - 1))]}"
         _delete_provider "$del_name"
         echo "  ✓ Deleted '$del_name'"
-        provider_changed=true
       else
         echo "  Invalid selection."
       fi
