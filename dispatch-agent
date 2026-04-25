@@ -136,7 +136,8 @@ _workspace_launch() {
     return $?
   fi
 
-  local ws="$ws_root/$(date +%Y-%m-%d-%H%M%S)"
+  local ws
+  ws="$ws_root/$(date +%Y-%m-%d-%H%M%S)"
   mkdir -p "$ws"
   while IFS= read -r subdir || [ -n "$subdir" ]; do
     [[ -n "$subdir" && "$subdir" != \#* ]] && mkdir -p "$ws/$subdir"
@@ -323,7 +324,7 @@ fi
 if [ -f "$config_dir/pi-args" ]; then
   _pi_args=()
   while IFS= read -r _line || [ -n "$_line" ]; do
-    # shellcheck disable=SC2206 — intentional word-splitting so multi-word flags expand
+    # shellcheck disable=SC2206  # intentional word-splitting so multi-word flags expand
     [[ -n "$_line" && "$_line" != \#* ]] && _pi_args+=($_line)
   done < <(envsubst < "$config_dir/pi-args")
   if [ ${#_pi_args[@]} -gt 0 ]; then

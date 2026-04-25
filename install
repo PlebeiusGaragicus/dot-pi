@@ -227,7 +227,7 @@ do_install() {
     ln -sf "$pi_system_models" "$dotpi_models"
     info "Symlinked shared/models.json -> $pi_system_models"
   else
-    warn "~/.pi/agent/models.json not found"
+    warn "$HOME/.pi/agent/models.json not found"
     warn "Run 'pi' once or 'dotpi setup' to create it, then: dotpi sync"
   fi
 

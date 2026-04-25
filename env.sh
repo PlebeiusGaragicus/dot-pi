@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034,SC2296
 # dot-pi environment — sourced from ~/.zshrc or ~/.bashrc.
 # Sets env vars only; no functions, no aliases.
 # Agent commands live in bin/ on PATH (see dispatch-agent).

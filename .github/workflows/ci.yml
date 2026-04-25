@@ -73,7 +73,7 @@ jobs:
 
           actual="${_pi_args[*]}"
           for expected in "--tools" "read,grep" "--no-skills"; do
-            if ! echo "$actual" | grep -qF "$expected"; then
+            if ! printf '%s\n' "$actual" | grep -qF -- "$expected"; then
               echo "FAIL: expected '$expected' in: $actual"
               exit 1
             fi
@@ -102,22 +102,14 @@ jobs:
         run: |
           set -e
           fail=0
-          while IFS= read -r pattern; do
-            [ -z "$pattern" ] && continue
-            case "$pattern" in \#*) continue;; esac
-            # Strip leading negation; only check positive patterns
-            case "$pattern" in !*) continue;; esac
-            # Only check concrete file patterns (skip directory globs we expect symlinks under)
-            case "$pattern" in */) continue;; esac
-            while IFS= read -r tracked; do
-              [ -z "$tracked" ] && continue
-              # Symlinks under teams/* and agents/* are intentionally tracked even if
-              # the underlying target file matches an ignore pattern; skip them.
-              if [ -L "$tracked" ]; then continue; fi
-              echo "ERROR: $tracked is tracked but matches gitignore pattern '$pattern'"
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            # Double-check with git check-ignore which respects ! negations
+            if git check-ignore -q "$f" 2>/dev/null; then
+              echo "ERROR: $f is tracked but gitignored"
               fail=1
-            done < <(git ls-files -- "$pattern" 2>/dev/null || true)
-          done < .gitignore
+            fi
+          done < <(git ls-files -ci --exclude-standard)
           exit "$fail"
 
   docs:

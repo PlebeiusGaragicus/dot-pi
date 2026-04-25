@@ -350,6 +350,7 @@ _configure_provider() {
 echo "[1/2] Providers"
 echo ""
 
+# shellcheck disable=SC2034
 provider_changed=false
 
 while true; do
