@@ -7,4 +7,3 @@ $FAST_MODEL
 off
 # Auto TTS on startup (say extension)
 --tts-enable
-# IMPORTANT: must end with a newline / or comment

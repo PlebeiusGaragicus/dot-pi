@@ -65,8 +65,6 @@ README
 
 cat > "$agent_dir/pi-args" <<'PIARGS'
 # Default CLI flags (read by dispatch-agent). One flag per line; # starts a comment.
-#
-# IMPORTANT: must end with a newline (this comment also works) or last line will be ignored
 PIARGS
 
 cat > "$agent_dir/SYSTEM.md" <<SYSTEMMD
@@ -87,8 +85,6 @@ if [ "$workspace" = true ]; then
 # Subdirectories to pre-create in each workspace run.
 # One directory name per line. The alias reads this file
 # and runs mkdir -p for each entry before launching pi.
-#
-# IMPORTANT: must end with a newline (this comment also works) or last line will be ignored
 WSCONF
   echo "Created workspace.conf (edit to add workspace subdirectories)"
 fi

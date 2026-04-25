@@ -26,6 +26,19 @@ jobs:
             env.sh \
             commands/*.sh
 
+  typecheck:
+    name: typecheck (extensions)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: tsc --noEmit
+        run: npx tsc --noEmit
+        continue-on-error: true
+
   smoke:
     name: smoke tests (entry scripts)
     runs-on: ubuntu-latest

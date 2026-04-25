@@ -42,6 +42,7 @@ dot-pi/
 ├── teams/                    # Multi-agent team directories
 ├── agents/                   # Standalone agent directories
 ├── workspaces/               # Ephemeral workspace directories (gitignored contents)
+├── pi-toppers/               # Optional submodule: web UIs (install via `dotpi install toppers`)
 ├── docs/                     # MkDocs documentation source
 └── REFERENCES/               # Local-only sibling checkouts for agent context (gitignored).
                               # Optional manual `git clone`s of related projects (pi-mono,
@@ -115,7 +116,7 @@ No `agents/` subdirectory, no `team-prompt.md`. The main pi process IS the agent
 **Prompt and tool customization** (combine as needed):
 
 1. **`SYSTEM.md` / `APPEND_SYSTEM.md`** (pi-native): `SYSTEM.md` replaces pi's default system prompt entirely; `APPEND_SYSTEM.md` appends to it. No extension needed — pi discovers these from `PI_CODING_AGENT_DIR` at startup.
-2. **`pi-args`** (via `dispatch-agent`): plain text file with default CLI flags (e.g. `--tools websearch`, `--no-tools`, `--no-skills`), one per line. The `dispatch-agent` script prepends these to the `pi` invocation. **End the file with a newline after the last flag** (or leave the scaffolded trailing comment line) so the last flag is not dropped; `dispatch-agent` also defends against a missing final newline when reading this file.
+2. **`pi-args`** (via `dispatch-agent`): plain text file with default CLI flags (e.g. `--tools websearch`, `--no-tools`, `--no-skills`), one per line. The `dispatch-agent` script prepends these to the `pi` invocation. A missing final newline is tolerated.
 3. **`AGENT.md`** (optional, legacy): YAML frontmatter sets `tools` and/or `model`; body appended to the system prompt. Requires symlink: `ln -sf ../../../shared/extensions/agent-prompt extensions/agent-prompt` — the `agent-prompt` shared extension reads `AGENT.md`. New `dotpi create-agent` scaffolds do not link this file by default.
 
 ## Key Concepts
@@ -239,14 +240,13 @@ Skills live in `shared/skills/` and are symlinked per-skill into each team/agent
 
 Any team or standalone agent can run as a **workspace agent** by adding a `workspace.conf` file to its directory. When present, running the command (e.g. `deepresearch`) launches pi in a fresh dated directory (`workspaces/<name>/<timestamp>/`) inside a subshell, so the user's shell stays in its original directory after pi exits.
 
-**`workspace.conf` format**: one subdirectory name per line. Lines starting with `#` are comments. Each listed directory is pre-created in the workspace before pi starts. **End the file with a newline after the last directory name** (or keep the scaffolded trailing comment); `dispatch-agent` also defends against a missing final newline when reading this file.
+**`workspace.conf` format**: one subdirectory name per line. Lines starting with `#` are comments. Each listed directory is pre-created in the workspace before pi starts. A missing final newline is tolerated.
 
 ```
 # teams/deepresearch/workspace.conf
 sources
 drafts
 sessions
-# IMPORTANT: must end with a newline (this comment also works) or last line will be ignored
 ```
 
 **To convert any existing team/agent to workspace mode**: create `workspace.conf` in its directory (can be empty for a bare workspace, or list subdirectories).

@@ -1,3 +1,1 @@
 # Optional default CLI flags for `impl` (read by dispatch-agent). One flag per line; # starts a comment.
-#
-# IMPORTANT: must end with a newline (this comment also works) or last line will be ignored

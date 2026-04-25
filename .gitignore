@@ -36,4 +36,7 @@ workspaces/*
 shared/bin/*
 !shared/bin/.gitkeep
 
+# Root node_modules (devDeps for extension type-checking)
+node_modules/
+
 REFERENCES/*

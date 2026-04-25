@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "description": "Type-checking devDeps for dot-pi extensions (not a publishable package)",
+  "devDependencies": {
+    "@mariozechner/pi-agent-core": "0.70.2",
+    "@mariozechner/pi-ai": "0.70.2",
+    "@mariozechner/pi-coding-agent": "0.70.2",
+    "@mariozechner/pi-tui": "0.70.2",
+    "@sinclair/typebox": "^0.34.0",
+    "typescript": "^5.7.0"
+  }
+}

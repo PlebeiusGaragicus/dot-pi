@@ -3,4 +3,3 @@
 --no-prompt-templates
 --model
 plebchat/google/gemma-4-31b
-# IMPORTANT: must end with a newline / or comment

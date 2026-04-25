@@ -19,6 +19,8 @@ Commands:
   list                                     List existing teams and standalone agents
   link-skill <team-or-agent> <skill> [...] Symlink one or more shared skills into a team or agent
   link-auth <src> <dst>                    Symlink auth.json from one team/agent (or path) into another
+  install <target>                          Install optional add-ons (e.g. toppers)
+  doctor [--strict]                        Run health checks on the dot-pi install
   sync                                     Rebuild bin/ symlinks from agents/ and teams/
   version | --version | -v                 Print dotpi version (from VERSION file) and exit
 
@@ -53,6 +55,8 @@ case "$cmd" in
   list)         source "$COMMANDS_DIR/list.sh" "$@" ;;
   link-skill)   source "$COMMANDS_DIR/link-skill.sh" "$@" ;;
   link-auth)    source "$COMMANDS_DIR/link-auth.sh" "$@" ;;
+  install)      source "$COMMANDS_DIR/install.sh" "$@" ;;
+  doctor)       source "$COMMANDS_DIR/doctor.sh" "$@" ;;
   sync)         source "$COMMANDS_DIR/sync.sh" "$@" ;;
   version|--version|-v)
                 v="unknown"
