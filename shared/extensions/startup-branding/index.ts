@@ -4,6 +4,8 @@
  * On session start, reads <agentDir>/banner.txt and replaces the
  * built-in header via ctx.ui.setHeader(). Works with quietStartup
  * (the empty built-in header gets swapped for the branded one).
+ * Also sets the terminal title to the first user prompt, trimmed to
+ * 30 characters, once that prompt is available.
  *
  * File format (plain text, optional --- separator):
  *   - Everything above the first "---" line renders in accent color (bold).
@@ -14,15 +16,74 @@
  * Then append usage/description text below a "---" line.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@mariozechner/pi-coding-agent";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+const TITLE_MAX_CHARS = 30;
+
+function promptToTitle(prompt: string): string {
+	const normalized = prompt.replace(/\s+/g, " ").trim();
+	return normalized.length > TITLE_MAX_CHARS ? normalized.slice(0, TITLE_MAX_CHARS) : normalized;
+}
+
+function textFromContent(content: unknown): string {
+	if (typeof content === "string") return content;
+	if (!Array.isArray(content)) return "";
+
+	const textParts: string[] = [];
+	for (const part of content) {
+		if (!part || typeof part !== "object") continue;
+		const maybeText = (part as { type?: unknown; text?: unknown });
+		if (maybeText.type === "text" && typeof maybeText.text === "string") {
+			textParts.push(maybeText.text);
+		}
+	}
+
+	return textParts.join(" ");
+}
+
+function firstUserPromptFromBranch(entries: SessionEntry[]): string {
+	for (const entry of entries) {
+		if (entry.type !== "message") continue;
+
+		const message = entry.message as { role?: unknown; content?: unknown };
+		if (message.role !== "user") continue;
+
+		const prompt = textFromContent(message.content);
+		if (prompt.trim()) return prompt;
+	}
+
+	return "";
+}
+
 export default function (pi: ExtensionAPI) {
+	let titleSet = false;
+	let sessionGeneration = 0;
+
+	function setTitleFromPrompt(ctx: ExtensionContext, prompt: string): void {
+		if (titleSet || !ctx.hasUI) return;
+
+		const title = promptToTitle(prompt);
+		if (!title) return;
+
+		ctx.ui.setTitle(title);
+		titleSet = true;
+	}
+
 	pi.on("session_start", async (_event, ctx) => {
+		titleSet = false;
+		const generation = ++sessionGeneration;
+
 		if (!ctx.hasUI) return;
+
+		setTimeout(() => {
+			if (generation !== sessionGeneration) return;
+			const prompt = firstUserPromptFromBranch(ctx.sessionManager.getBranch());
+			setTitleFromPrompt(ctx, prompt);
+		}, 200);
 
 		const bannerPath = path.join(getAgentDir(), "banner.txt");
 		if (!fs.existsSync(bannerPath)) return;
@@ -39,5 +100,9 @@ export default function (pi: ExtensionAPI) {
 			const styledUsage = usage ? "\n" + theme.fg("dim", usage) : "";
 			return new Text(styledArt + styledUsage, 1, 1);
 		});
+	});
+
+	pi.on("before_agent_start", async (event, ctx) => {
+		setTitleFromPrompt(ctx, event.prompt);
 	});
 }
