@@ -82,7 +82,7 @@ export default function (pi: ExtensionAPI) {
 		}
 
 		if (event.toolName === "write") {
-			const filePath = (event.input.file_path || event.input.path) as string;
+			const filePath = event.input.path as string;
 			if (!filePath) return undefined;
 
 			const blocked = BLOCKED_WRITE_EXTENSIONS.find((ext) => filePath.endsWith(ext));

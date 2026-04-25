@@ -447,7 +447,7 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.on("message_end", async (event) => {
-		const msg = event.message as Record<string, unknown> | undefined;
+		const msg = event.message as unknown as Record<string, unknown> | undefined;
 		const sr = msg?.stopReason;
 		if (sr === "error" || sr === "aborted") {
 			resetSpeechState();

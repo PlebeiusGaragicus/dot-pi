@@ -16,9 +16,9 @@
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
-import { Container, Markdown, Spacer, Text, getMarkdownTheme } from "@mariozechner/pi-tui";
-import { Type } from "@sinclair/typebox";
+import { getAgentDir, getMarkdownTheme } from "@mariozechner/pi-coding-agent";
+import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
+import { Type } from "typebox";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -304,15 +304,16 @@ export default function (pi: ExtensionAPI) {
                         text: "Error: Tavily API key is not configured.\n\n" +
                               "Run /tavily-api-key to set it, or export TAVILY_API_KEY in your shell." 
                     }],
-                    isError: true
+                    isError: true,
+                    details: undefined,
                 };
             }
 
             const requestParams: SearchParams = {
                 query: params.query,
                 max_results: params.max_results ?? 10,
-                topic: params.topic,
-                time_range: params.time_range
+                topic: params.topic as SearchParams["topic"],
+                time_range: params.time_range as SearchParams["time_range"],
             };
 
             const filteredParams = Object.fromEntries(
@@ -343,7 +344,8 @@ export default function (pi: ExtensionAPI) {
                             text: "Error: Authentication failed. Please check your TAVILY_API_KEY.\n" +
                                   "You can verify your key at https://app.tavily.com"
                         }],
-                        isError: true
+                        isError: true,
+                        details: undefined,
                     };
                 }
 
@@ -355,7 +357,8 @@ export default function (pi: ExtensionAPI) {
                             text: `Error: Rate limit exceeded (HTTP 429).${ra}\n` +
                                   "See https://docs.tavily.com/documentation/rate-limits — check usage at https://app.tavily.com"
                         }],
-                        isError: true
+                        isError: true,
+                        details: undefined,
                     };
                 }
 
@@ -366,7 +369,8 @@ export default function (pi: ExtensionAPI) {
                             text: `Error: Plan or credit limit exceeded (HTTP ${response.status}).\n` +
                                   "Check your usage at https://app.tavily.com or contact support@tavily.com"
                         }],
-                        isError: true
+                        isError: true,
+                        details: undefined,
                     };
                 }
 
@@ -378,7 +382,8 @@ export default function (pi: ExtensionAPI) {
                             text: `Error: API request failed with status ${response.status}.\n` +
                                   `${errorText || "(No additional details)"}` 
                         }],
-                        isError: true
+                        isError: true,
+                        details: undefined,
                     };
                 }
 
@@ -397,7 +402,8 @@ export default function (pi: ExtensionAPI) {
                         content: [{ 
                             type: "text", 
                             text: "No results found for this query." 
-                        }]
+                        }],
+                        details: undefined,
                     };
                 }
 
@@ -433,7 +439,8 @@ export default function (pi: ExtensionAPI) {
                             type: "text",
                             text: "Search was cancelled."
                         }],
-                        isError: true
+                        isError: true,
+                        details: undefined,
                     };
                 }
 
@@ -442,7 +449,8 @@ export default function (pi: ExtensionAPI) {
                         type: "text",
                         text: `Error performing search: ${(error as Error).message}`
                     }],
-                    isError: true
+                    isError: true,
+                    details: undefined,
                 };
             }
         },
@@ -474,8 +482,11 @@ export default function (pi: ExtensionAPI) {
                 hasAnswer?: boolean;
                 usage?: TavilySearchRequestUsage;
             } | undefined;
+
+            const firstContent = result.content[0];
+            const contentText = firstContent?.type === "text" ? firstContent.text : undefined;
             
-            if (!details || !result.content[0]?.text) {
+            if (!details || !contentText) {
                 return new Text(theme.fg("muted", "(no output)"), 0, 0);
             }
 
@@ -495,13 +506,12 @@ export default function (pi: ExtensionAPI) {
                 container.addChild(new Text(header, 0, 0));
                 container.addChild(new Spacer(1));
 
-                // Render content as markdown
-                container.addChild(new Markdown(result.content[0].text, 0, 0, getMarkdownTheme()));
+                container.addChild(new Markdown(contentText, 0, 0, getMarkdownTheme()));
                 
                 return container;
             }
 
-            const lines = result.content[0].text.split("\n");
+            const lines = contentText.split("\n");
             let preview = "";
             
             if (details.hasAnswer) {
@@ -509,13 +519,13 @@ export default function (pi: ExtensionAPI) {
                           lines.slice(1, Math.min(lines.length, 4)).join("\n") + "\n";
             }
             
-            const resultsStart = details.hasAnswer ? lines.findIndex(l => l.startsWith("## Results")) : 0;
+            const resultsStart = details.hasAnswer ? lines.findIndex((l: string) => l.startsWith("## Results")) : 0;
             if (resultsStart > 0 && !details.hasAnswer) {
                 preview += theme.fg("muted", "(no answer)\n");
             }
             
             // Get first few result titles
-            const resultLines = lines.slice(resultsStart + 1).filter(l => l.startsWith("### "));
+            const resultLines = lines.slice(resultsStart + 1).filter((l: string) => l.startsWith("### "));
             for (let i = 0; i < Math.min(3, resultLines.length); i++) {
                 preview += theme.fg("dim", "• ") + resultLines[i].replace(/^### /, "") + "\n";
             }
@@ -543,7 +553,7 @@ export default function (pi: ExtensionAPI) {
                 return;
             }
             const keyPath = saveTavilyKey(input.trim());
-            ctx.ui.notify(`Saved to ${keyPath}`, "success");
+            ctx.ui.notify(`Saved to ${keyPath}`, "info");
             await refreshFooterBootstrap(ctx);
         },
     });

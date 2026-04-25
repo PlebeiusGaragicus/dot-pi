@@ -35,9 +35,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
-      - name: tsc --noEmit
-        run: npx tsc --noEmit
-        continue-on-error: true
+      - run: npx tsc --noEmit
 
   smoke:
     name: smoke tests (entry scripts)

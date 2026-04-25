@@ -113,12 +113,12 @@ export default function (pi: ExtensionAPI) {
 		for (const msg of messages) {
 			if (msg.role === "assistant" && msg.content) {
 				for (const part of msg.content) {
-					if (part.type === "tool_use") {
+					if (part.type === "toolCall") {
 						hadToolCalls = true;
 						break;
 					}
 				}
-			} else if (msg.role === "user" && msg.toolResult) {
+			} else if (msg.role === "toolResult") {
 				hadToolCalls = true;
 			}
 			
@@ -131,7 +131,7 @@ export default function (pi: ExtensionAPI) {
 			: "Run completed - ready for input";
 		
 		// Show in-app notification via TUI
-		ctx.ui.notify("Pi Agent", hadToolCalls ? "Success" : "Ready");
+		ctx.ui.notify("Pi Agent", "info");
 		
 		// Send system notification
 		notify("Pi Agent", notificationBody);

@@ -16,7 +16,7 @@ import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { AssistantMessage, TextContent } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Key } from "@mariozechner/pi-tui";
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 import { applyTodoUpdate, extractTodoItems, isSafeCommand, type IncomingTodo, type TodoItem } from "./utils.js";
 
 // Tools
@@ -142,6 +142,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 			if (!executionMode || todoItems.length === 0) {
 				return {
 					content: [{ type: "text", text: "todo: no active plan to track. Call ignored." }],
+					details: undefined,
 				};
 			}
 			const incoming = (params as { todos: IncomingTodo[] }).todos;
@@ -163,6 +164,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 						text: `Recorded. Progress: ${done}/${todoItems.length}. Remaining: ${remaining}`,
 					},
 				],
+				details: undefined,
 			};
 		},
 	});

@@ -92,7 +92,7 @@ function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig
 			.map((s: string) => s.trim())
 			.filter(Boolean);
 
-		const noSkills = frontmatter["no-skills"] === "true" || frontmatter["no-skills"] === true;
+		const noSkills = frontmatter["no-skills"] === "true";
 
 		agents.push({
 			name,

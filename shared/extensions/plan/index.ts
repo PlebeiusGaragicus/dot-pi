@@ -7,9 +7,9 @@
  * (typed feedback), or stop.
  */
 
-import { type ExtensionAPI, getMarkdownTheme } from "@mariozechner/pi-coding-agent";
+import { type ExtensionAPI, type ExtensionContext, type ExtensionCommandContext, getMarkdownTheme, Theme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Text } from "@mariozechner/pi-tui";
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 
 const PLAN_SUBMIT = "plan_submit";
 const PLANNING_TOOLS = new Set(["read", "grep", "find", "ls", PLAN_SUBMIT]);
@@ -23,7 +23,7 @@ export default function plan(pi: ExtensionAPI): void {
 	let phase: "idle" | "planning" = "idle";
 	let savedTools: string[] = [];
 
-	function enterPlanning(ctx: { ui: { setStatus: (k: string, v: string | undefined) => void; notify: (m: string, t?: string) => void }; hasUI: boolean }, theme: { fg: (c: string, t: string) => string }) {
+	function enterPlanning(ctx: ExtensionCommandContext, theme: Theme) {
 		savedTools = pi.getActiveTools();
 		phase = "planning";
 		const tools = [...new Set([...savedTools.filter((t) => !BLOCKED_TOOLS.has(t)), PLAN_SUBMIT])];
@@ -32,7 +32,7 @@ export default function plan(pi: ExtensionAPI): void {
 		ctx.ui.notify("Plan mode enabled. Read-only tools + plan_submit.");
 	}
 
-	function exitToIdle(ctx: { ui: { setStatus: (k: string, v: string | undefined) => void; notify: (m: string, t?: string) => void } }) {
+	function exitToIdle(ctx: ExtensionContext | ExtensionCommandContext) {
 		phase = "idle";
 		pi.setActiveTools(savedTools);
 		savedTools = [];
@@ -63,9 +63,10 @@ export default function plan(pi: ExtensionAPI): void {
 		}) as any,
 
 		renderCall(args, theme) {
+			const { plan } = args as { plan: string };
 			const container = new Container();
 			container.addChild(new Text(theme.fg("toolTitle", theme.bold("Submit Plan"))));
-			container.addChild(new Markdown(args.plan, 0, 0, getMarkdownTheme()));
+			container.addChild(new Markdown(plan, 0, 0, getMarkdownTheme()));
 			return container;
 		},
 
@@ -73,6 +74,7 @@ export default function plan(pi: ExtensionAPI): void {
 			if (phase !== "planning") {
 				return {
 					content: [{ type: "text", text: "Error: not in plan mode. Use /plan first." }],
+					details: undefined,
 				};
 			}
 
@@ -88,6 +90,7 @@ Implementation mode is now active. Available tools: ${toolList}.
 
 Previous plan-mode constraints no longer apply. Begin implementing the plan you just submitted, starting with the first step. Use the tools above to make file changes and/or run commands with 'bash'.`,
 					}],
+					details: undefined,
 				};
 			}
 
@@ -111,6 +114,7 @@ Implementation mode is now active. Available tools: ${toolList}.
 
 Previous plan-mode constraints no longer apply. Begin implementing the plan you just submitted, starting with the first step. Use the tools above to make file changes and/or run commands with 'bash'.`,
 					}],
+					details: undefined,
 				};
 			}
 
@@ -119,10 +123,12 @@ Previous plan-mode constraints no longer apply. Begin implementing the plan you 
 				if (!feedback) {
 					return {
 						content: [{ type: "text", text: "No feedback provided. Revise your plan and call plan_submit again." }],
+						details: undefined,
 					};
 				}
 				return {
 					content: [{ type: "text", text: `User feedback:\n\n${feedback}\n\nRevise your plan accordingly, then call plan_submit again.` }],
+					details: undefined,
 				};
 			}
 
@@ -130,6 +136,7 @@ Previous plan-mode constraints no longer apply. Begin implementing the plan you 
 			exitToIdle(ctx);
 			return {
 				content: [{ type: "text", text: "Planning cancelled. Full tool access restored." }],
+				details: undefined,
 			};
 		},
 	});

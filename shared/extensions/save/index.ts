@@ -82,7 +82,7 @@ export default function (pi: ExtensionAPI) {
 
 			try {
 				fs.writeFileSync(fullPath, text, "utf-8");
-				ctx.ui.notify(`Saved to ${fullPath}`, "success");
+				ctx.ui.notify(`Saved to ${fullPath}`, "info");
 			} catch (err) {
 				ctx.ui.notify(`Failed to save: ${err instanceof Error ? err.message : String(err)}`, "error");
 			}

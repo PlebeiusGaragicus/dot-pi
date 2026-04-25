@@ -101,7 +101,7 @@ export default function moodsExtension(pi: ExtensionAPI): void {
 
 	function captureBaseline(ctx: ExtensionContext): void {
 		if (baselineTools === null) baselineTools = pi.getActiveTools();
-		if (baselineTheme === null) baselineTheme = ctx.ui.theme.name;
+		if (baselineTheme === null) baselineTheme = ctx.ui.theme.name ?? null;
 	}
 
 	function previousMoodHasSkills(): boolean {
