@@ -56,6 +56,35 @@ jobs:
           fi
       - name: install --help
         run: bash install --help
+      - name: pi-args parsing (no trailing newline, comments, multi-word flags)
+        run: |
+          set -e
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+
+          # pi-args with comments, blank line, multi-word flag, and NO trailing newline
+          printf '# comment line\n\n--tools\nread,grep\n--no-skills' > "$tmp/pi-args"
+
+          # Run the same parsing loop dispatch-agent uses
+          _pi_args=()
+          while IFS= read -r _line || [ -n "$_line" ]; do
+            [[ -n "$_line" && "$_line" != \#* ]] && _pi_args+=($_line)
+          done < "$tmp/pi-args"
+
+          actual="${_pi_args[*]}"
+          for expected in "--tools" "read,grep" "--no-skills"; do
+            if ! echo "$actual" | grep -qF "$expected"; then
+              echo "FAIL: expected '$expected' in: $actual"
+              exit 1
+            fi
+          done
+
+          # Verify comment and blank line were skipped (should be exactly 3 elements)
+          if [ "${#_pi_args[@]}" -ne 3 ]; then
+            echo "FAIL: expected 3 elements, got ${#_pi_args[@]}: $actual"
+            exit 1
+          fi
+          echo "PASS: pi-args parsed correctly (${#_pi_args[@]} elements): $actual"
       - name: bash syntax check (all shell scripts)
         run: |
           bash -n dotpi

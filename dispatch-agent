@@ -300,13 +300,16 @@ if _has_flag "-h" "$@" || _has_flag "--help" "$@"; then
   _show_help "$config_dir"
 fi
 
-# Detect batch mode
+# ── batch mode ────────────────────────────────────────────────────────────────
+# Activated when stdin is a pipe OR -p is passed explicitly.
+# Precedence: explicit -p wins; piped stdin is only consumed when no -p flag
+# is present. In batch mode we add --mode json so pi emits a JSON event stream,
+# which _json_filter reduces to human-friendly stderr + final text on stdout.
 _batch=false
 if [ ! -t 0 ] || _has_flag "-p" "$@"; then
   _batch=true
 fi
 
-# Stdin pipe: read and pass as -p
 if [ ! -t 0 ] && ! _has_flag "-p" "$@"; then
   _stdin_prompt=$(cat)
   set -- -p "$_stdin_prompt" "$@"
