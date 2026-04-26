@@ -1,8 +1,8 @@
 --no-tools
 --no-skills
 # --no-prompt-templates
---model
-$FAST_MODEL
+#--model
+#$FAST_MODEL
 --thinking
 off
 # Auto TTS on startup (say extension)
