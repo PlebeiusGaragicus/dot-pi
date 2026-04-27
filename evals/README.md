@@ -5,12 +5,12 @@ Serial evaluation runner for testing agent teams against scripted prompts.
 ## Usage
 
 ```bash
-./evals/run-eval.sh [--with-retro] <team> <prompts-file>
+./evals/run-eval.sh [--with-retro] <agent> <prompts-file>
 ```
 
-Both positional arguments are required. Reads one prompt per line from the prompts file, runs each through `pi-<team> -p "..."` in non-interactive mode, and logs results to a JSONL manifest.
+Both positional arguments are required. Reads one prompt per line from the prompts file, runs each through the agent command in non-interactive mode, and logs results to a JSONL manifest.
 
-Each prompt gets its own workspace (for workspace teams) and output file. Results are organized by team and eval name (derived from the prompts filename).
+Each prompt gets its own workspace (for workspace agents) and output file. Results are organized by agent and eval name (derived from the prompts filename).
 
 ## Options
 
@@ -45,7 +45,7 @@ Provide an update on the Iran war with a focus on maritime traffic.
 The eval name is derived from the prompts filename (without `.txt` extension):
 
 ```
-evals/results/<team>/<eval-name>/<timestamp>/
+evals/results/<agent>/<eval-name>/<timestamp>/
 ├── prompt-1-output.txt     # Stdout/stderr from pi for prompt 1
 ├── prompt-1-retro.txt      # Retro output for prompt 1 (when --with-retro)
 ├── prompt-2-output.txt     # Stdout/stderr from pi for prompt 2
@@ -61,7 +61,7 @@ For example, `./evals/run-eval.sh deepresearch evals/deepresearch-short.txt` wri
 |-------|-------------|
 | `prompt_num` | 1-indexed prompt number |
 | `prompt` | The prompt text |
-| `workspace` | Path to the workspace directory (for workspace teams) |
+| `workspace` | Path to the workspace directory (for workspace agents) |
 | `exit_code` | pi's exit code (0 = success) |
 | `duration_seconds` | Wall-clock runtime |
 

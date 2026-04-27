@@ -16,7 +16,7 @@ pi resolves its config root via `getAgentDir()` in the coding-agent package. Thi
 - `team-prompt.md` -- orchestrator config and system prompt (YAML frontmatter parsed by the subagent-teams extension for name, description, tools, model; body appended to system prompt)
 - `workspace.conf` -- workspace subdirectory list (triggers workspace mode in dispatch-agent)
 
-This is the mechanism dot-pi exploits for both team isolation and standalone agent configurations.
+This is the mechanism dot-pi exploits for both team-style and standalone agent configurations.
 
 ## Directory Layout
 
@@ -25,7 +25,7 @@ dot-pi/
 ├── dotpi                     # CLI: setup, create, create-agent, list, link-skill, link-auth
 ├── commands/                 # Subcommand scripts (sourced by dotpi)
 ├── env.sh                    # Shell environment (source in .zshrc/.bashrc)
-├── dispatch-agent            # Symlink target in bin/ (dispatches commands to teams/agents)
+├── dispatch-agent            # Symlink target in bin/ (dispatches commands to agents)
 ├── AGENTS.md                 # LLM-readable project guide
 ├── shared/                   # Reusable resources (never loaded directly)
 │   ├── extensions/           # Shared extension source code
@@ -33,25 +33,15 @@ dot-pi/
 │   ├── themes/               # Shared themes (JSON)
 │   ├── bin/                  # Downloaded binaries (fd, rg) -- gitignored contents
 │   └── models.json           # Custom model provider config
-├── teams/                    # Multi-agent team directories (one per team)
+├── agents/                   # Team-style and standalone agent directories
 │   └── <name>/               # Each is a complete PI_CODING_AGENT_DIR root
-│       ├── extensions/       # ← symlinks to shared/extensions/
-│       ├── agents/           # Subagent definitions (<name>-agentname.md)
+│       ├── extensions/       # Custom extension (+ shared symlinks)
+│       ├── agents/           # Optional subagent definitions (<name>-agentname.md)
 │       ├── prompts/          # Prompt templates (slash-command workflows)
 │       ├── skills/           # ← individual symlinks to shared/skills/
 │       ├── themes/           # ← individual symlinks to shared/themes/
-│       ├── team-prompt.md    # Orchestrator config (frontmatter) + system prompt (body)
-│       ├── banner.txt        # Startup branding (ASCII art + usage)
-│       ├── workspace.conf    # (optional) Triggers workspace mode (dated directories)
-│       ├── bin/              # ← symlink to shared/bin/
-│       ├── sessions/         # Runtime (gitignored)
-│       ├── settings.json     # Theme, quietStartup (gitignored)
-│       └── models.json       # ← symlink to shared/models.json
-├── agents/                   # Standalone agent directories (one per agent)
-│   └── <name>/               # Each is a complete PI_CODING_AGENT_DIR root
-│       ├── extensions/       # Custom extension (+ shared symlinks)
-│       ├── skills/           # ← individual symlinks to shared/skills/
-│       ├── themes/           # ← individual symlinks to shared/themes/
+│       ├── team-prompt.md    # Team-style orchestrator config, when present
+│       ├── SYSTEM.md         # Standalone system prompt, when present
 │       ├── banner.txt        # Startup branding (ASCII art + usage)
 │       ├── bin/              # ← symlink to shared/bin/
 │       ├── sessions/         # Runtime (gitignored)
@@ -67,10 +57,10 @@ dot-pi/
 ```mermaid
 graph TD
   User["User runs: recon 'find auth code'"]
-  Alias["dispatch-agent sets<br/>PI_CODING_AGENT_DIR=~/dot-pi/teams/recon"]
+  Alias["dispatch-agent sets<br/>PI_CODING_AGENT_DIR=~/dot-pi/agents/recon"]
   PiMain["pi process starts"]
-  ExtLoad["Loads extensions from<br/>teams/recon/extensions/"]
-  AgentDiscover["Discovers agents from<br/>teams/recon/agents/"]
+  ExtLoad["Loads extensions from<br/>agents/recon/extensions/"]
+  AgentDiscover["Discovers agents from<br/>agents/recon/agents/"]
   SubagentTool["subagent-teams extension<br/>registers 'subagent' tool"]
   LLM["LLM decides to use<br/>subagent tool"]
   Spawn["Spawns child pi process<br/>with agent system prompt"]
@@ -82,7 +72,7 @@ graph TD
   SubagentTool --> LLM --> Spawn --> Result
 ```
 
-### Workspace Team Flow
+### Workspace Agent Team Flow
 
 ```mermaid
 graph TD
@@ -116,7 +106,7 @@ graph TD
 
 See [Standalone Agents](standalone-agents.md) for details.
 
-## Team-Level Configuration
+## Team-Style Configuration
 
 ### `team-prompt.md` -- Orchestrator Config and System Prompt
 
@@ -169,17 +159,17 @@ Prompt templates (`.md` files in `prompts/`) define reusable workflows. They can
 
 ## Isolation Model
 
-Each team and standalone agent directory is a complete pi config root. This provides:
+Each agent directory is a complete pi config root. This provides:
 
-- **Extension isolation** -- each team loads only its own extensions
-- **Agent isolation** -- only the team's agents are visible to the LLM
-- **Skill isolation** -- per-team via individual symlinks, per-agent via frontmatter (`skills`, `no-skills`)
-- **Session isolation** -- separate conversation history per team
-- **Settings isolation** -- per-team model preferences and configuration
+- **Extension isolation** -- each agent config loads only its own extensions
+- **Agent isolation** -- only a team-style agent's subagents are visible to the LLM
+- **Skill isolation** -- per-agent config via individual symlinks, per-subagent via frontmatter (`skills`, `no-skills`)
+- **Session isolation** -- separate conversation history per agent config
+- **Settings isolation** -- per-agent config model preferences and configuration
 
-Shared resources (extensions, themes, models, binaries) are symlinked from `shared/` when you scaffold a team or agent. **Skills are opt-in:** link them with `dotpi link-skill` (or `ln -sf`) into `skills/`. Downloaded binaries (`fd`, `rg`) are written once to `shared/bin/` through directory symlinks and shared across all teams automatically. Subagents can further restrict which skills they load via frontmatter. Orchestrator tools can be restricted per-team via the `tools` field in `team-prompt.md` frontmatter (e.g. restricting to `read,find,ls,grep` to force subagent delegation).
+Shared resources (extensions, themes, models, binaries) are symlinked from `shared/` when you scaffold an agent config. **Skills are opt-in:** link them with `dotpi link-skill` (or `ln -sf`) into `skills/`. Downloaded binaries (`fd`, `rg`) are written once to `shared/bin/` through directory symlinks and shared across all agent configs automatically. Subagents can further restrict which skills they load via frontmatter. Orchestrator tools can be restricted per team-style agent via the `tools` field in `team-prompt.md` frontmatter (e.g. restricting to `read,find,ls,grep` to force subagent delegation).
 
-For shared authentication across teams and agents, symlink `auth.json`:
+For shared authentication across agent configs, symlink `auth.json`:
 
 ```bash
 dotpi link-auth recon blog

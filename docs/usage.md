@@ -91,9 +91,9 @@ blog
 
 This skips research and goes straight to write-review-revise.
 
-## 4. Deep Research (Workspace Team)
+## 4. Deep Research (Workspace Agent Team)
 
-Workspace teams launch in a fresh dated directory so artifacts stay isolated.
+Workspace agent teams launch in a fresh dated directory so artifacts stay isolated.
 
 ```bash
 deepresearch "What are the latest developments in WebTransport protocol?"
@@ -136,7 +136,7 @@ This cd's into the original workspace directory (so all files are present) and o
 
 ### Running evals
 
-The eval runner (`evals/run-eval.sh`) tests teams against scripted prompts in non-interactive mode. Both the team name and a prompts file are required:
+The eval runner (`evals/run-eval.sh`) tests agent teams against scripted prompts in non-interactive mode. Both the agent name and a prompts file are required:
 
 ```bash
 # Quick smoke test
@@ -153,7 +153,7 @@ Each prompt runs in its own workspace. Results are organized by eval name (deriv
 
 ## 5. Trajectory Analysis (Retro)
 
-After running a workspace team, use the retro team to analyze session traces and output files for procedural issues. The retro team runs on a free open-source model and produces a structured report that can be fed to a frontier model for deeper analysis.
+After running a workspace agent team, use the retro agent team to analyze session traces and output files for procedural issues. The retro agent runs on a free open-source model and produces a structured report that can be fed to a frontier model for deeper analysis.
 
 ### Interactive use
 
@@ -217,14 +217,14 @@ Say you want a team for writing documentation:
 # Scaffold the team directory (in-situ mode)
 dotpi create docs-team
 
-# Or as a workspace team (creates workspace.conf)
+# Or as a workspace agent team (creates workspace.conf)
 dotpi create --workspace docs-team
 ```
 
-This creates `teams/docs-team/` with extensions and models symlinked; **`skills/` is empty** until you run `dotpi link-skill docs-team <skill>`. Now add agents:
+This creates `agents/docs-team/` with extensions and models symlinked; **`skills/` is empty** until you run `dotpi link-skill docs-team <skill>`. Now add agents:
 
 ```bash
-cat > ~/.dot-pi/teams/docs-team/agents/docs-writer.md << 'EOF'
+cat > ~/.dot-pi/agents/docs-team/agents/docs-writer.md << 'EOF'
 ---
 name: writer
 description: Writes clear technical documentation from code and context
@@ -244,7 +244,7 @@ Output format:
 EOF
 ```
 
-The `no-skills: true` + `skills: skills/searxng` combination means this agent loads only the searxng skill, ignoring any others in the team's `skills/` directory. Omit both fields to load all team skills, or set only `no-skills: true` to load none.
+The `no-skills: true` + `skills: skills/searxng` combination means this subagent loads only the searxng skill, ignoring any others in the parent agent's `skills/` directory. Omit both fields to load all parent skills, or set only `no-skills: true` to load none.
 
 Rebuild symlinks and use it:
 
@@ -254,23 +254,23 @@ cd ~/projects/my-api
 docs-team "Write API reference docs for all endpoints in src/routes/"
 ```
 
-## 8. Sharing Auth Across Teams
+## 8. Sharing Auth Across Agents
 
-Each team has its own config root, including API authentication. After you authenticate in one team, share it with others:
+Each agent has its own config root, including API authentication. After you authenticate in one agent, share it with others:
 
 ```bash
-# Authenticate via the recon team
+# Authenticate via the recon agent
 recon
-# (pi prompts for API key on first run, saves to teams/recon/auth.json)
+# (pi prompts for API key on first run, saves to agents/recon/auth.json)
 
-# Share that auth with other teams
+# Share that auth with other agents
 dotpi link-auth recon impl
 dotpi link-auth recon blog
 ```
 
 ## 9. Check Your Setup
 
-See what teams are configured and whether their extensions are properly linked:
+See what agent configs are available and whether their extensions are properly linked:
 
 ```bash
 dotpi list

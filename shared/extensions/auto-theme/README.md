@@ -1,6 +1,6 @@
 # Auto Theme Extension
 
-Applies the first custom theme discovered in `<agentDir>/themes/` on session start. Lets dot-pi agents and teams ship a default theme via symlinks into `themes/` without depending on the gitignored `settings.json`.
+Applies the first custom theme discovered in `<agentDir>/themes/` on session start. Lets dot-pi agent configs ship a default theme via symlinks into `themes/` without depending on the gitignored `settings.json`.
 
 ## Files
 

@@ -59,6 +59,65 @@ function firstUserPromptFromBranch(entries: SessionEntry[]): string {
 	return "";
 }
 
+function expandEnvVars(value: string): string {
+	return value.replace(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g, (_match, name: string) => process.env[name] ?? "");
+}
+
+function readPiArgs(agentDir: string): string[] {
+	const piArgsPath = path.join(agentDir, "pi-args");
+	if (!fs.existsSync(piArgsPath)) return [];
+
+	const args: string[] = [];
+	try {
+		const lines = fs.readFileSync(piArgsPath, "utf-8").split(/\r?\n/);
+		for (const rawLine of lines) {
+			const line = expandEnvVars(rawLine.trim());
+			if (!line || line.startsWith("#")) continue;
+			args.push(...line.split(/\s+/).filter(Boolean));
+		}
+	} catch {
+		return [];
+	}
+
+	return args;
+}
+
+function parseConfiguredTools(args: string[]): string[] | null {
+	const tools: string[] = [];
+	for (let i = 0; i < args.length; i++) {
+		const arg = args[i];
+		if (arg === "--no-tools") return [];
+		if (arg === "--tools") {
+			const value = args[i + 1];
+			if (value && !value.startsWith("--")) {
+				tools.push(...value.split(",").map((tool) => tool.trim()).filter(Boolean));
+				i++;
+			}
+		} else if (arg.startsWith("--tools=")) {
+			tools.push(...arg.slice("--tools=".length).split(",").map((tool) => tool.trim()).filter(Boolean));
+		}
+	}
+	return tools.length > 0 ? Array.from(new Set(tools)) : null;
+}
+
+function formatToolsReport(agentDir: string): string {
+	const args = readPiArgs(agentDir);
+	const tools = parseConfiguredTools(args);
+	const contextFilesDisabled = args.includes("--no-context-files");
+
+	const lines = [`Agent config: ${agentDir}`, ""];
+	if (tools === null) {
+		lines.push("Configured tools: not restricted in pi-args");
+	} else if (tools.length === 0) {
+		lines.push("Configured tools: none (--no-tools)");
+	} else {
+		lines.push("Configured tools:");
+		for (const tool of tools) lines.push(`- ${tool}`);
+	}
+	lines.push("", `Context files: ${contextFilesDisabled ? "disabled (--no-context-files)" : "enabled"}`);
+	return lines.join("\n");
+}
+
 export default function (pi: ExtensionAPI) {
 	let titleSet = false;
 	let sessionGeneration = 0;
@@ -104,5 +163,13 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("before_agent_start", async (event, ctx) => {
 		setTitleFromPrompt(ctx, event.prompt);
+	});
+
+	pi.registerCommand("tools", {
+		description: "Show configured tools from this agent's pi-args",
+		handler: async (_args, ctx) => {
+			if (!ctx.hasUI) return;
+			ctx.ui.notify(`Configured tools\n\n${formatToolsReport(getAgentDir())}`, "info");
+		},
 	});
 }

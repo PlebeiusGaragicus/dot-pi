@@ -45,9 +45,9 @@ By default, each subagent inherits all skills from the team's `skills/` director
 | `true` | absent | No skills |
 | `true` | set | Only the listed skills |
 
-Skill paths are resolved relative to the team directory (`PI_CODING_AGENT_DIR`). For example, `skills: skills/searxng` resolves to `teams/<team>/skills/searxng`.
+Skill paths are resolved relative to the team directory (`PI_CODING_AGENT_DIR`). For example, `skills: skills/searxng` resolves to `agents/<team>/skills/searxng`.
 
-Shared skills live in `shared/skills/`. Add the ones you need with `dotpi link-skill <team> <skill>` (or `ln -sf`); each appears under `teams/<team>/skills/<name>` (e.g. `teams/blog/skills/searxng -> ../../../shared/skills/searxng`). Remove a symlink to exclude a skill. To restrict at the subagent level, use `no-skills: true` with an explicit `skills:` list.
+Shared skills live in `shared/skills/`. Add the ones you need with `dotpi link-skill <team> <skill>` (or `ln -sf`); each appears under `agents/<team>/skills/<name>` (e.g. `agents/blog/skills/searxng -> ../../../shared/skills/searxng`). Remove a symlink to exclude a skill. To restrict at the subagent level, use `no-skills: true` with an explicit `skills:` list.
 
 ## Team Naming Convention
 

@@ -9,7 +9,7 @@ dot-pi is a **dotfiles-style** repository for [pi](https://github.com/PlebeiusGa
 
 Two kinds of agent configurations live here:
 
-- **Teams** (`teams/`): Multi-agent setups with the `subagent-teams` extension for orchestrated delegation (single, parallel, chain).
+- **Team-style agents** (`agents/`): Multi-agent setups with the `subagent-teams` extension for orchestrated delegation (single, parallel, chain).
 - **Standalone agents** (`agents/`): Single-agent setups with custom extensions and no subagent orchestration.
 
 Either kind can run **in-situ** (in the user's current directory) or as a **workspace** agent (in a fresh dated directory). A `workspace.conf` file marks which mode to use — see "Workspace Agents" under Key Concepts.
@@ -23,7 +23,7 @@ dot-pi/
 ├── dotpi                     # CLI: setup, create, create-agent, list, link-skill, link-auth
 ├── commands/                 # Subcommand scripts (sourced by dotpi)
 ├── env.sh                    # Shell environment (source in .zshrc/.bashrc)
-├── dispatch-agent            # Symlink target in bin/ (dispatches commands to teams/agents)
+├── dispatch-agent            # Symlink target in bin/ (dispatches commands to agents)
 ├── mkdocs.yml                # MkDocs config for docs site
 │
 ├── shared/                   # Reusable resources (never used as PI_CODING_AGENT_DIR directly)
@@ -39,10 +39,8 @@ dot-pi/
 │   ├── settings.json.example # Template for shared/settings.json (auto-copied by install / dotpi sync)
 │   └── plebchat-models.json  # Reference catalogue of known plebchat models (manual lookup)
 │
-├── teams/                    # Multi-agent team directories
-├── agents/                   # Standalone agent directories
+├── agents/                   # Team-style and standalone agent directories
 ├── workspaces/               # Ephemeral workspace directories (gitignored contents)
-├── pi-toppers/               # Optional submodule: web UIs (install via `dotpi install toppers`)
 ├── docs/                     # MkDocs documentation source
 └── REFERENCES/               # Local-only sibling checkouts for agent context (gitignored).
                               # Optional manual `git clone`s of related projects (pi-mono,
@@ -58,17 +56,17 @@ These files are **never tracked**. They're created locally by the installer or `
 | File | Source | Purpose |
 |------|--------|---------|
 | `model_roles` | `cp bootstrap/model_roles.example model_roles` (or `dotpi setup`) | Per-role model env vars (`AGENTIC_MODEL`, `THINKING_MODEL`, …). Sourced by `env.sh`. |
-| `shared/settings.json` | `cp bootstrap/settings.json.example shared/settings.json` (auto on `install` / `dotpi sync`) | Pi runtime settings (theme, defaults). Symlinked into every team/agent. |
+| `shared/settings.json` | `cp bootstrap/settings.json.example shared/settings.json` (auto on `install` / `dotpi sync`) | Pi runtime settings (theme, defaults). Symlinked into every agent config. |
 | `shared/models.json` | Symlink → `~/.pi/agent/models.json` (created by installer or `dotpi sync`) | Multi-provider model config shared with system pi. `dotpi setup` edits the system file. |
 | `*/auth.json` | `dotpi link-auth` or set up by pi on first run | Per-agent credentials. |
 | `REFERENCES/*` | Optional manual `git clone`s; see REFERENCE-REPOS.md` | Sibling project source for agents to read. |
 
-### Team Directory Layout (`teams/<name>/`)
+### Team Directory Layout (`agents/<name>/`)
 
 Each is a complete `PI_CODING_AGENT_DIR` root:
 
 ```
-teams/<name>/
+agents/<name>/
 ├── extensions/               # Symlinked from shared/extensions/ (see Symlink Patterns)
 ├── agents/                   # Subagent definitions (team-agentname.md)
 ├── prompts/                  # Prompt templates (slash-command workflows)
@@ -116,7 +114,7 @@ No `agents/` subdirectory, no `team-prompt.md`. The main pi process IS the agent
 **Prompt and tool customization** (combine as needed):
 
 1. **`SYSTEM.md` / `APPEND_SYSTEM.md`** (pi-native): `SYSTEM.md` replaces pi's default system prompt entirely; `APPEND_SYSTEM.md` appends to it. No extension needed — pi discovers these from `PI_CODING_AGENT_DIR` at startup.
-2. **`pi-args`** (via `dispatch-agent`): plain text file with default CLI flags (e.g. `--tools websearch`, `--no-tools`, `--no-skills`), one per line. The `dispatch-agent` script prepends these to the `pi` invocation. A missing final newline is tolerated.
+2. **`pi-args`** (via `dispatch-agent`): plain text file with default CLI flags (e.g. `--tools websearch`, `--no-tools`, `--no-skills`, `--no-context-files`), one per line. The `dispatch-agent` script prepends these to the `pi` invocation. A missing final newline is tolerated. Non-coding agents and reusable subagents should usually include `--no-context-files` so workspace runs inside this repo do not inherit `AGENTS.md` or other coding context files. Coding agents such as `coder` may intentionally omit it.
 3. **`AGENT.md`** (optional, legacy): YAML frontmatter sets `tools` and/or `model`; body appended to the system prompt. Requires symlink: `ln -sf ../../../shared/extensions/agent-prompt extensions/agent-prompt` — the `agent-prompt` shared extension reads `AGENT.md`. New `dotpi create-agent` scaffolds do not link this file by default.
 
 ## Key Concepts
@@ -234,7 +232,7 @@ Use this curl command to search: ...
 | `description` | Yes | Short description |
 | `allowed-tools` | No | Restrict which tools the agent may use with this skill |
 
-Skills live in `shared/skills/` and are symlinked per-skill into each team/agent's `skills/` directory.
+Skills live in `shared/skills/` and are symlinked per-skill into each agent config's `skills/` directory.
 
 ### Workspace Agents
 
@@ -243,21 +241,21 @@ Any team or standalone agent can run as a **workspace agent** by adding a `works
 **`workspace.conf` format**: one subdirectory name per line. Lines starting with `#` are comments. Each listed directory is pre-created in the workspace before pi starts. A missing final newline is tolerated.
 
 ```
-# teams/deepresearch/workspace.conf
+# agents/deepresearch/workspace.conf
 sources
 drafts
 sessions
 ```
 
-**To convert any existing team/agent to workspace mode**: create `workspace.conf` in its directory (can be empty for a bare workspace, or list subdirectories).
+**To convert any existing agent config to workspace mode**: create `workspace.conf` in its directory (can be empty for a bare workspace, or list subdirectories).
 
-**To scaffold a new workspace team/agent**: use the `--workspace` flag with `dotpi`:
+**To scaffold a new workspace agent config**: use the `--workspace` flag with `dotpi`:
 ```bash
 dotpi create --workspace my-research-team
 dotpi create-agent --workspace my-scraper
 ```
 
-**Resuming a workspace session**: Workspace teams support `--resume` and `--list`:
+**Resuming a workspace session**: Workspace agents support `--resume` and `--list`:
 ```bash
 deepresearch --list                         # show existing workspaces
 deepresearch --resume                       # resume most recent workspace
@@ -265,7 +263,7 @@ deepresearch --resume 2026-04-10            # resume workspace matching prefix
 ```
 `--resume` cd's into the existing workspace directory and passes `--resume` to pi, so the session selector opens with the original session available. `--list` shows each workspace with a file count.
 
-**Rebuilding symlinks**: Run `dotpi sync` to rebuild the `bin/` symlinks after adding or removing teams/agents.
+**Rebuilding symlinks**: Run `dotpi sync` to rebuild the `bin/` symlinks after adding or removing agent configs.
 
 **Unified session logging**: When a workspace has a `sessions/` directory, both the orchestrator and all subagent sessions are stored there. The workspace launcher passes `--session-dir` to pi, and the `subagent-teams` extension detects the same directory for subagent sessions. This puts the complete run trajectory in one place for retrospective analysis. Legacy `subagent-sessions/` directories are also supported as a fallback.
 
@@ -281,18 +279,18 @@ Per-team orchestrator instructions, read by `subagent-teams` on startup and appe
 
 ## Symlink Patterns
 
-`dotpi` wires shared resources into team/agent directories via relative symlinks. The canonical sources live in `shared/` and are never loaded directly by pi.
+`dotpi` wires shared resources into agent config directories via relative symlinks. The canonical sources live in `shared/` and are never loaded directly by pi.
 
 **How it works:**
 
-- **Extensions**: `dotpi create` symlinks a standard set of shared extensions into `<teamDir>/extensions/`. Teams get the `subagent-teams` directory extension plus individual file extensions; `dotpi create-agent` symlinks `run-finish-notify.ts`, `startup-branding.ts`, and `say.ts` plus your stub under `extensions/<name>/`. Additional extensions from `shared/extensions/` can be manually symlinked as needed (including `agent-prompt.ts` if you use `AGENT.md`).
-- **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <team-or-agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
+- **Extensions**: `dotpi create` symlinks a standard set of shared extensions into `<agentDir>/extensions/`. Team-style agents get the `subagent-teams` directory extension plus individual file extensions; `dotpi create-agent` symlinks `run-finish-notify.ts`, `startup-branding.ts`, and `say.ts` plus your stub under `extensions/<name>/`. Additional extensions from `shared/extensions/` can be manually symlinked as needed (including `agent-prompt.ts` if you use `AGENT.md`).
+- **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
 - **Themes**: Each theme JSON in `shared/themes/` is symlinked individually into `<dir>/themes/`.
-- **bin**: A single directory symlink (`bin → ../../shared/bin`) so pi downloads `fd`/`rg` once and all teams share them.
-- **models.json**: A single file symlink (`models.json → ../../shared/models.json → ~/.pi/agent/models.json`). All teams, agents, and bare `pi` share one system config file. `dotpi setup` adds/edits/removes providers in the system file.
-- **settings.json**: A single file symlink (`settings.json → ../../shared/settings.json`) so all teams and standalone agents share Pi preferences (theme, defaults, etc.).
+- **bin**: A single directory symlink (`bin → ../../shared/bin`) so pi downloads `fd`/`rg` once and all agent configs share them.
+- **models.json**: A single file symlink (`models.json → ../../shared/models.json → ~/.pi/agent/models.json`). All agent configs and bare `pi` share one system config file. `dotpi setup` adds/edits/removes providers in the system file.
+- **settings.json**: A single file symlink (`settings.json → ../../shared/settings.json`) so all agent configs share Pi preferences (theme, defaults, etc.).
 
-All symlinks use relative paths (e.g. `../../../shared/extensions/...` for extensions under `teams/<name>/extensions/`).
+All symlinks use relative paths (e.g. `../../../shared/extensions/...` for extensions under `agents/<name>/extensions/`).
 
 **Do not edit symlink targets** — edit the source in `shared/` instead.
 
@@ -300,10 +298,10 @@ All symlinks use relative paths (e.g. `../../../shared/extensions/...` for exten
 
 ### Add a subagent to an existing team
 
-1. Create `teams/<team>/agents/<team>-<name>.md` with YAML frontmatter (at minimum: `description`)
+1. Create `agents/<team>/agents/<team>-<name>.md` with YAML frontmatter (at minimum: `description`)
 2. Write the system prompt in the markdown body
-3. Update `teams/<team>/team-prompt.md` to mention the new agent
-4. Optionally add/update prompt templates in `teams/<team>/prompts/`
+3. Update `agents/<team>/team-prompt.md` to mention the new agent
+4. Optionally add/update prompt templates in `agents/<team>/prompts/`
 
 ### Create a new team
 
@@ -328,7 +326,7 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 ### Add a shared skill
 
 1. Create `shared/skills/<name>/SKILL.md` with frontmatter (`name`, `description`)
-2. Link into a team or agent: `dotpi link-skill <team-or-agent> <name>` (or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`)
+2. Link into an agent config: `dotpi link-skill <agent> <name>` (or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`)
 
 ### Write a custom extension
 
@@ -344,30 +342,30 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `shared/extensions/**/*.ts` | Yes | Shared extension source code |
 | `shared/skills/*/SKILL.md` | Yes | Shared skill definitions |
 | `shared/themes/*.json` | Yes | Shared themes |
-| `teams/*/agents/*.md` | Yes | Subagent definitions |
-| `teams/*/prompts/*.md` | Yes | Prompt templates |
-| `teams/*/team-prompt.md` | Yes | Team orchestrator instructions |
+| `agents/*/agents/*.md` | Yes | Subagent definitions |
+| `agents/*/prompts/*.md` | Yes | Prompt templates |
+| `agents/*/team-prompt.md` | Yes | Team orchestrator instructions |
 | `*/banner.txt` | Yes | Startup branding (ASCII art + usage text) |
 | `*/workspace.conf` | Yes | Workspace subdirectory list (presence marks workspace mode) |
 | `agents/*/AGENT.md` | Yes | Agent prompt config (frontmatter: tools, model; body: system prompt append) |
 | `agents/*/SYSTEM.md` | Yes | Replaces pi's default system prompt (pi-native) |
 | `agents/*/APPEND_SYSTEM.md` | Yes | Appends to pi's default system prompt (pi-native) |
 | `agents/*/pi-args` | Yes | Default CLI flags (read by `dispatch-agent`) |
-| `teams/*/pi-args` | Yes | Optional default CLI flags for the team orchestrator (read by `dispatch-agent`) |
+| `agents/*/pi-args` | Yes | Optional default CLI flags for the team orchestrator (read by `dispatch-agent`) |
 | `agents/*/extensions/**/*.ts` | Yes | Custom agent extensions |
 | `dotpi` | Yes | CLI dispatcher (setup, create, list, link-skill, link-auth) |
 | `commands/*.sh` | Yes | Subcommand scripts (sourced by dotpi) |
 | `env.sh` | Yes | Shell environment (sourced from .zshrc/.bashrc) |
-| `dispatch-agent` | Yes | Symlink target in bin/ (dispatches commands to teams/agents) |
+| `dispatch-agent` | Yes | Symlink target in bin/ (dispatches commands to agents) |
 | `docs/**/*.md` | Yes | MkDocs documentation |
-| `teams/*/extensions/*` | **No** | Symlinks — edit `shared/extensions/` instead |
-| `teams/*/skills/*` | **No** | Symlinks — edit `shared/skills/` instead |
-| `teams/*/themes/*` | **No** | Symlinks — edit `shared/themes/` instead |
-| `*/models.json` (in teams/agents) | **No** | Symlink chain → `shared/models.json` → `~/.pi/agent/models.json` |
+| `agents/*/extensions/*` | **No** | Symlinks — edit `shared/extensions/` instead |
+| `agents/*/skills/*` | **No** | Symlinks — edit `shared/skills/` instead |
+| `agents/*/themes/*` | **No** | Symlinks — edit `shared/themes/` instead |
+| `*/models.json` (in agent configs) | **No** | Symlink chain → `shared/models.json` → `~/.pi/agent/models.json` |
 | `shared/models.json` | **No** | Symlink → `~/.pi/agent/models.json`. Edit the system file directly or via `dotpi setup`. |
 | `*/bin/` | **No** | Symlink — managed by pi runtime |
 | `*/sessions/` | **No** | Runtime data — gitignored |
-| `*/settings.json` (in teams/agents) | **No** | Symlink — edit `shared/settings.json` |
+| `*/settings.json` (in agent configs) | **No** | Symlink — edit `shared/settings.json` |
 | `*/auth.json` | **No** | Credentials — gitignored |
 | `REFERENCES/**` | **No** | Local-only sibling checkouts; gitignored. Cloned manually for agent context (see `REFERENCE-REPOS.md`). |
 | `model_roles` | Local | Per-machine config; gitignored. Written by `dotpi setup`, sourced by `env.sh`. Bootstrap manually with `cp bootstrap/model_roles.example model_roles`. |

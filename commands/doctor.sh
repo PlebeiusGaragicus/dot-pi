@@ -75,7 +75,7 @@ else
   _warn "bin/ not found on PATH — add to your shell RC: export PATH=\"\$HOME/.dot-pi/bin:\$PATH\""
 fi
 
-# 7. Per-team and per-agent checks
+# 7. Per-agent config checks
 _check_agent_dir() {
   local dir="$1" label="$2"
   local _had_fail=false
@@ -144,11 +144,6 @@ _check_agent_dir() {
   fi
 }
 
-for d in "$DOT_PI_DIR"/teams/*/; do
-  [ -d "$d" ] || continue
-  _check_agent_dir "$d" "teams/$(basename "$d")"
-done
-
 for d in "$DOT_PI_DIR"/agents/*/; do
   [ -d "$d" ] || continue
   _check_agent_dir "$d" "agents/$(basename "$d")"
@@ -162,15 +157,6 @@ for _bin in fd rg; do
     _warn "shared/bin/$_bin not found (pi downloads these on first run)"
   fi
 done
-
-# 9. pi-toppers submodule
-if [ -d "$DOT_PI_DIR/pi-toppers" ]; then
-  if [ -n "$(ls -A "$DOT_PI_DIR/pi-toppers" 2>/dev/null)" ]; then
-    _ok "pi-toppers submodule populated"
-  else
-    _warn "pi-toppers submodule present but empty — run: dotpi install toppers"
-  fi
-fi
 
 # Summary
 echo ""

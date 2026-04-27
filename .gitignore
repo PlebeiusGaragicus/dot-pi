@@ -8,23 +8,16 @@ shared/settings.json
 bin/
 .ssh
 
-# Runtime session data (each team gets its own sessions/ dir)
-teams/*/sessions/*
-!teams/*/sessions/.gitkeep
-
-# Auth tokens (may be symlinked across teams)
-teams/*/auth.json
-
-# Pi runtime state
-# teams/*/settings.json
-teams/*/.cache/
-
-# Standalone agent runtime data (mirrors team patterns)
+# Agent runtime data
 agents/*/sessions/*
 !agents/*/sessions/.gitkeep
 agents/*/auth.json
 # agents/*/settings.json
 agents/*/.cache/
+subagents/*/sessions/*
+!subagents/*/sessions/.gitkeep
+subagents/*/auth.json
+subagents/*/.cache/
 
 # Eval results (generated per-run, can be large)
 evals/results/
@@ -37,7 +30,8 @@ workspaces/*
 shared/bin/*
 !shared/bin/.gitkeep
 
-# Root node_modules (devDeps for extension type-checking)
-node_modules/
+# Typecheck node_modules (devDeps for extension type-checking)
+tests/node_modules/
 
 REFERENCES/*
+IGNORE/

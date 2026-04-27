@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# dotpi sync — rebuild bin/ symlinks from agents/ and teams/ directories.
+# dotpi sync — rebuild bin/ symlinks from agents/ directories.
 # Called automatically after dotpi create / create-agent and by the installer.
 
 BIN_DIR="$DOT_PI_DIR/bin"
@@ -33,18 +33,15 @@ fi
 
 added=0 removed=0
 
-# Create symlinks for every agent and team
-for search_dir in "$DOT_PI_DIR/teams" "$DOT_PI_DIR/agents"; do
-  [ -d "$search_dir" ] || continue
-  for d in "$search_dir"/*/; do
-    [ -d "$d" ] || continue
-    name=$(basename "$d")
-    link="$BIN_DIR/$name"
-    if [ ! -L "$link" ]; then
-      ln -sf ../dispatch-agent "$link"
-      added=$((added + 1))
-    fi
-  done
+# Create symlinks for every agent config
+for d in "$DOT_PI_DIR"/agents/*/; do
+  [ -d "$d" ] || continue
+  name=$(basename "$d")
+  link="$BIN_DIR/$name"
+  if [ ! -L "$link" ]; then
+    ln -sf ../dispatch-agent "$link"
+    added=$((added + 1))
+  fi
 done
 
 # Always ensure these special entries exist
@@ -57,7 +54,7 @@ if [ ! -L "$BIN_DIR/dotpi" ]; then
   added=$((added + 1))
 fi
 
-# Remove stale symlinks (point to dispatch-agent/dotpi but the agent/team no longer exists)
+# Remove stale symlinks (point to dispatch-agent/dotpi but the agent no longer exists)
 for link in "$BIN_DIR"/*; do
   [ -L "$link" ] || continue
   name=$(basename "$link")
@@ -68,7 +65,7 @@ for link in "$BIN_DIR"/*; do
   target=$(readlink "$link" 2>/dev/null || true)
   case "$target" in
     ../dispatch-agent|*/dispatch-agent)
-      if [ ! -d "$DOT_PI_DIR/teams/$name" ] && [ ! -d "$DOT_PI_DIR/agents/$name" ]; then
+      if [ ! -d "$DOT_PI_DIR/agents/$name" ]; then
         rm "$link"
         removed=$((removed + 1))
       fi

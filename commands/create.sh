@@ -1,4 +1,4 @@
-# dotpi create — create a new team directory with shared extension symlinks
+# dotpi create — create a new team-style agent directory with shared extension symlinks
 # Sourced by the dotpi dispatcher — do not execute directly.
 
 workspace=false
@@ -9,10 +9,10 @@ fi
 
 [ $# -lt 1 ] && { echo "Error: team name required"; exit 1; }
 team_name="$1"
-team_dir="$DOT_PI_DIR/teams/$team_name"
+team_dir="$DOT_PI_DIR/agents/$team_name"
 
 if [ -d "$team_dir" ]; then
-  echo "Error: team '$team_name' already exists at $team_dir"
+  echo "Error: agent '$team_name' already exists at $team_dir"
   exit 1
 fi
 

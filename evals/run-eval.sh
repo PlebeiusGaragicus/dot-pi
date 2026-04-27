@@ -5,7 +5,7 @@
 # JSONL manifest for later trajectory analysis.
 #
 # Usage:
-#   ./evals/run-eval.sh [--with-retro] <team> <prompts-file>
+#   ./evals/run-eval.sh [--with-retro] <agent> <prompts-file>
 #
 # Options:
 #   --with-retro   Run retrospective analysis on each workspace after the

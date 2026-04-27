@@ -27,11 +27,11 @@ The paradigms differ in **where the control flow lives**:
 
 ## What each paradigm looks like in this repo
 
-### Interpreter: `teams/deepresearch/team-prompt.md`
+### Interpreter: `agents/deepresearch/team-prompt.md`
 
 The team prompt is already a program. It has sequence, parallel dispatch, and conditionals:
 
-```42:91:teams/deepresearch/team-prompt.md
+```42:91:agents/deepresearch/team-prompt.md
 ## Standard workflow
 
 For every research request, follow this pipeline:
@@ -103,7 +103,7 @@ This is **context rot**: the model's attention dilutes across irrelevant history
 
 Mitigations the interpreter paradigm requires:
 
-1. **Subagent-first orchestration.** The orchestrator must push every non-trivial task into a subagent (fresh context window, isolated pi process, returns only a summary). The existing `teams/deepresearch/team-prompt.md` already does this — the orchestrator reads `report.md` at the end but never the `sources/*.md` directly. That is the correct pattern.
+1. **Subagent-first orchestration.** The orchestrator must push every non-trivial task into a subagent (fresh context window, isolated pi process, returns only a summary). The existing `agents/deepresearch/team-prompt.md` already does this — the orchestrator reads `report.md` at the end but never the `sources/*.md` directly. That is the correct pattern.
 2. **Artifact-based handoffs.** Subagents return short status text; real deliverables live on disk (`sources/`, `report.md`). The orchestrator carries pointers, not payloads. This matches `unix-abstraction.md`'s "output may be a side effect, not a stream."
 3. **Explicit context hygiene.** The prompt must forbid the orchestrator from quoting subagent outputs into its own messages. It should only reference paths and summaries.
 4. **Short-lived sessions.** If the workflow has natural chapter breaks, consider running the orchestrator in multiple separate sessions, each starting fresh from on-disk state — effectively hand-compiling chapter boundaries.
@@ -163,7 +163,7 @@ This is not a compromise — it is the right architecture. Use the compiler para
 Concretely for this repo:
 
 1. **Build the agent primitives first.** `research`, `scrape`, `summarize`, `judge`, `revise`. These are standalone agents with strict stdin/stdout contracts (per `piped-agents.md`). They are useful on their own, not just as deepresearch parts.
-2. **Keep `teams/deepresearch` as-is** for interactive, exploratory use. It is the interpreter version, and it is good at what it does.
+2. **Keep `agents/deepresearch` as-is** for interactive, exploratory use. It is the interpreter version, and it is good at what it does.
 3. **Add a `scripts/deepresearch.sh`** that wires the primitives into a compiled pipeline for batch / CI / scheduled use. Same workflow, different paradigm, different use cases.
 4. **Write the team prompts defensively** against context rot: forbid quoting subagent output, mandate artifact pointers, keep the orchestrator's job strictly clerical (dispatch, read final file, summarize).
 

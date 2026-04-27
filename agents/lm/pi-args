@@ -7,3 +7,5 @@
 off
 # Auto TTS on startup (say extension)
 --tts-enable
+# Disable repo context files for non-coding agents (prevents parent AGENTS.md leakage).
+--no-context-files

@@ -1,6 +1,6 @@
 # Standalone Agents
 
-Standalone agents are single-purpose pi configurations with custom extensions. Unlike [teams](architecture.md), they don't use subagent orchestration — the main pi process IS the agent, and behavior is customized entirely through extensions.
+Standalone agents are single-purpose pi configurations with custom extensions. Unlike team-style agents, they don't use subagent orchestration — the main pi process IS the agent, and behavior is customized entirely through extensions.
 
 ## When to Use
 
@@ -70,15 +70,18 @@ For tool restriction, use a **`pi-args`** file with CLI flags:
 # pi-args — default CLI flags, one per line
 --tools websearch
 --no-skills
+--no-context-files
 ```
 
 The `dispatch-agent` script reads this file and prepends the flags to every `pi` invocation. Lines starting with `#` are comments.
 
-Available flags include `--tools <list>` (whitelist), `--no-tools` (disable all built-in tools), `--no-skills`, `--no-prompt-templates`, `--model <provider/id>`, etc. See `pi --help` for the full list.
+Available flags include `--tools <list>` (whitelist), `--no-tools` (disable all built-in tools), `--no-skills`, `--no-prompt-templates`, `--no-context-files`, `--model <provider/id>`, etc. See `pi --help` for the full list.
+
+Use `--no-context-files` for non-coding agents and workspace agents that should not inherit repository instructions such as `AGENTS.md` from parent directories. Omit it only when the agent is meant to work inside codebases and should read project guidance, such as the `coder` agent.
 
 **Optional: `AGENT.md` (via manually linked `agent-prompt` extension)**
 
-YAML frontmatter + markdown body, similar to `team-prompt.md` for teams. **`dotpi create-agent` does not symlink `agent-prompt`.** To use it:
+YAML frontmatter + markdown body, similar to `team-prompt.md` for team-style agents. **`dotpi create-agent` does not symlink `agent-prompt`.** To use it:
 
 ```bash
 ln -sf ../../../shared/extensions/agent-prompt agents/<name>/extensions/agent-prompt

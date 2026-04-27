@@ -39,5 +39,5 @@ Full implementation workflow:
 recon "Find all authentication code and map the auth flow"
 
 # Direct invocation (without the symlink)
-PI_CODING_AGENT_DIR=~/dot-pi/teams/recon pi "Map the database schema"
+PI_CODING_AGENT_DIR=~/dot-pi/agents/recon pi "Map the database schema"
 ```

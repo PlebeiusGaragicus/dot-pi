@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # BusyBox-style dispatcher: behavior determined by $0 (the symlink name).
-# All agent/team symlinks in bin/ point here.
+# All agent symlinks in bin/ point here.
 
 AGENT_NAME="$(basename "$0")"
 
@@ -237,7 +237,7 @@ _run_retro() {
 
   [ ! -d "$ws_path" ] && { echo "Error: workspace not found: $ws_path" >&2; return 1; }
 
-  local team_prompt="$DOT_PI_DIR/teams/$team/team-prompt.md"
+  local team_prompt="$DOT_PI_DIR/agents/$team/team-prompt.md"
   if [ -f "$team_prompt" ] && [ ! -e "$ws_path/.source-team-prompt.md" ]; then
     ln -s "$team_prompt" "$ws_path/.source-team-prompt.md"
   fi
@@ -245,7 +245,7 @@ _run_retro() {
   local prompt="Analyze this $team workspace."
   [ -n "$hint" ] && prompt="$prompt Focus: $hint"
 
-  local retro_dir="$DOT_PI_DIR/teams/retro"
+  local retro_dir="$DOT_PI_DIR/agents/retro"
   local retro_sessions="$retro_dir/sessions"
   mkdir -p "$retro_sessions"
   echo "Retro: $ws_path" >&2
@@ -260,19 +260,13 @@ _list_available() {
   echo "Available agents:" >&2
   printf '  %-20s  %-8s  %s\n' "name" "kind" "mode" >&2
   {
-    for d in "$DOT_PI_DIR"/teams/*/; do
-      [ -d "$d" ] || continue
-      local name mode
-      name=$(basename "$d")
-      mode=$([ -f "$d/workspace.conf" ] && echo workspace || echo in-situ)
-      printf '%s\tteam\t%s\n' "$name" "$mode"
-    done
     for d in "$DOT_PI_DIR"/agents/*/; do
       [ -d "$d" ] || continue
-      local name mode
+      local name mode kind
       name=$(basename "$d")
       mode=$([ -f "$d/workspace.conf" ] && echo workspace || echo in-situ)
-      printf '%s\tagent\t%s\n' "$name" "$mode"
+      kind=$([ -e "$d/extensions/subagent-teams/index.ts" ] || [ -f "$d/team-prompt.md" ] && echo team || echo agent)
+      printf '%s\t%s\t%s\n' "$name" "$kind" "$mode"
     done
   } | sort -t $'\t' -k1,1 | while IFS=$'\t' read -r name kind mode; do
     printf '  %-20s  %-8s  %s\n' "$name" "$kind" "$mode" >&2
@@ -297,12 +291,10 @@ fi
 
 # Resolve config directory
 config_dir=""
-if [ -d "$DOT_PI_DIR/teams/$AGENT_NAME" ]; then
-  config_dir="$DOT_PI_DIR/teams/$AGENT_NAME"
-elif [ -d "$DOT_PI_DIR/agents/$AGENT_NAME" ]; then
+if [ -d "$DOT_PI_DIR/agents/$AGENT_NAME" ]; then
   config_dir="$DOT_PI_DIR/agents/$AGENT_NAME"
 else
-  echo "Unknown agent or team: $AGENT_NAME" >&2
+  echo "Unknown agent: $AGENT_NAME" >&2
   _list_available
   exit 1
 fi

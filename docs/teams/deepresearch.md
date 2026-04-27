@@ -4,7 +4,9 @@ Comprehensive web research with source collection, synthesis, and editorial revi
 
 ## Orchestrator
 
-The orchestrator has restricted tools (`read,find,ls,grep` via `team-prompt.md` frontmatter) and cannot fetch URLs or run commands directly. It must delegate all work through the subagent pipeline. The body of `team-prompt.md` gives it detailed context about the team's agents, workflows, and constraints.
+The orchestrator has restricted tools (`read,find,ls,grep,subagent` via `pi-args`) and disables context-file discovery with `--no-context-files`, so workspace runs do not inherit repository instructions such as `AGENTS.md`. It cannot fetch URLs or run commands directly. It must delegate all work through the subagent pipeline.
+
+Deepresearch owns its top-level prompt in `SYSTEM.md`. Subagents are imported through symlinks in `agents/deepresearch/agents/`, and `agent-orchestrator` collages each linked subagent's `USAGE.md` into the parent prompt.
 
 ## Agents
 
@@ -68,15 +70,12 @@ workspaces/deepresearch/2026-04-12-141259/
 
 ## Configuration
 
-All orchestrator configuration is in `team-prompt.md` YAML frontmatter:
+Runtime configuration is file-based:
 
-```yaml
----
-name: Deep Research
-description: Search, collect, synthesize, report. Each run gets its own workspace.
-tools: read, find, ls, grep
----
-```
+- `SYSTEM.md` -- deepresearch orchestration prompt
+- `pi-args` -- tool restrictions and `--no-context-files`
+- `agents/` -- symlink imports of reusable subagents
+- `workspace.conf` -- workspace directories
 
 The body of `team-prompt.md` provides the orchestrator's system prompt with team context and workflow instructions.
 

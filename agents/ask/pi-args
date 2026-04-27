@@ -1,3 +1,5 @@
 --no-skills
 --tools
 grep,find,ls,read
+# Disable repo context files for non-coding agents (prevents parent AGENTS.md leakage).
+--no-context-files

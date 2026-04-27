@@ -1,6 +1,6 @@
 # dot-pi
 
-Custom [pi](https://github.com/PlebeiusGaragicus/pi-mono) agent teams as dotfiles.
+Custom [pi](https://github.com/PlebeiusGaragicus/pi-mono) agent configs as dotfiles.
 
 ## What is this?
 

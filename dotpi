@@ -14,18 +14,17 @@ Usage: dotpi <command> [args]
 
 Commands:
   setup                                    Interactive setup wizard (API keys, models, roles)
-  create [--workspace] <team-name>         Create a new team directory with shared extension symlinks
+  create [--workspace] <team-name>         Create a team-style agent directory with shared extension symlinks
   create-agent [--workspace] <agent-name>  Create a standalone agent directory with a stub extension
-  list                                     List existing teams and standalone agents
-  link-skill <team-or-agent> <skill> [...] Symlink one or more shared skills into a team or agent
-  link-auth <src> <dst>                    Symlink auth.json from one team/agent (or path) into another
-  install <target>                          Install optional add-ons (e.g. toppers)
+  list                                     List existing agent configs
+  link-skill <agent> <skill> [...]         Symlink one or more shared skills into an agent config
+  link-auth <src> <dst>                    Symlink auth.json from one agent config (or path) into another
   doctor [--strict]                        Run health checks on the dot-pi install
-  sync                                     Rebuild bin/ symlinks from agents/ and teams/
+  sync                                     Rebuild bin/ symlinks from agents/
   version | --version | -v                 Print dotpi version (from VERSION file) and exit
 
 Options:
-  --workspace   Mark as a workspace agent/team. Creates a workspace.conf file so the
+  --workspace   Mark as a workspace agent. Creates a workspace.conf file so the
                 auto-generated alias launches pi in a fresh dated directory instead of
                 the user's current directory. Edit workspace.conf to list subdirectories
                 that should be pre-created in each workspace run.
@@ -55,7 +54,6 @@ case "$cmd" in
   list)         source "$COMMANDS_DIR/list.sh" "$@" ;;
   link-skill)   source "$COMMANDS_DIR/link-skill.sh" "$@" ;;
   link-auth)    source "$COMMANDS_DIR/link-auth.sh" "$@" ;;
-  install)      source "$COMMANDS_DIR/install.sh" "$@" ;;
   doctor)       source "$COMMANDS_DIR/doctor.sh" "$@" ;;
   sync)         source "$COMMANDS_DIR/sync.sh" "$@" ;;
   version|--version|-v)

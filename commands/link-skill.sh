@@ -1,13 +1,13 @@
-# dotpi link-skill — symlink one or more shared skills into a team or agent
+# dotpi link-skill — symlink one or more shared skills into an agent config
 # Sourced by the dotpi dispatcher — do not execute directly.
 
-[ $# -lt 2 ] && { echo "Error: team/agent name and at least one skill required"; exit 1; }
+[ $# -lt 2 ] && { echo "Error: agent name and at least one skill required"; exit 1; }
 
 target="$1"
 shift
 
 dst_dir=$(resolve_dir "$target") || {
-  echo "Error: '$target' does not exist as a team or agent"
+  echo "Error: '$target' does not exist as an agent"
   exit 1
 }
 

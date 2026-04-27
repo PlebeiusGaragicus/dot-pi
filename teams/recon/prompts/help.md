@@ -1,1 +1,0 @@
-../../../shared/prompts/help.md

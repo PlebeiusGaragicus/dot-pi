@@ -60,7 +60,7 @@ The wizard offers quick presets for common setups:
 | Custom OpenAI-compatible | (you provide) | Any OpenAI-API-compatible endpoint |
 | Custom Anthropic-compatible | (you provide) | Anthropic-style endpoints |
 
-For each provider, the wizard fetches available models (with an Ollama `/api/tags` fallback), lets you pick which to include, and saves them to `~/.pi/agent/models.json` (pi's system config). dot-pi symlinks `shared/models.json` to this file so all teams and agents share the same provider configuration as bare `pi`.
+For each provider, the wizard fetches available models (with an Ollama `/api/tags` fallback), lets you pick which to include, and saves them to `~/.pi/agent/models.json` (pi's system config). dot-pi symlinks `shared/models.json` to this file so all agent configs share the same provider configuration as bare `pi`.
 
 ### Model roles
 
@@ -76,7 +76,7 @@ These are exported as env vars via `model_roles` (sourced by `env.sh`) and can b
 
 ### First-party auth
 
-For pi's built-in providers, use `/login` inside any agent session. Share that auth across teams with `dotpi link-auth`:
+For pi's built-in providers, use `/login` inside any agent session. Share that auth across agent configs with `dotpi link-auth`:
 
 ```bash
 lm                          # start a session, use /login to authenticate
@@ -108,13 +108,13 @@ dotpi setup
 
 ## Verify
 
-Check that your teams are set up and extensions are linked:
+Check that your agent configs are set up and extensions are linked:
 
 ```bash
 dotpi list
 ```
 
-You should see each team with its agent/prompt counts and extension link status, followed by any standalone agents.
+You should see each team-style agent with its subagent/prompt counts and extension link status, followed by any standalone agents.
 
 Test a team:
 
@@ -143,7 +143,7 @@ The uninstaller removes `~/.dot-pi` and attempts to clean dot-pi lines from your
 
 ## The `dotpi` CLI
 
-`dotpi` manages team and standalone agent directories. It handles setup, scaffolding, listing, and auth sharing.
+`dotpi` manages agent config directories. It handles setup, scaffolding, listing, and auth sharing.
 
 ### `dotpi setup`
 
@@ -151,12 +151,12 @@ Interactive wizard that configures model providers, fetches available models, an
 
 ### `dotpi create <team-name>`
 
-Creates a new team directory at `teams/<team-name>/` with shared extension symlinks, theme symlinks, and a starter `team-prompt.md`. Use `--workspace` for workspace mode.
+Creates a new team-style agent directory at `agents/<team-name>/` with shared extension symlinks, theme symlinks, and a starter `team-prompt.md`. Use `--workspace` for workspace mode.
 
 After creating a team, you need to:
 
-1. **Add agents** -- create `.md` files in `teams/<team-name>/agents/` with YAML frontmatter (`name`, `description`, optionally `tools`, `skills`, `no-skills`, `model`, `team`) and a system prompt body.
-2. **Add prompts** (optional) -- create `.md` files in `teams/<team-name>/prompts/` that define chain/parallel workflows.
+1. **Add agents** -- create `.md` files in `agents/<team-name>/agents/` with YAML frontmatter (`name`, `description`, optionally `tools`, `skills`, `no-skills`, `model`, `team`) and a system prompt body.
+2. **Add prompts** (optional) -- create `.md` files in `agents/<team-name>/prompts/` that define chain/parallel workflows.
 3. **Rebuild symlinks** -- run `dotpi sync` to rebuild bin/ symlinks so the new team is available as a command.
 
 ### `dotpi create-agent <agent-name>`
@@ -165,16 +165,16 @@ Creates a standalone agent directory at `agents/<agent-name>/` with a stub exten
 
 ### `dotpi list`
 
-Shows all teams and standalone agents with their counts and status.
+Shows all team-style and standalone agents with their counts and status.
 
-### `dotpi link-skill <team-or-agent> <skill> [<skill> ...]`
+### `dotpi link-skill <agent> <skill> [<skill> ...]`
 
-Symlink shared skills into a team or agent's `skills/` folder.
+Symlink shared skills into an agent config's `skills/` folder.
 
 ### `dotpi link-auth <source> <destination>`
 
-Share `auth.json` from one team/agent to another via symlink. Useful after authenticating via `/login` in one agent.
+Share `auth.json` from one agent config to another via symlink. Useful after authenticating via `/login` in one agent.
 
 ### `dotpi sync`
 
-Rebuild `bin/` symlinks from `agents/` and `teams/` directories. Called automatically after `dotpi create` / `create-agent`.
+Rebuild `bin/` symlinks from `agents/`. Called automatically after `dotpi create` / `create-agent`.

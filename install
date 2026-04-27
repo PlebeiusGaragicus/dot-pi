@@ -106,15 +106,15 @@ check_pi() {
 }
 
 install_node_modules() {
-  if [ ! -f "$DOT_PI_HOME/package.json" ]; then return; fi
+  if [ ! -f "$DOT_PI_HOME/tests/package.json" ]; then return; fi
   if ! command -v npm &>/dev/null; then
     warn "npm not found — extension dependencies (typebox) not installed."
-    echo "    Install Node.js, then run:  cd $DOT_PI_HOME && npm install"
+    echo "    Install Node.js, then run:  cd $DOT_PI_HOME/tests && npm install"
     return
   fi
   info "Installing extension dependencies (npm install)..."
-  ( cd "$DOT_PI_HOME" && npm install --silent ) || \
-    warn "npm install failed. Run manually: cd $DOT_PI_HOME && npm install"
+  ( cd "$DOT_PI_HOME/tests" && npm install --silent ) || \
+    warn "npm install failed. Run manually: cd $DOT_PI_HOME/tests && npm install"
 }
 
 check_espeak() {

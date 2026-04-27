@@ -19,7 +19,7 @@ dot-pi has **two** workflows:
 
 GitHub Actions runs the CI workflow in a fresh Ubuntu VM in the cloud. If any job fails, the PR shows a red X and you can click in to see exactly what broke.
 
-## The four CI jobs
+## The five CI jobs
 
 ### 1. `shellcheck` — bash linter
 
@@ -40,7 +40,11 @@ shellcheck catches things bash itself silently accepts but that almost certainly
 
 Severity is set to `warning` — only real issues fail the build, not stylistic nits.
 
-### 2. `smoke` — entry-script smoke tests
+### 2. `typecheck` — extension TypeScript
+
+Runs `npm ci` and `npx tsc --noEmit` from `tests/` to type-check the TypeScript extensions under `shared/extensions/`.
+
+### 3. `smoke` — entry-script smoke tests
 
 The cheapest possible "does it even start" tests:
 
@@ -51,13 +55,13 @@ The cheapest possible "does it even start" tests:
 
 This catches the embarrassing case where you push a script with a stray `fi` or unmatched quote — it would crash the moment a user runs it. Now it crashes the CI instead.
 
-### 3. `gitignore-guard` — prevent tracked-but-ignored files
+### 4. `gitignore-guard` — prevent tracked-but-ignored files
 
 Reads every line of `.gitignore` and checks that no file currently tracked by git matches an ignore pattern. Symlinks are skipped (per-team `settings.json` symlinks are intentionally tracked even though the underlying `shared/settings.json` is ignored).
 
 Why it matters: if a file is both **tracked** and **gitignored**, every clone gets the tracked copy but local edits are silently ignored by `git status`. This bit us before with `model_roles` and almost bit us with `shared/settings.json`. The guard makes that whole class of mistake impossible to merge.
 
-### 4. `docs` — strict mkdocs build
+### 5. `docs` — strict mkdocs build
 
 Runs `mkdocs build --strict`. Strict mode turns warnings into errors, so:
 
@@ -89,11 +93,14 @@ shellcheck --shell=bash --severity=warning --external-sources \
 bash install --help
 bash -n dotpi install dispatch-agent env.sh commands/*.sh
 
+# extension typecheck
+(cd tests && npm ci && npx tsc --noEmit)
+
 # docs strict build (install with: pip install mkdocs-material)
 mkdocs build --strict
 ```
 
-If those four blocks pass, CI will pass too.
+If those blocks pass, CI will pass too.
 
 ## Adding new checks
 
@@ -102,5 +109,4 @@ Edit [`.github/workflows/ci.yml`](https://github.com/PlebeiusGaragicus/dot-pi/bl
 Good candidates for the future:
 
 - **`shfmt --diff`** to enforce consistent bash formatting.
-- **`tsc --noEmit`** over `shared/extensions/**/*.ts` once a `tsconfig.json` exists.
 - **Symlink integrity check** (`find . -type l ! -exec test -e {} \; -print` should be empty).
