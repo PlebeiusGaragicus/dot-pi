@@ -12,6 +12,7 @@ export interface AgentConfig {
 	name: string;
 	description: string;
 	usage?: string;
+	resourcePool: string;
 	source: "user" | "project";
 	dir: string;
 	linkPath: string;
@@ -59,6 +60,7 @@ function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig
 			name: entry.name,
 			description: readDescription(resolvedDir, entry.name),
 			usage: readUsage(resolvedDir),
+			resourcePool: readResourcePool(resolvedDir),
 			source,
 			dir: resolvedDir,
 			linkPath,
@@ -99,6 +101,24 @@ function readUsage(dir: string): string | undefined {
 	} catch {
 		return undefined;
 	}
+}
+
+function readResourcePool(dir: string): string {
+	const poolPath = path.join(dir, "resource-pool.conf");
+	if (!fs.existsSync(poolPath)) return "local";
+
+	try {
+		const lines = fs.readFileSync(poolPath, "utf-8").split(/\r?\n/);
+		for (const rawLine of lines) {
+			const line = rawLine.trim();
+			if (!line || line.startsWith("#")) continue;
+			return line.replace(/[^A-Za-z0-9_.-]/g, "") || "local";
+		}
+	} catch {
+		return "local";
+	}
+
+	return "local";
 }
 
 function isDirectory(p: string): boolean {
@@ -147,7 +167,7 @@ export function formatAgentList(agents: AgentConfig[], maxItems: number): { text
 	const listed = agents.slice(0, maxItems);
 	const remaining = agents.length - listed.length;
 	return {
-		text: listed.map((a) => `${a.name} (${a.source}): ${a.description}`).join("; "),
+		text: listed.map((a) => `${a.name} (${a.source}, ${a.resourcePool}): ${a.description}`).join("; "),
 		remaining,
 	};
 }

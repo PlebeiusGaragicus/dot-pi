@@ -19,14 +19,14 @@ import * as path from "node:path";
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import type { Message } from "@mariozechner/pi-ai";
 import { StringEnum } from "@mariozechner/pi-ai";
-import { type ExtensionAPI, getMarkdownTheme } from "@mariozechner/pi-coding-agent";
+import { type ExtensionAPI, getAgentDir, getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
 import { Type } from "typebox";
 import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.js";
 
 const MAX_PARALLEL_TASKS = 8;
-const MAX_CONCURRENCY = 4;
 const COLLAPSED_ITEM_COUNT = 10;
+const DEFAULT_RESOURCE_POOL = "local";
 
 function formatTokens(count: number): string {
 	if (count < 1000) return count.toString();
@@ -187,26 +187,6 @@ function getDisplayItems(messages: Message[]): DisplayItem[] {
 	return items;
 }
 
-async function mapWithConcurrencyLimit<TIn, TOut>(
-	items: TIn[],
-	concurrency: number,
-	fn: (item: TIn, index: number) => Promise<TOut>,
-): Promise<TOut[]> {
-	if (items.length === 0) return [];
-	const limit = Math.max(1, Math.min(concurrency, items.length));
-	const results: TOut[] = new Array(items.length);
-	let nextIndex = 0;
-	const workers = new Array(limit).fill(null).map(async () => {
-		while (true) {
-			const current = nextIndex++;
-			if (current >= items.length) return;
-			results[current] = await fn(items[current], current);
-		}
-	});
-	await Promise.all(workers);
-	return results;
-}
-
 function getPiInvocation(args: string[]): { command: string; args: string[] } {
 	const currentScript = process.argv[1];
 	const isBunVirtualScript = currentScript?.startsWith("/$bunfs/root/");
@@ -253,6 +233,112 @@ function readPiArgs(agentDir: string): string[] {
 	}
 
 	return args;
+}
+
+function findDotPiRoot(startDir: string): string {
+	let current = startDir;
+	while (true) {
+		if (fs.existsSync(path.join(current, "dotpi"))) return current;
+		const parent = path.dirname(current);
+		if (parent === current) return startDir;
+		current = parent;
+	}
+}
+
+function readResourcePoolLimits(agentDir: string): Record<string, number> {
+	const root = findDotPiRoot(agentDir);
+	const configPath = path.join(root, "agent-orchestrator.conf");
+	const limits: Record<string, number> = { default: 1, local: 1 };
+	if (!fs.existsSync(configPath)) return limits;
+
+	try {
+		const lines = fs.readFileSync(configPath, "utf-8").split(/\r?\n/);
+		for (const rawLine of lines) {
+			const line = rawLine.trim();
+			if (!line || line.startsWith("#")) continue;
+			const [rawKey, rawValue] = line.split("=", 2);
+			const key = rawKey?.trim();
+			const value = Number.parseInt(rawValue?.trim() ?? "", 10);
+			if (!key || !Number.isFinite(value) || value < 1) continue;
+			limits[key] = value;
+		}
+	} catch {
+		return limits;
+	}
+
+	return limits;
+}
+
+function getPoolLimit(pool: string, limits: Record<string, number>): number {
+	return Math.max(1, limits[pool] ?? limits.default ?? 1);
+}
+
+type ParallelTaskItem = { agent: string; task: string; cwd?: string };
+
+async function mapWithResourcePoolLimits<TOut>(
+	tasks: ParallelTaskItem[],
+	agents: AgentConfig[],
+	poolLimits: Record<string, number>,
+	onSchedulerUpdate: (running: number, queued: number, done: number) => void,
+	onTaskStart: (index: number) => void,
+	fn: (item: ParallelTaskItem, index: number) => Promise<TOut>,
+): Promise<TOut[]> {
+	if (tasks.length === 0) return [];
+
+	const results: TOut[] = new Array(tasks.length);
+	const runningByPool = new Map<string, number>();
+	const completed = new Set<number>();
+	const running = new Set<number>();
+	const queued = tasks.map((_, index) => index);
+
+	const getTaskPool = (index: number): string => {
+		const agent = agents.find((a) => a.name === tasks[index].agent);
+		return agent?.resourcePool || DEFAULT_RESOURCE_POOL;
+	};
+
+	return await new Promise<TOut[]>((resolve, reject) => {
+		const emit = () => onSchedulerUpdate(running.size, queued.length, completed.size);
+
+		const maybeStart = () => {
+			emit();
+			if (completed.size === tasks.length) {
+				resolve(results);
+				return;
+			}
+
+			let started = false;
+			for (let i = 0; i < queued.length; i++) {
+				const taskIndex = queued[i];
+				const pool = getTaskPool(taskIndex);
+				const runningForPool = runningByPool.get(pool) ?? 0;
+				if (runningForPool >= getPoolLimit(pool, poolLimits)) continue;
+
+				queued.splice(i, 1);
+				i--;
+				started = true;
+				running.add(taskIndex);
+				runningByPool.set(pool, runningForPool + 1);
+				onTaskStart(taskIndex);
+				emit();
+
+				fn(tasks[taskIndex], taskIndex)
+					.then((result) => {
+						results[taskIndex] = result;
+					})
+					.catch(reject)
+					.finally(() => {
+						running.delete(taskIndex);
+						runningByPool.set(pool, Math.max(0, (runningByPool.get(pool) ?? 1) - 1));
+						completed.add(taskIndex);
+						maybeStart();
+					});
+			}
+
+			if (!started) emit();
+		};
+
+		maybeStart();
+	});
 }
 
 function buildUsageCatalog(agents: AgentConfig[]): string | null {
@@ -483,7 +569,7 @@ export default function (pi: ExtensionAPI) {
 			const lines = discovery.agents
 				.slice()
 				.sort((a, b) => a.name.localeCompare(b.name))
-				.map((agent) => `- ${agent.name}: ${agent.description}\n  ${agent.dir}`);
+				.map((agent) => `- ${agent.name} [${agent.resourcePool}]: ${agent.description}\n  ${agent.dir}`);
 			ctx.ui.notify(`Subagents\n\n${lines.join("\n")}`, "info");
 		},
 	});
@@ -633,7 +719,7 @@ export default function (pi: ExtensionAPI) {
 						agent: params.tasks[i].agent,
 						agentSource: "unknown",
 						task: params.tasks[i].task,
-						exitCode: -1, // -1 = still running
+						exitCode: -2, // -2 = queued, -1 = running
 						messages: [],
 						stderr: "",
 						usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0 },
@@ -643,38 +729,63 @@ export default function (pi: ExtensionAPI) {
 				const emitParallelUpdate = () => {
 					if (onUpdate) {
 						const running = allResults.filter((r) => r.exitCode === -1).length;
-						const done = allResults.filter((r) => r.exitCode !== -1).length;
+						const queued = allResults.filter((r) => r.exitCode === -2).length;
+						const done = allResults.filter((r) => r.exitCode !== -1 && r.exitCode !== -2).length;
 						onUpdate({
 							content: [
-								{ type: "text", text: `Parallel: ${done}/${allResults.length} done, ${running} running...` },
+								{ type: "text", text: `Parallel: ${done}/${allResults.length} done, ${running} running, ${queued} queued...` },
 							],
 							details: makeDetails("parallel")([...allResults]),
 						});
 					}
 				};
 
-				const results = await mapWithConcurrencyLimit(params.tasks, MAX_CONCURRENCY, async (t, index) => {
-					const result = await runSingleAgent(
-						ctx.cwd,
-						agents,
-						t.agent,
-						t.task,
-						t.cwd,
-						undefined,
-						signal,
-						// Per-task update callback
-						(partial) => {
-							if (partial.details?.results[0]) {
-								allResults[index] = partial.details.results[0];
-								emitParallelUpdate();
-							}
-						},
-						makeDetails("parallel"),
-					);
-					allResults[index] = result;
-					emitParallelUpdate();
-					return result;
-				});
+				const poolLimits = readResourcePoolLimits(getAgentDir());
+				const emitSchedulerUpdate = (running: number, queued: number, done: number) => {
+					if (onUpdate) {
+						onUpdate({
+							content: [
+								{
+									type: "text",
+									text: `Parallel: ${done}/${allResults.length} done, ${running} running, ${queued} queued...`,
+								},
+							],
+							details: makeDetails("parallel")([...allResults]),
+						});
+					}
+				};
+
+				const results = await mapWithResourcePoolLimits(
+					params.tasks,
+					agents,
+					poolLimits,
+					emitSchedulerUpdate,
+					(index) => {
+						allResults[index].exitCode = -1;
+					},
+					async (t, index) => {
+						const result = await runSingleAgent(
+							ctx.cwd,
+							agents,
+							t.agent,
+							t.task,
+							t.cwd,
+							undefined,
+							signal,
+							// Per-task update callback
+							(partial) => {
+								if (partial.details?.results[0]) {
+									allResults[index] = partial.details.results[0];
+									emitParallelUpdate();
+								}
+							},
+							makeDetails("parallel"),
+						);
+						allResults[index] = result;
+						emitParallelUpdate();
+						return result;
+					},
+				);
 
 				const successCount = results.filter((r) => r.exitCode === 0).length;
 				const summaries = results.map((r) => {
