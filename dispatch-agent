@@ -89,7 +89,11 @@ _resume_workspace_path() {
   echo "Resuming: $ws_path" >&2
   local _resume_args=()
   [ -d "$ws_path/sessions" ] && _resume_args+=(--session-dir "$ws_path/sessions")
-  (cd "$ws_path" && PI_CODING_AGENT_DIR="$config_dir" _pi "${_pi_args[@]}" "${_resume_args[@]}" --resume "$@")
+  local cmd_args=()
+  [ ${#_pi_args[@]} -gt 0 ] && cmd_args+=("${_pi_args[@]}")
+  [ ${#_resume_args[@]} -gt 0 ] && cmd_args+=("${_resume_args[@]}")
+  cmd_args+=(--resume "$@")
+  (cd "$ws_path" && PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}")
 }
 
 _pick_workspace() {
@@ -276,7 +280,11 @@ _workspace_launch() {
   echo "Workspace: $ws" >&2
   local _launch_args=()
   [ -d "$ws/sessions" ] && _launch_args+=(--session-dir "$ws/sessions")
-  (cd "$ws" && PI_CODING_AGENT_DIR="$config_dir" _pi "${_pi_args[@]}" "${_launch_args[@]}" "${pi_args[@]}")
+  local cmd_args=()
+  [ ${#_pi_args[@]} -gt 0 ] && cmd_args+=("${_pi_args[@]}")
+  [ ${#_launch_args[@]} -gt 0 ] && cmd_args+=("${_launch_args[@]}")
+  [ ${#pi_args[@]} -gt 0 ] && cmd_args+=("${pi_args[@]}")
+  (cd "$ws" && PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}")
   return $?
 }
 
