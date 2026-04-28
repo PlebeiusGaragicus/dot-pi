@@ -19,9 +19,10 @@ agents/<name>/
 ├── extensions/
 │   ├── <name>/               # Your custom extension
 │   │   └── index.ts
-│   ├── run-finish-notify.ts  # Shared notification extension (symlinked)
-│   ├── startup-branding.ts   # Shared startup branding (symlinked)
-│   └── say.ts                # Shared TTS / say (symlinked by default scaffold)
+│   ├── run-finish-notify     # Shared notification extension (symlinked)
+│   ├── run-timer             # Shared elapsed-time status extension (symlinked)
+│   ├── startup-branding      # Shared startup branding (symlinked)
+│   └── say                   # Shared TTS / say (symlinked by default scaffold)
 ├── AGENT.md                  # (optional) Requires agent-prompt.ts symlink — see below
 ├── SYSTEM.md                 # (optional) Replaces pi's default system prompt
 ├── APPEND_SYSTEM.md          # (optional) Appends to pi's default system prompt

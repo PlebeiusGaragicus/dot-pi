@@ -91,8 +91,8 @@ Same `PI_CODING_AGENT_DIR` root but without subagent orchestration:
 agents/<name>/
 ├── extensions/
 │   ├── <name>/               # Custom extension (index.ts)
-│   ├── say.ts                # Shared (default scaffold): TTS / say tool — symlinked from shared
-│   ├── run-finish-notify.ts, startup-branding.ts   # Shared (default scaffold)
+│   ├── say                   # Shared (default scaffold): TTS / say tool — symlinked from shared
+│   ├── run-finish-notify, run-timer, startup-branding   # Shared (default scaffold)
 │   └── ...                   # Optional: e.g. agent-prompt.ts — symlink manually if you use AGENT.md
 ├── AGENT.md                  # (optional, not scaffolded) YAML + body — symlink agent-prompt.ts to load
 ├── SYSTEM.md                 # Starter system prompt (scaffolded by dotpi; replaces pi default)
@@ -268,7 +268,7 @@ Markdown files in `<agentDir>/prompts/` defining reusable workflows. Invoked via
 
 **How it works:**
 
-- **Extensions**: `dotpi create` symlinks `agent-orchestrator` plus standard shared extensions into `<agentDir>/extensions/`. `dotpi create-agent` symlinks `run-finish-notify.ts`, `startup-branding.ts`, and `say.ts` plus your stub under `extensions/<name>/`. Additional extensions from `shared/extensions/` can be manually symlinked as needed.
+- **Extensions**: `dotpi create` symlinks `agent-orchestrator` plus standard shared extensions into `<agentDir>/extensions/`. `dotpi create-agent` symlinks `run-finish-notify`, `run-timer`, `startup-branding`, and `say` plus your stub under `extensions/<name>/`. Additional extensions from `shared/extensions/` can be manually symlinked as needed.
 - **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
 - **Themes**: Each theme JSON in `shared/themes/` is symlinked individually into `<dir>/themes/`.
 - **bin**: A single directory symlink (`bin → ../../shared/bin`) so pi downloads `fd`/`rg` once and all agent configs share them.

@@ -295,6 +295,19 @@ Key patterns:
 - Falls back to terminal escape codes (OSC 777 for most terminals, OSC 99 for Kitty)
 - Checks `process.stdout.isTTY` to skip when not in a terminal
 
+### Example: Run Timer
+
+A shared extension that shows elapsed time for each agent turn in the TUI status line.
+
+Source: `shared/extensions/run-timer/index.ts`
+
+Key patterns:
+
+- Uses `before_agent_start` to initialize per-turn state
+- Uses `ctx.ui.setStatus()` for a lightweight live status segment
+- Updates once per second while the agent is running
+- Uses `agent_end` to replace `Running: 00:00` with `Trajectory time: 00:00`
+
 ### Example: Agent Orchestrator
 
 The most complex extension in the repo — registers a `subagent` tool with three execution modes, TUI rendering, directory-based subagent discovery, and resource-pool scheduling.
