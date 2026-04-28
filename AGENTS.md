@@ -37,7 +37,7 @@ dot-pi/
 │   └── settings.json         # Pi settings (gitignored; bootstrapped from bootstrap/settings.json.example)
 │
 ├── bootstrap/                # Tracked seed/template files (copied into place on first run)
-│   ├── model_roles.example   # Template for per-role model env vars (-> ./model_roles)
+│   ├── model-defaults.example # Template for local fallback model aliases (-> ./model-defaults)
 │   ├── settings.json.example # Template for shared/settings.json (auto-copied by install / dotpi sync)
 │   └── plebchat-models.json  # Reference catalogue of known plebchat models (manual lookup)
 │
@@ -57,7 +57,7 @@ These files are **never tracked**. They're created locally by the installer or `
 
 | File | Source | Purpose |
 |------|--------|---------|
-| `model_roles` | `cp bootstrap/model_roles.example model_roles` (or `dotpi setup`) | Per-role model env vars (`AGENTIC_MODEL`, `THINKING_MODEL`, …). Sourced by `env.sh`. |
+| `model-defaults` | `cp bootstrap/model-defaults.example model-defaults` (or `dotpi model-defaults`) | Global fallback model aliases (`DEFAULT_AGENTIC_MODEL`, `DEFAULT_FAST_MODEL`, `DEFAULT_VLM_MODEL`). Loaded at agent launch time. |
 | `shared/settings.json` | `cp bootstrap/settings.json.example shared/settings.json` (auto on `install` / `dotpi sync`) | Pi runtime settings (theme, defaults). Symlinked into every agent config. |
 | `shared/models.json` | Symlink → `~/.pi/agent/models.json` (created by installer or `dotpi sync`) | Multi-provider model config shared with system pi. `dotpi setup` edits the system file. |
 | `*/auth.json` | `dotpi link-auth` or set up by pi on first run | Per-agent credentials. |
@@ -94,7 +94,7 @@ agents/<name>/
 ├── extensions/
 │   ├── <name>/               # Custom extension (index.ts)
 │   ├── say                   # Common bundle: TTS / say tool
-│   ├── run-finish-notify, run-timer, startup-branding   # Common bundle
+│   ├── run-finish-notify, run-timer, startup-branding, model-default  # Common bundle
 │   └── ...                   # Optional: e.g. agent-prompt.ts — symlink manually if you use AGENT.md
 ├── AGENT.md                  # (optional, not scaffolded) YAML + body — symlink agent-prompt.ts to load
 ├── SYSTEM.md                 # Starter system prompt (scaffolded by dotpi; replaces pi default)
@@ -116,7 +116,7 @@ No orchestrator subagent pool is required. The main pi process IS the agent. Cus
 **Prompt and tool customization** (combine as needed):
 
 1. **`SYSTEM.md` / `APPEND_SYSTEM.md`** (pi-native): `SYSTEM.md` replaces pi's default system prompt entirely; `APPEND_SYSTEM.md` appends to it. No extension needed — pi discovers these from `PI_CODING_AGENT_DIR` at startup.
-2. **`pi-args`** (via `dispatch-agent`): plain text file with default CLI flags (e.g. `--tools websearch`, `--no-tools`, `--no-skills`, `--no-context-files`), one per line. The `dispatch-agent` script prepends these to the `pi` invocation. A missing final newline is tolerated. Non-coding agents and reusable subagents should usually include `--no-context-files` so workspace runs inside this repo do not inherit `AGENTS.md` or other coding context files. Coding agents such as `coder` may intentionally omit it.
+2. **`pi-args`** (via `dispatch-agent`): plain text file with default CLI flags (e.g. `--model $DEFAULT_FAST_MODEL`, `--tools websearch`, `--no-tools`, `--no-skills`, `--no-context-files`), one per line. Model defaults come from repo-local `model-defaults` and optional agent-local `.model` overrides; empty `--model $DEFAULT_*` values are skipped so pi falls back to `settings.json`. A missing final newline is tolerated. Non-coding agents and reusable subagents should usually include `--no-context-files` so workspace runs inside this repo do not inherit `AGENTS.md` or other coding context files. Coding agents such as `coder` may intentionally omit it.
 3. **`AGENT.md`** (optional, legacy): YAML frontmatter sets `tools` and/or `model`; body appended to the system prompt. Requires symlink: `ln -sf ../../../shared/extensions/agent-prompt extensions/agent-prompt` — the `agent-prompt` shared extension reads `AGENT.md`. New `dotpi create-agent` scaffolds do not link this file by default.
 
 ## Key Concepts
@@ -271,7 +271,7 @@ Markdown files in `<agentDir>/prompts/` defining reusable workflows. Invoked via
 **How it works:**
 
 - **Extension implementations**: Shared extension source lives in `shared/extensions/`. Do not move source into bundle directories.
-- **Common top-level extensions**: `shared/extensions-common/` contains symlinks for standard interactive/top-level agent extensions (`run-finish-notify`, `run-timer`, `startup-branding`, `say`, `save`, `reasoning-off-shim`). `dotpi create`, `dotpi create-agent`, and `dotpi sync` link this bundle into top-level `agents/<name>/extensions/`.
+- **Common top-level extensions**: `shared/extensions-common/` contains symlinks for standard interactive/top-level agent extensions (`run-finish-notify`, `run-timer`, `startup-branding`, `say`, `save`, `model-default`, `reasoning-off-shim`). `dotpi create`, `dotpi create-agent`, and `dotpi sync` link this bundle into top-level `agents/<name>/extensions/`.
 - **Subagent extensions**: `shared/extensions-subagents/` contains default subagent extension symlinks, currently `reasoning-off-shim`. Reusable subagents live canonically under `subagents/<name>/` and are symlinked into MAS roots (`agents/<mas>/agents/<name> -> ../../../subagents/<name>`). `dotpi sync` links the subagent bundle into canonical reusable subagents and MAS-local subagent directories. Subagents do not get the full common top-level bundle.
 - **Specialized extensions**: MAS roots link `agent-orchestrator` explicitly. Other one-off extensions (`agent-prompt`, `tavily`, `moods`, `plan-mode`, etc.) are linked intentionally per agent as needed.
 - **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
@@ -359,7 +359,8 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `*/settings.json` (in agent configs) | **No** | Symlink — edit `shared/settings.json` |
 | `*/auth.json` | **No** | Credentials — gitignored |
 | `REFERENCES/**` | **No** | Local-only sibling checkouts; gitignored. Cloned manually for agent context (see `REFERENCE-REPOS.md`). |
-| `model_roles` | Local | Per-machine config; gitignored. Written by `dotpi setup`, sourced by `env.sh`. Bootstrap manually with `cp bootstrap/model_roles.example model_roles`. |
+| `model-defaults` | Local | Per-machine global fallback model aliases. Written by `dotpi model-defaults`, loaded at agent launch time. Bootstrap manually with `cp bootstrap/model-defaults.example model-defaults`. |
+| `agents/*/.model`, `subagents/*/.model`, `agents/*/agents/*/.model` | Local | Per-agent model default overrides written by `/model-default`; gitignored. |
 | `shared/settings.json` | Local | Bootstrapped from `bootstrap/settings.json.example` by `install` / `dotpi sync`; gitignored thereafter. Edit freely; not tracked. |
 | `bootstrap/*.example`, `bootstrap/plebchat-models.json` | Yes | Tracked seed/template files used to bootstrap local config. Edit to change defaults seen by new installs. |
 | `VERSION` | Yes | Bump on releases. Surfaced via `dotpi --version`. |

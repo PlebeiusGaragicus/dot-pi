@@ -12,11 +12,11 @@ if [ ! -f "$DOT_PI_DIR/shared/settings.json" ] && \
   echo "sync: created shared/settings.json from bootstrap/settings.json.example"
 fi
 
-# Bootstrap model_roles from example if missing (gitignored, local-only)
-if [ ! -f "$DOT_PI_DIR/model_roles" ] && \
-   [ -f "$DOT_PI_DIR/bootstrap/model_roles.example" ]; then
-  cp "$DOT_PI_DIR/bootstrap/model_roles.example" "$DOT_PI_DIR/model_roles"
-  echo "sync: created model_roles from bootstrap/model_roles.example"
+# Bootstrap model-defaults from example if missing (gitignored, local-only)
+if [ ! -f "$DOT_PI_DIR/model-defaults" ] && \
+   [ -f "$DOT_PI_DIR/bootstrap/model-defaults.example" ]; then
+  cp "$DOT_PI_DIR/bootstrap/model-defaults.example" "$DOT_PI_DIR/model-defaults"
+  echo "sync: created model-defaults from bootstrap/model-defaults.example"
 fi
 
 # Symlink shared/models.json to system pi config if missing

@@ -1,3 +1,5 @@
+--model
+$DEFAULT_FAST_MODEL
 --tools
 read,ls,bash
 # Disable repo context files for non-coding agents (prevents parent AGENTS.md leakage).

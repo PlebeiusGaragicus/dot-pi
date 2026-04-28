@@ -251,19 +251,67 @@ function getParentSessionConfig(): string | false | null {
 	return null;
 }
 
-function expandEnvVars(value: string): string {
-	return value.replace(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g, (_match, name: string) => process.env[name] ?? "");
+function loadEnvFile(filePath: string, env: Record<string, string>): void {
+	if (!fs.existsSync(filePath)) return;
+	for (const rawLine of fs.readFileSync(filePath, "utf-8").split(/\r?\n/)) {
+		const line = rawLine.trim();
+		if (!line || line.startsWith("#")) continue;
+		const match = line.match(/^export\s+([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+		if (!match) continue;
+		const [, name, rawValue] = match;
+		if (!name) continue;
+		const fallback = rawValue.match(/^"\$\{([A-Za-z_][A-Za-z0-9_]*):-([^}]*)\}"$/);
+		if (fallback) {
+			const fallbackValue = fallback[2] ?? "";
+			if (!env[name]) env[name] = fallbackValue;
+			continue;
+		}
+		if (!env[name]) env[name] = rawValue.replace(/^"(.*)"$/, "$1");
+	}
 }
 
-function readPiArgs(agentDir: string): string[] {
+function modelEnvForAgent(agentDir: string): Record<string, string> {
+	const root = findDotPiRoot(agentDir);
+	const env = { ...process.env } as Record<string, string>;
+	loadEnvFile(path.join(agentDir, ".model"), env);
+	loadEnvFile(path.join(root, "model-defaults"), env);
+	return env;
+}
+
+function expandEnvVars(value: string, env: Record<string, string>): string {
+	return value.replace(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g, (_match, name: string) => env[name] ?? "");
+}
+
+function filterModelFlags(args: string[], existingArgs: string[]): string[] {
+	const explicitModel = existingArgs.includes("--model");
+	const explicitThinking = existingArgs.includes("--thinking");
+	const out: string[] = [];
+	for (let i = 0; i < args.length; i++) {
+		const arg = args[i];
+		if (arg !== "--model" && arg !== "--thinking") {
+			out.push(arg);
+			continue;
+		}
+		const value = args[i + 1];
+		if (!value || value.startsWith("--")) continue;
+		i++;
+		if (arg === "--model" && explicitModel) continue;
+		if (arg === "--thinking" && explicitThinking) continue;
+		out.push(arg, value);
+	}
+	return out;
+}
+
+function readPiArgs(agentDir: string, existingArgs: string[]): string[] {
 	const piArgsPath = path.join(agentDir, "pi-args");
 	if (!fs.existsSync(piArgsPath)) return [];
 
 	const args: string[] = [];
 	try {
+		const env = modelEnvForAgent(agentDir);
 		const lines = fs.readFileSync(piArgsPath, "utf-8").split(/\r?\n/);
 		for (const rawLine of lines) {
-			const line = expandEnvVars(rawLine.trim());
+			const line = expandEnvVars(rawLine.trim(), env);
 			if (!line || line.startsWith("#")) continue;
 			args.push(...line.split(/\s+/).filter(Boolean));
 		}
@@ -271,7 +319,7 @@ function readPiArgs(agentDir: string): string[] {
 		return [];
 	}
 
-	return args;
+	return filterModelFlags(args, existingArgs);
 }
 
 function findDotPiRoot(startDir: string): string {
@@ -424,7 +472,8 @@ async function runSingleAgent(
 			args.push("--no-session");
 		}
 	}
-	args.push(...readPiArgs(agent.dir), "-p");
+	const piArgs = readPiArgs(agent.dir, args);
+	args.push(...piArgs, "-p");
 
 	const currentResult: SingleResult = {
 		agent: agentName,

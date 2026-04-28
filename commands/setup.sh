@@ -374,7 +374,7 @@ while true; do
   echo "    a) Add a new provider"
   echo "    e) Edit an existing provider (by number)"
   echo "    d) Delete a provider (by number)"
-  echo "    s) Continue to role configuration"
+  echo "    s) Continue to model defaults"
   echo ""
   read -r -p "  choice: " action
 
@@ -412,45 +412,10 @@ done
 
 echo ""
 
-# ── Step 2: Model roles ──────────────────────────────────────────────────────
+# ── Step 2: Model defaults ────────────────────────────────────────────────────
 
-echo "[2/2] Model roles"
-echo ""
-echo "  Assign a default model to each role. These are exported as env vars"
-echo "  (sourced by env.sh) and referenced in pi-args files."
-echo ""
-
-roles_file="$DOT_PI_DIR/model_roles"
-role_names=(AGENTIC_MODEL THINKING_MODEL CODING_MODEL VISION_MODEL FAST_MODEL)
-
-# Gather ALL models from ALL providers in models.json
-all_prefixed_ids=()
-if [ -f "$MODELS_FILE" ]; then
-  while IFS= read -r line; do
-    [ -n "$line" ] && all_prefixed_ids+=("$line")
-  done < <(jq -r '.providers | to_entries[] | .key as $p | .value.models[]? | "\($p)/\(.id)"' "$MODELS_FILE" 2>/dev/null)
-fi
-
-if [ ${#all_prefixed_ids[@]} -eq 0 ]; then
-  echo "  No models in models.json — skipping role assignment."
-  echo "  Re-run 'dotpi setup' after adding a provider."
-  echo ""
-else
-  role_vals=()
-  for role in "${role_names[@]}"; do
-    cur=$(_setup_read_env_var "$roles_file" "$role")
-    role_vals+=("$(_setup_select_model "$role" "$cur" "${all_prefixed_ids[@]}")")
-    echo ""
-  done
-
-  {
-    for ri in "${!role_names[@]}"; do
-      echo "export ${role_names[$ri]}=${role_vals[$ri]}"
-    done
-  } > "$roles_file"
-  echo "  ✓ Wrote $roles_file"
-  echo ""
-fi
+echo "[2/2] Model defaults"
+source "$COMMANDS_DIR/model-defaults.sh"
 
 # Ensure shared/models.json symlink exists after setup creates the system file
 _dotpi_models="$SHARED_DIR/models.json"
@@ -475,9 +440,10 @@ else
 fi
 echo ""
 
-if [ -f "$roles_file" ]; then
-  for role in "${role_names[@]}"; do
-    v=$(_setup_read_env_var "$roles_file" "$role")
+defaults_file="$DOT_PI_DIR/model-defaults"
+if [ -f "$defaults_file" ]; then
+  for role in DEFAULT_AGENTIC_MODEL DEFAULT_FAST_MODEL DEFAULT_VLM_MODEL; do
+    v=$(_setup_read_env_var "$defaults_file" "$role")
     echo "  ${role}: ${v:-(not set)}"
   done
 fi
@@ -485,7 +451,7 @@ echo ""
 
 echo "  Local config (gitignored, safe to edit by hand):"
 echo "    $MODELS_FILE    (providers, API keys, model lists)"
-echo "    $roles_file              (role → model env vars; sourced by env.sh)"
+echo "    $defaults_file           (fallback model aliases; sourced by env.sh)"
 echo ""
 
 _setup_shell_rc() {

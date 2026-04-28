@@ -59,7 +59,7 @@ This catches the embarrassing case where you push a script with a stray `fi` or 
 
 Reads every line of `.gitignore` and checks that no file currently tracked by git matches an ignore pattern. Symlinks are skipped (per-agent `settings.json` symlinks are intentionally tracked even though the underlying `shared/settings.json` is ignored).
 
-Why it matters: if a file is both **tracked** and **gitignored**, every clone gets the tracked copy but local edits are silently ignored by `git status`. This bit us before with `model_roles` and almost bit us with `shared/settings.json`. The guard makes that whole class of mistake impossible to merge.
+Why it matters: if a file is both **tracked** and **gitignored**, every clone gets the tracked copy but local edits are silently ignored by `git status`. This bit us before with local model defaults and almost bit us with `shared/settings.json`. The guard makes that whole class of mistake impossible to merge.
 
 ### 5. `docs` — strict mkdocs build
 

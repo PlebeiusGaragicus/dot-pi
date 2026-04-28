@@ -54,6 +54,7 @@ nav:
     - Retro: multi-agent-systems/retro.md
   - Reference:
     - Writing Extensions: reference/extensions.md
+    - Model Defaults: reference/model-defaults.md
     - Subagent Concurrency: reference/subagent-concurrency.md
     - Multi-Agent Systems: reference/multi-agent-systems.md
     - Continuous Integration: ci.md

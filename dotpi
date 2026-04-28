@@ -13,7 +13,8 @@ dotpi — dot-pi management CLI
 Usage: dotpi <command> [args]
 
 Commands:
-  setup                                    Interactive setup wizard (API keys, models, roles)
+  setup                                    Interactive setup wizard (API keys and models)
+  model-defaults                           Configure local fallback model aliases
   create [--workspace] <mas-name>          Create a multi-agent system with an orchestrator and subagents
   create-mas [--workspace] <mas-name>      Alias for create
   create-agent [--workspace] <agent-name>  Create a standalone agent directory with a stub extension
@@ -32,6 +33,7 @@ Options:
 
 Examples:
   dotpi setup
+  dotpi model-defaults
   dotpi create research
   dotpi create --workspace deepresearch
   dotpi create-agent twenty-questions
@@ -50,6 +52,8 @@ shift
 
 case "$cmd" in
   setup)        source "$COMMANDS_DIR/setup.sh" "$@" ;;
+  model-defaults)
+                source "$COMMANDS_DIR/model-defaults.sh" "$@" ;;
   create|create-mas)
                 source "$COMMANDS_DIR/create.sh" "$@" ;;
   create-agent) source "$COMMANDS_DIR/create-agent.sh" "$@" ;;

@@ -34,6 +34,7 @@ agents/example-mas/
 │   ├── startup-branding -> ../../../shared/extensions-common/startup-branding
 │   ├── save -> ../../../shared/extensions-common/save
 │   ├── say -> ../../../shared/extensions-common/say
+│   ├── model-default -> ../../../shared/extensions-common/model-default
 │   └── reasoning-off-shim -> ../../../shared/extensions-common/reasoning-off-shim
 ├── prompts/
 │   ├── help.md -> ../../../shared/prompts/help.md
@@ -92,15 +93,17 @@ New scaffolds do not link `agent-prompt` by default. Use `SYSTEM.md`, `APPEND_SY
 
 Default CLI flags for every launch of this agent root. `dispatch-agent` reads this file before invoking `pi`.
 
-The file is plain text: one flag or flag group per line, with `#` comments ignored. Environment variables such as `${VISION_MODEL}` are expanded by `dispatch-agent`.
+The file is plain text: one flag or flag group per line, with `#` comments ignored. Use it for tools, context-file behavior, prompt-template flags, session behavior, and model defaults.
 
 Common examples:
 
 ```text
 --tools read,find,ls,grep,subagent
+--model $DEFAULT_AGENTIC_MODEL
 --no-context-files
---model ${VISION_MODEL}
 ```
+
+Model aliases come from repo-local `model-defaults` and optional agent-local `.model` overrides. If an expanded `--model` or `--thinking` value is empty, `dispatch-agent` skips that flag so pi falls back to its own defaults.
 
 Use `--no-context-files` for agents that should not inherit repository guidance such as `AGENTS.md` from the current working directory. Coding agents may intentionally omit it.
 
@@ -254,6 +257,18 @@ Symlink bundle for default subagent extensions. `dotpi sync` links each entry in
 
 Reusable subagents live canonically under `subagents/<name>/` and are symlinked into MAS roots, for example `agents/deepresearch/agents/scout -> ../../../subagents/scout`. In that case, `dotpi sync` wires `shared/extensions-subagents/` into the canonical `subagents/<name>/` directory. MAS-specific local subagents can be real directories under `agents/<mas>/agents/<subagent>/`.
 
+### `model-defaults`
+
+Required local repo-root file created from `bootstrap/model-defaults.example`. It provides fallback model aliases:
+
+```sh
+export DEFAULT_AGENTIC_MODEL="${DEFAULT_AGENTIC_MODEL:-}"
+export DEFAULT_FAST_MODEL="${DEFAULT_FAST_MODEL:-}"
+export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
+```
+
+Configure it with `dotpi model-defaults`. Empty values are allowed. The `/model-default` command can write agent-local `.model` overrides with the same aliases.
+
 ## Subagent Roots
 
 A subagent under `agents/<mas>/agents/<subagent>/` is a separate pi config root. It does not automatically inherit extensions, skills, prompts, or args from the parent MAS root.
@@ -263,7 +278,7 @@ Recommended subagent files:
 - `SYSTEM.md` or `APPEND_SYSTEM.md`: required for discovery.
 - `README.md`: short human-readable capability description; also used in orchestrator listings.
 - `USAGE.md`: invocation contract appended to the orchestrator prompt.
-- `pi-args`: subagent-specific tool, model, context-file, and skill flags.
+- `pi-args`: subagent-specific tool, context-file, and skill flags.
 - `resource-pool.conf`: physical concurrency pool name such as `local` or `api`.
 - `extensions/reasoning-off-shim`: linked through `shared/extensions-subagents/` because subagents launch as separate pi processes.
 
@@ -295,6 +310,7 @@ agents/example-standalone/
 │   ├── startup-branding -> ../../../shared/extensions-common/startup-branding
 │   ├── say -> ../../../shared/extensions-common/say
 │   ├── save -> ../../../shared/extensions-common/save
+│   ├── model-default -> ../../../shared/extensions-common/model-default
 │   └── reasoning-off-shim -> ../../../shared/extensions-common/reasoning-off-shim
 ├── prompts/
 │   └── help.md -> ../../../shared/prompts/help.md

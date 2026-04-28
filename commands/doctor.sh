@@ -31,19 +31,11 @@ else
   _warn "env.sh not sourced — DOT_PI_INSTALLED is not set"
 fi
 
-# 3. model_roles exists and at least one role var is non-empty
-if [ -f "$DOT_PI_DIR/model_roles" ]; then
-  _has_role=false
-  for _var in AGENTIC_MODEL THINKING_MODEL CODING_MODEL VISION_MODEL FAST_MODEL; do
-    [ -n "${!_var:-}" ] && _has_role=true && break
-  done
-  if [ "$_has_role" = true ]; then
-    _ok "model_roles exists and at least one role var is set"
-  else
-    _warn "model_roles exists but all role vars are empty"
-  fi
+# 3. model-defaults exists
+if [ -f "$DOT_PI_DIR/model-defaults" ]; then
+  _ok "model-defaults exists"
 else
-  _warn "model_roles file not found (bootstrap: cp bootstrap/model_roles.example model_roles)"
+  _warn "model-defaults file not found (bootstrap: cp bootstrap/model-defaults.example model-defaults)"
 fi
 
 # 4. shared/settings.json

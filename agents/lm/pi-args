@@ -1,11 +1,11 @@
---no-tools
---no-skills
-# --no-prompt-templates
-#--model
-#$FAST_MODEL
+--model
+$DEFAULT_FAST_MODEL
 --thinking
 off
-# Auto TTS on startup (say extension)
---tts-enable
+--no-tools
+--no-skills
 # Disable repo context files for non-coding agents (prevents parent AGENTS.md leakage).
 --no-context-files
+# --no-prompt-templates
+# Auto TTS on startup (say extension)
+--tts-enable

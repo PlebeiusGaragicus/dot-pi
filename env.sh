@@ -13,4 +13,3 @@ else
     DOT_PI_DIR="${DOT_PI_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)}"
 fi
 
-[ -f "$DOT_PI_DIR/model_roles" ] && source "$DOT_PI_DIR/model_roles"

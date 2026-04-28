@@ -1,7 +1,9 @@
+--model
+$DEFAULT_FAST_MODEL
+--thinking
+off
 --no-tools
 --no-skills
 --no-prompt-templates
---model
-plebchat/google/gemma-4-31b
 # Disable repo context files for non-coding agents (prevents parent AGENTS.md leakage).
 --no-context-files

@@ -60,7 +60,7 @@ The orchestrator root is the command the user runs. It should define the workflo
 Key files:
 
 - `SYSTEM.md`: parent prompt. Put workflow policy, delegation rules, artifact expectations, resume behavior, and final response style here.
-- `pi-args`: parent tool restrictions. MAS roots usually need the `subagent` tool plus enough read/list/search capability to inspect workspace artifacts.
+- `pi-args`: parent tool restrictions and model defaults. MAS roots usually need the `subagent` tool plus enough read/list/search capability to inspect workspace artifacts.
 - `extensions/agent-orchestrator`: registers the `subagent` tool and handles discovery, prompt augmentation, scheduling, and child process launches.
 - `workspace.conf`: optional, but common for MAS configs that create durable artifacts.
 

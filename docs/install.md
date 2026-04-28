@@ -11,7 +11,7 @@ The installer will:
 1. Check for required tools (`git`, `curl`, `jq`)
 2. Offer to install `pi` via npm if not already present
 3. Clone dot-pi to `~/.dot-pi`
-4. Bootstrap local config files (`shared/settings.json`, `model_roles`)
+4. Bootstrap local config files (`shared/settings.json`, `model-defaults`)
 5. Build `bin/` symlinks so agent commands are on your PATH
 
 Override the install location with `DOT_PI_HOME`:
@@ -62,17 +62,15 @@ The wizard offers quick presets for common setups:
 
 For each provider, the wizard fetches available models (with an Ollama `/api/tags` fallback), lets you pick which to include, and saves them to `~/.pi/agent/models.json` (pi's system config). dot-pi symlinks `shared/models.json` to this file so all agent configs share the same provider configuration as bare `pi`.
 
-### Model roles
+### Model defaults
 
-After configuring providers, the wizard lets you assign a default model to each role:
+After configuring providers, the wizard lets you assign local fallback models:
 
-- `AGENTIC_MODEL` — primary agent model
-- `THINKING_MODEL` — reasoning-heavy tasks
-- `CODING_MODEL` — code generation
-- `VISION_MODEL` — image understanding
-- `FAST_MODEL` — quick/cheap completions
+- `DEFAULT_AGENTIC_MODEL` — primary agent model fallback
+- `DEFAULT_FAST_MODEL` — quick/cheap model fallback
+- `DEFAULT_VLM_MODEL` — vision model fallback
 
-These are exported as env vars via `model_roles` (sourced by `env.sh`) and can be referenced in `pi-args` files. All roles are optional.
+These are exported from local `model-defaults` and can be overridden per-agent by `agents/<name>/.model` via `/model-default`. Each agent chooses which fallback to use in `pi-args`, for example `--model $DEFAULT_FAST_MODEL`. Empty defaults are valid; `dispatch-agent` skips empty `--model` values so pi uses its `settings.json` default.
 
 ### First-party auth
 
@@ -85,7 +83,7 @@ dotpi link-auth lm recon    # share auth.json from lm to recon
 
 ### Multi-provider
 
-`~/.pi/agent/models.json` supports multiple providers side-by-side. Each `dotpi setup` run adds or edits one provider without disturbing others. The role picker shows models from all providers. dot-pi's `shared/models.json` is a symlink to this system file — there is only one copy.
+`~/.pi/agent/models.json` supports multiple providers side-by-side. Each `dotpi setup` run adds or edits one provider without disturbing others. The default picker shows models from all providers. dot-pi's `shared/models.json` is a symlink to this system file — there is only one copy.
 
 ## Local one-device setup
 
@@ -93,7 +91,7 @@ For a fully local setup (no API keys needed):
 
 1. Install [Ollama](https://ollama.com) and pull a model: `ollama pull llama3.2`
 2. Run `dotpi setup`, pick the **Ollama** preset, accept defaults
-3. Assign roles, then `lm` to start chatting
+3. Assign model defaults, then `lm` to start chatting
 
 ## Manual install
 
@@ -147,7 +145,15 @@ The uninstaller removes `~/.dot-pi` and attempts to clean dot-pi lines from your
 
 ### `dotpi setup`
 
-Interactive wizard that configures model providers, fetches available models, and assigns model roles. Supports multiple providers (Ollama, LM Studio, custom endpoints). Re-run anytime to add, edit, or remove providers.
+Interactive wizard that configures model providers, fetches available models, and then walks through `model-defaults`. Supports multiple providers (Ollama, LM Studio, custom endpoints). Re-run anytime to add, edit, or remove providers.
+
+### `dotpi model-defaults`
+
+Interactive picker for repo-local fallback model aliases in `model-defaults`. Re-run anytime after changing providers or model preferences.
+
+### `/model-default`
+
+Interactive in-agent command for local overrides. With no args, it opens a menu and preselects the default alias used by the current agent's `pi-args` when possible. Current-agent choices write the agent config root's `.model`; global choices update repo-root `model-defaults`. Inline env overrides such as `DEFAULT_AGENTIC_MODEL=provider/model deepresearch` still win over both files.
 
 ### `dotpi create <mas-name>`
 

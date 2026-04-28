@@ -24,6 +24,7 @@ agents/<name>/
 │   ├── startup-branding      # Common extension bundle symlink
 │   ├── say                   # Common extension bundle symlink
 │   ├── save                  # Common extension bundle symlink
+│   ├── model-default         # Common extension bundle symlink
 │   └── reasoning-off-shim    # Common extension bundle symlink
 ├── AGENT.md                  # (optional) Requires agent-prompt.ts symlink — see below
 ├── SYSTEM.md                 # (optional) Replaces pi's default system prompt
@@ -58,7 +59,7 @@ dotpi create-agent my-agent
 
 This creates the directory structure with common extension bundle symlinks and a stub extension at `agents/my-agent/extensions/my-agent/index.ts`.
 
-The common bundle includes `reasoning-off-shim`, so top-level standalone agents send an explicit reasoning-disable request to OpenAI-compatible backends when thinking is off.
+The common bundle includes `reasoning-off-shim` and `/model-default`, so top-level standalone agents can manage local model defaults while keeping agent policy in `pi-args`.
 
 ### Customizing the Prompt and Tools
 
@@ -74,6 +75,7 @@ For tool restriction, use a **`pi-args`** file with CLI flags:
 ```
 # pi-args — default CLI flags, one per line
 --tools websearch
+--model $DEFAULT_FAST_MODEL
 --no-skills
 --no-context-files
 ```
@@ -83,6 +85,17 @@ The `dispatch-agent` script reads this file and prepends the flags to every `pi`
 Available flags include `--tools <list>` (whitelist), `--no-tools` (disable all built-in tools), `--no-skills`, `--no-prompt-templates`, `--no-context-files`, `--model <provider/id>`, etc. See `pi --help` for the full list.
 
 Use `--no-context-files` for non-coding agents and workspace agents that should not inherit repository instructions such as `AGENTS.md` from parent directories. Omit it only when the agent is meant to work inside codebases and should read project guidance, such as the `coder` agent.
+
+For model and thinking policy, use `pi-args` with repo-local defaults:
+
+```text
+--model
+$DEFAULT_FAST_MODEL
+--thinking
+off
+```
+
+If `$DEFAULT_FAST_MODEL` is empty, `dispatch-agent` skips `--model` so pi falls back to its `settings.json` default. Use `/model-default` to persist agent-local `.model` overrides for the `DEFAULT_*` aliases.
 
 **Optional: `AGENT.md` (via manually linked `agent-prompt` extension)**
 

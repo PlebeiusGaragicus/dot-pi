@@ -1,0 +1,5 @@
+# Local fallback model aliases used by pi-args files.
+# Leave a value empty to let pi fall back to its settings.json default.
+export DEFAULT_AGENTIC_MODEL="${DEFAULT_AGENTIC_MODEL:-}"
+export DEFAULT_FAST_MODEL="${DEFAULT_FAST_MODEL:-}"
+export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"

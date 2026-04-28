@@ -90,7 +90,7 @@ Runtime configuration is file-based:
 | `agents/*/extensions/reasoning-off-shim` | Subagent extension bundle link for the same provider-request shim |
 | `agents/ocr-page/pi-args` | Restricts OCR workers to page read/write tools |
 
-For OCR, configure a vision-capable default model, or add `--model ${VISION_MODEL}` to the OCR subagents' `pi-args` after assigning `VISION_MODEL` through `dotpi setup` / `model_roles`. If OCR runs against a local model instead of an API-backed model, change `ocr-page/resource-pool.conf` and `page-auditor/resource-pool.conf` from `api` to `local`.
+For OCR, configure `DEFAULT_VLM_MODEL` with `dotpi model-defaults`, or use `/model-default` from an OCR subagent context for a subagent-local `.model` override. The OCR subagents reference `$DEFAULT_VLM_MODEL` from their `pi-args`. If OCR runs against a local model instead of an API-backed model, change `ocr-page/resource-pool.conf` and `page-auditor/resource-pool.conf` from `api` to `local`.
 
 Reader gets `reasoning-off-shim` through the standard top-level extension bundle, and reader subagents get it through the subagent extension bundle. Run `dotpi sync` after adding a reader subagent so its default subagent extensions are wired.
 

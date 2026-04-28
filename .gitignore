@@ -2,7 +2,7 @@
 .env
 .tavily.env
 .tts-wpm
-model_roles
+model-defaults
 shared/models.json
 shared/settings.json
 bin/
@@ -12,11 +12,14 @@ bin/
 agents/*/sessions/*
 !agents/*/sessions/.gitkeep
 agents/*/auth.json
+agents/*/.model
 # agents/*/settings.json
 agents/*/.cache/
+agents/*/agents/*/.model
 subagents/*/sessions/*
 !subagents/*/sessions/.gitkeep
 subagents/*/auth.json
+subagents/*/.model
 subagents/*/.cache/
 
 # agents being developed

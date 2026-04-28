@@ -221,10 +221,10 @@ do_install() {
     info "Created shared/settings.json from bootstrap/settings.json.example"
   fi
 
-  if [ ! -f "$DOT_PI_HOME/model_roles" ] && \
-     [ -f "$DOT_PI_HOME/bootstrap/model_roles.example" ]; then
-    cp "$DOT_PI_HOME/bootstrap/model_roles.example" "$DOT_PI_HOME/model_roles"
-    info "Created model_roles from bootstrap/model_roles.example"
+  if [ ! -f "$DOT_PI_HOME/model-defaults" ] && \
+     [ -f "$DOT_PI_HOME/bootstrap/model-defaults.example" ]; then
+    cp "$DOT_PI_HOME/bootstrap/model-defaults.example" "$DOT_PI_HOME/model-defaults"
+    info "Created model-defaults from bootstrap/model-defaults.example"
   fi
 
   # Symlink shared/models.json to system pi config
