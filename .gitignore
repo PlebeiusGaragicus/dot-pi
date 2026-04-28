@@ -19,6 +19,9 @@ subagents/*/sessions/*
 subagents/*/auth.json
 subagents/*/.cache/
 
+# agents being developed
+agents/*-beta/
+
 # Eval results (generated per-run, can be large)
 evals/results/
 

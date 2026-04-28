@@ -43,16 +43,17 @@ nav:
   - Installation: install.md
   - Usage Guide: usage.md
   - Architecture: architecture.md
+  - Agent Layout: agent-layout.md
   - Standalone Agents: standalone-agents.md
   - Multi-Agent Systems:
     - Recon: multi-agent-systems/recon.md
     - Impl: multi-agent-systems/impl.md
     - Blog: multi-agent-systems/blog.md
     - Deep Research: multi-agent-systems/deepresearch.md
+    - Reader: multi-agent-systems/reader.md
     - Retro: multi-agent-systems/retro.md
   - Reference:
     - Writing Extensions: reference/extensions.md
-    - Agent Orchestrator: reference/agent-orchestrator.md
     - Subagent Concurrency: reference/subagent-concurrency.md
     - Multi-Agent Systems: reference/multi-agent-systems.md
     - Continuous Integration: ci.md

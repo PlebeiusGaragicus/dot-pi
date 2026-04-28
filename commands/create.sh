@@ -21,11 +21,8 @@ mkdir -p "$mas_dir/extensions" "$mas_dir/agents" "$mas_dir/prompts" "$mas_dir/sk
 
 ln -sf "../../../shared/prompts/help.md" "$mas_dir/prompts/help.md"
 
-ln -sf "../../../shared/extensions/agent-orchestrator" "$mas_dir/extensions/agent-orchestrator"
-ln -sf "../../../shared/extensions/run-finish-notify" "$mas_dir/extensions/run-finish-notify"
-ln -sf "../../../shared/extensions/run-timer" "$mas_dir/extensions/run-timer"
-ln -sf "../../../shared/extensions/startup-branding" "$mas_dir/extensions/startup-branding"
-ln -sf "../../../shared/extensions/save" "$mas_dir/extensions/save"
+link_extension_bundle "$SHARED_DIR/extensions-common" "$mas_dir/extensions" "../../../shared/extensions-common"
+ln -sfn "../../../shared/extensions/agent-orchestrator" "$mas_dir/extensions/agent-orchestrator"
 
 mkdir -p "$mas_dir/themes"
 for theme in "$SHARED_DIR"/themes/*.json; do
@@ -91,7 +88,7 @@ echo "Created $mode_label MAS at $mas_dir"
 echo ""
 echo "Directory layout:"
 echo "  $mas_dir/"
-echo "    extensions/          (symlinked to shared)"
+echo "    extensions/          (common bundle plus MAS-specific agent-orchestrator)"
 echo "    agents/              (add or link subagent config directories here)"
 echo "    prompts/             (add workflow prompt templates here)"
 echo "    skills/              (empty — use dotpi link-skill $mas_name <skill>)"

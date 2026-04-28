@@ -21,11 +21,7 @@ mkdir -p "$agent_dir/extensions/$agent_name" "$agent_dir/skills" "$agent_dir/ses
 
 ln -sf "../../../shared/prompts/help.md" "$agent_dir/prompts/help.md"
 
-ln -sf "../../../shared/extensions/run-finish-notify" "$agent_dir/extensions/run-finish-notify"
-ln -sf "../../../shared/extensions/run-timer" "$agent_dir/extensions/run-timer"
-ln -sf "../../../shared/extensions/startup-branding" "$agent_dir/extensions/startup-branding"
-ln -sf "../../../shared/extensions/say" "$agent_dir/extensions/say"
-ln -sf "../../../shared/extensions/save" "$agent_dir/extensions/save"
+link_extension_bundle "$SHARED_DIR/extensions-common" "$agent_dir/extensions" "../../../shared/extensions-common"
 
 cat > "$agent_dir/extensions/$agent_name/index.ts" <<'STUB'
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -97,7 +93,7 @@ echo "Created $mode_label standalone agent at $agent_dir"
 echo ""
 echo "Directory layout:"
 echo "  $agent_dir/"
-echo "    extensions/              ($agent_name/, run-finish-notify, run-timer, startup-branding, say)"
+echo "    extensions/              ($agent_name/ plus common extension bundle)"
 echo "    skills/                  (empty — use dotpi link-skill $agent_name <skill>)"
 echo "    prompts/                 (shared help.md symlinked; add agent-specific prompts here)"
 echo "    themes/                  (individual themes symlinked from shared)"

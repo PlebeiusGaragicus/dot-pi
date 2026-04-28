@@ -2,7 +2,33 @@
 
 Extensions are TypeScript modules that add custom behavior to pi. They can hook into the agent lifecycle, register new tools, and render custom TUI elements.
 
-Source: `shared/extensions/` (shared) or `agents/<name>/extensions/` (per-agent)
+Source: `shared/extensions/` (shared implementations) or `agents/<name>/extensions/` (per-agent links and custom extensions).
+
+## Extension Bundles
+
+dot-pi separates extension implementation from default wiring:
+
+- `shared/extensions/` contains the actual extension source code.
+- `shared/extensions-common/` contains symlinks for extensions that every top-level interactive agent should load.
+- `shared/extensions-subagents/` contains symlinks for extensions that subagent config roots should load.
+- Agent-specific and workflow-specific extensions are linked explicitly into the relevant agent.
+
+Top-level MAS and standalone agents get the common bundle. `dotpi create`, `dotpi create-agent`, and `dotpi sync` wire every entry in `shared/extensions-common/` into `agents/<name>/extensions/`.
+
+Current common extensions:
+
+| Extension | Purpose |
+|-----------|---------|
+| `run-finish-notify` | Notify when an agent turn completes. |
+| `run-timer` | Show elapsed turn time in the TUI. |
+| `startup-branding` | Render `banner.txt` at startup. |
+| `save` | Provide the shared save tool. |
+| `say` | Provide text-to-speech / `say` behavior. |
+| `reasoning-off-shim` | Make `--thinking off` explicit for OpenAI-compatible backends. |
+
+Subagents are not interactive, so they do not get the top-level common bundle. `dotpi sync` wires only `shared/extensions-subagents/` into subagent config roots. For reusable subagents, the canonical root is `subagents/<name>/`, and MAS configs link those directories into `agents/<mas>/agents/`. MAS-specific local subagents can live directly under `agents/<mas>/agents/<name>/`. Today the subagent bundle contains `reasoning-off-shim`, because subagents launch as separate `PI_CODING_AGENT_DIR` roots and still need provider-request behavior.
+
+Specialized extensions stay out of the default bundles. Examples include `agent-orchestrator`, `agent-prompt`, `tavily`, `moods`, `plan-mode`, `questionnaire`, `bash-guardrails`, `auto-theme`, and `theme-cycler`.
 
 ## Extension Structure
 
@@ -307,6 +333,19 @@ Key patterns:
 - Uses `ctx.ui.setStatus()` for a lightweight live status segment
 - Updates once per second while the agent is running
 - Uses `agent_end` to replace `Running: 00:00` with `Trajectory time: 00:00`
+
+### Example: Reasoning Off Shim
+
+A shared extension that makes Pi's `--thinking off` behavior explicit for OpenAI-compatible chat-completions backends that otherwise use a server-side reasoning default.
+
+Source: `shared/extensions/reasoning-off-shim/index.ts`
+
+Key patterns:
+
+- Uses `before_provider_request` to inspect and shallow-clone outgoing provider payloads
+- Adds `reasoning_effort: "none"` only when the payload is chat-completions-shaped and has no existing reasoning controls
+- Included in `shared/extensions-common/` for top-level agents
+- Included in `shared/extensions-subagents/` for subagent roots
 
 ### Example: Agent Orchestrator
 

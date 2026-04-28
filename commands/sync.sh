@@ -33,10 +33,37 @@ fi
 
 added=0 removed=0
 
+# Wire default extensions into reusable subagent configs at their canonical roots.
+for subagent in "$DOT_PI_DIR"/subagents/*/; do
+  [ -d "$subagent" ] || continue
+  [ -f "$subagent/SYSTEM.md" ] || [ -f "$subagent/APPEND_SYSTEM.md" ] || continue
+  link_extension_bundle "$SHARED_DIR/extensions-subagents" "$subagent/extensions" "../../../shared/extensions-subagents"
+done
+
 # Create symlinks for every agent config
 for d in "$DOT_PI_DIR"/agents/*/; do
   [ -d "$d" ] || continue
   name=$(basename "$d")
+  link_extension_bundle "$SHARED_DIR/extensions-common" "$d/extensions" "../../../shared/extensions-common"
+  if [ -e "$d/extensions/agent-orchestrator/index.ts" ]; then
+    for subagent in "$d"/agents/*/; do
+      [ -d "$subagent" ] || continue
+      if [ -L "${subagent%/}" ]; then
+        target=$(readlink "${subagent%/}" 2>/dev/null || true)
+        case "$target" in
+          ../../../subagents/*|"$DOT_PI_DIR"/subagents/*) ;;
+          *)
+            echo "sync: invalid subagent symlink ${subagent%/} -> $target" >&2
+            echo "sync: reusable subagents must live under $DOT_PI_DIR/subagents and be linked into MAS agents/ directories" >&2
+            exit 1
+            ;;
+        esac
+        continue
+      fi
+      [ -f "$subagent/SYSTEM.md" ] || [ -f "$subagent/APPEND_SYSTEM.md" ] || continue
+      link_extension_bundle "$SHARED_DIR/extensions-subagents" "$subagent/extensions" "../../../../../shared/extensions-subagents"
+    done
+  fi
   link="$BIN_DIR/$name"
   if [ ! -L "$link" ]; then
     ln -sf ../dispatch-agent "$link"

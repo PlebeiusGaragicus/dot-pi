@@ -19,10 +19,12 @@ agents/<name>/
 ├── extensions/
 │   ├── <name>/               # Your custom extension
 │   │   └── index.ts
-│   ├── run-finish-notify     # Shared notification extension (symlinked)
-│   ├── run-timer             # Shared elapsed-time status extension (symlinked)
-│   ├── startup-branding      # Shared startup branding (symlinked)
-│   └── say                   # Shared TTS / say (symlinked by default scaffold)
+│   ├── run-finish-notify     # Common extension bundle symlink
+│   ├── run-timer             # Common extension bundle symlink
+│   ├── startup-branding      # Common extension bundle symlink
+│   ├── say                   # Common extension bundle symlink
+│   ├── save                  # Common extension bundle symlink
+│   └── reasoning-off-shim    # Common extension bundle symlink
 ├── AGENT.md                  # (optional) Requires agent-prompt.ts symlink — see below
 ├── SYSTEM.md                 # (optional) Replaces pi's default system prompt
 ├── APPEND_SYSTEM.md          # (optional) Appends to pi's default system prompt
@@ -54,7 +56,9 @@ The directory is a complete `PI_CODING_AGENT_DIR` root, just like a MAS director
 dotpi create-agent my-agent
 ```
 
-This creates the directory structure with shared symlinks and a stub extension at `agents/my-agent/extensions/my-agent/index.ts`.
+This creates the directory structure with common extension bundle symlinks and a stub extension at `agents/my-agent/extensions/my-agent/index.ts`.
+
+The common bundle includes `reasoning-off-shim`, so top-level standalone agents send an explicit reasoning-disable request to OpenAI-compatible backends when thinking is off.
 
 ### Customizing the Prompt and Tools
 

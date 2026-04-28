@@ -1,8 +1,45 @@
 # Multi-Agent Systems
 
+This is the definitive guide to dot-pi's multi-agent implementation. For the file-by-file anatomy of an agent config root, start with [Agent Layout](../agent-layout.md). This page explains how those files work together to create an orchestrated multi-agent system.
+
 In dot-pi, a multi-agent system (MAS) is a top-level orchestrator agent plus a pool of specialized subagents. The orchestrator owns the user conversation, decomposes work, calls subagents through the `subagent` tool, and synthesizes the final answer. Subagents run as isolated pi child processes with their own context windows, tools, prompts, and resource-pool settings.
 
 This is a centralized orchestration model. It is closer to supervisor-worker and pipeline systems than to fully decentralized swarms.
+
+## Implementation Overview
+
+A MAS is a normal agent config root with one important extension:
+
+```text
+agents/deepresearch/
+├── SYSTEM.md
+├── pi-args
+├── workspace.conf
+├── extensions/
+│   ├── agent-orchestrator -> ../../../shared/extensions/agent-orchestrator
+│   └── reasoning-off-shim -> ../../../shared/extensions-common/reasoning-off-shim
+└── agents/
+    └── scout/
+        ├── README.md
+        ├── SYSTEM.md
+        ├── USAGE.md
+        ├── pi-args
+        ├── resource-pool.conf
+        └── extensions/
+            └── reasoning-off-shim -> ../../../../../shared/extensions-subagents/reasoning-off-shim
+```
+
+The parent process loads `extensions/agent-orchestrator`, which registers the `subagent` tool. When the model calls that tool, the extension launches child pi processes using the selected subagent directories as their `PI_CODING_AGENT_DIR` roots.
+
+Each subagent is isolated:
+
+- It has its own prompt files.
+- It has its own `pi-args`.
+- It has its own tools and skills.
+- It has its own context window.
+- It only gets the task passed to it by the orchestrator.
+
+This isolation is the main reason to use a MAS. Subagents can explore, write, review, OCR, collect, or evaluate without filling the parent context with every intermediate detail.
 
 ## Terminology Map
 
@@ -12,9 +49,185 @@ This is a centralized orchestration model. It is closer to supervisor-worker and
 | Worker, specialist, role agent | A subagent config under `agents/<name>/agents/` |
 | Agent capability card | `README.md` and `USAGE.md` in a subagent config |
 | Blackboard or shared workspace | Workspace directory and artifact files such as `sources/` or `report.md` |
-| Tool restriction | Subagent-specific pi config, tools, skills, and prompts |
-| Evaluation agent | A reviewer, editor, scanner, or retro subagent |
+| Tool restriction | Subagent-specific `pi-args`, skills, and extensions |
+| Evaluation agent | A reviewer, editor, scanner, auditor, or retro subagent |
 | Resource scheduler | `resource-pool.conf` plus root `agent-orchestrator.conf` |
+
+## Orchestrator Root
+
+The orchestrator root is the command the user runs. It should define the workflow and delegation policy, not duplicate every subagent's detailed instructions.
+
+Key files:
+
+- `SYSTEM.md`: parent prompt. Put workflow policy, delegation rules, artifact expectations, resume behavior, and final response style here.
+- `pi-args`: parent tool restrictions. MAS roots usually need the `subagent` tool plus enough read/list/search capability to inspect workspace artifacts.
+- `extensions/agent-orchestrator`: registers the `subagent` tool and handles discovery, prompt augmentation, scheduling, and child process launches.
+- `workspace.conf`: optional, but common for MAS configs that create durable artifacts.
+
+The optional repo-level `agent-orchestrator.conf` file configures pool limits for physical subagent concurrency.
+
+The orchestrator should normally coordinate rather than perform specialist work itself. If a task belongs to a subagent role, encode that policy in the root `SYSTEM.md`.
+
+## Subagent Config Format
+
+Subagents are pi config directories stored in two places:
+
+- User-level: `<PI_CODING_AGENT_DIR>/agents/`
+- Project-level: `.pi/agents/`, discovered from the current working directory upward
+
+Reusable dot-pi subagents live canonically under `subagents/<name>/` and are symlinked into a MAS, for example `agents/deepresearch/agents/scout -> ../../../subagents/scout`. MAS-specific subagents can be real directories directly under `agents/<mas>/agents/<name>/`.
+
+A subagent is available when its directory contains `SYSTEM.md` or `APPEND_SYSTEM.md`.
+
+Recommended files:
+
+- `SYSTEM.md` or `APPEND_SYSTEM.md`: the subagent prompt.
+- `README.md`: short description used in orchestrator listings.
+- `USAGE.md`: invocation contract appended to the orchestrator prompt.
+- `pi-args`: tool, model, context-file, and skill restrictions for this subagent.
+- `resource-pool.conf`: shared concurrency pool name, usually `local` or `api`.
+- `extensions/reasoning-off-shim`: linked from `shared/extensions-subagents/` because every subagent is its own pi config root.
+
+Subagents do not get the top-level common extension bundle. They are non-interactive child processes, so only extensions in `shared/extensions-subagents/` are wired into them by `dotpi sync`. For reusable symlinked subagents, `sync` wires the canonical `subagents/<name>/` directory rather than treating the MAS link as the source of truth.
+
+The `USAGE.md` file is especially important. It tells the orchestrator how to call the subagent, what input the subagent expects, what artifacts it may read or write, and what it should return.
+
+Example:
+
+```markdown
+# scout Usage
+
+Call scout when you need fast codebase or source discovery.
+
+Input:
+- A focused research question.
+- Any known paths or keywords.
+
+Output:
+- Concise findings with file paths or source paths.
+- Open questions or blockers.
+- Do not make edits.
+```
+
+## Prompt Augmentation
+
+The parent MAS prompt lives in `<agentDir>/SYSTEM.md`. At runtime, `agent-orchestrator` appends discovered subagent information so the orchestrator can delegate without hard-coding every subagent contract into the parent prompt.
+
+The appended information includes:
+
+- subagent names
+- short descriptions from `README.md`
+- resource pool names from `resource-pool.conf`
+- invocation contracts from `USAGE.md`
+
+This keeps the root `SYSTEM.md` focused on orchestration policy while each subagent owns its own capability contract.
+
+## Agent Discovery
+
+Agents are discovered fresh on each `subagent` tool invocation.
+
+Discovery locations:
+
+1. User-level subagents from `<PI_CODING_AGENT_DIR>/agents/`
+2. Project-level subagents from `.pi/agents/`, relative to the current working directory and walking upward
+
+The `agentScope` parameter controls which locations are loaded:
+
+- `user`: only the MAS config's bundled subagents
+- `project`: only project-local `.pi/agents/`
+- `both`: both sets, with project agents overriding user agents of the same name
+
+Project-local agents are useful when a repository needs task-specific specialists without changing the shared dot-pi config.
+
+## The `subagent` Tool
+
+The `subagent` tool has three modes: single, parallel, and chain.
+
+### Single
+
+Run one subagent on one task:
+
+```json
+{ "agent": "scout", "task": "Find all auth code" }
+```
+
+Use this for routing or one-off specialist work.
+
+### Parallel
+
+Run logically independent tasks:
+
+```json
+{
+  "tasks": [
+    { "agent": "scout", "task": "Find authentication code" },
+    { "agent": "planner", "task": "Review architecture boundaries" }
+  ]
+}
+```
+
+The tasks are independent from the prompt's point of view. Physical concurrency is still controlled by resource pools.
+
+### Chain
+
+Run a sequential pipeline:
+
+```json
+{
+  "chain": [
+    { "agent": "scout", "task": "Find code related to auth" },
+    { "agent": "planner", "task": "Plan changes based on: {previous}" }
+  ]
+}
+```
+
+The `{previous}` placeholder is replaced with the prior step's output. Use chains for fixed pipelines where each step depends on the one before it.
+
+## Resource Scheduling
+
+The LLM expresses logical independence; config controls physical concurrency.
+
+Each subagent can declare the shared resource it consumes:
+
+```text
+agents/<mas>/agents/<subagent>/resource-pool.conf
+```
+
+```text
+local
+```
+
+Pool limits are configured at the dot-pi root:
+
+```text
+agent-orchestrator.conf
+```
+
+```ini
+local=1
+api=4
+default=1
+```
+
+This matters most for self-hosted inference. Ten OCR tasks may be logically independent, but if they all hit one local GPU, the `local` pool should probably run them one at a time. API-backed tasks can often use a larger `api` pool.
+
+For the exact rules, see [Subagent Concurrency](subagent-concurrency.md).
+
+## Workspace And Artifact Handoffs
+
+MAS configs often run in workspace mode. A workspace gives all subagents a shared filesystem for durable artifacts:
+
+```text
+workspaces/deepresearch/2026-04-28-120000/
+├── sources/
+├── drafts/
+├── sessions/
+└── report.md
+```
+
+Artifact handoffs are usually better than returning large text blobs through the orchestrator. A collector can save source extracts to `sources/`, a writer can read those files and create `drafts/report.md`, and an editor can review the draft against the saved sources.
+
+This pattern keeps the parent context smaller and makes failures inspectable. It also makes `--resume` and retrospective analysis practical.
 
 ## Common Patterns
 
@@ -67,6 +280,14 @@ Swarms let agents coordinate peer-to-peer through shared memory or task queues. 
 - The system lacks a verifier, so hallucinated or incomplete outputs pass through.
 - Agents loop because the stop condition, artifact path, or ownership boundary is unclear.
 - The orchestrator treats a failed subagent as a partial success.
+- `USAGE.md` drifts from the subagent's real behavior, so the orchestrator calls it incorrectly.
+- A subagent is missing required extensions or `pi-args` because it was assumed to inherit the parent MAS root.
+
+## How This Maps To dot-pi
+
+Start with a simple orchestrator-worker design. Add pipelines when the workflow is stable, evaluator agents when quality matters, and resource pools when concurrency meets real infrastructure limits. Reach for more experimental patterns like debate or swarm coordination only after the basic artifact flow and eval loop are reliable.
+
+Use [Agent Layout](../agent-layout.md) as the source of truth for where files live. Use this page as the source of truth for how the orchestrator and subagents interact.
 
 ## Resources
 
@@ -82,7 +303,3 @@ Swarms let agents coordinate peer-to-peer through shared memory or task queues. 
 - Tree of Thoughts and multi-agent debate: search and deliberation methods for difficult reasoning tasks.
 - “Large Language Model based Multi-Agents: A Survey of Progress and Challenges” (2024): survey of LLM MAS domains, communication, profiling, and evaluation.
 - “A Survey on Multi-Generative Agent System: Recent Advances and New Frontiers” (2024): survey of generative MAS applications and evaluation.
-
-## How This Maps To dot-pi
-
-Start with a simple orchestrator-worker design. Add pipelines when the workflow is stable, evaluator agents when quality matters, and resource pools when concurrency meets real infrastructure limits. Reach for more experimental patterns like debate or swarm coordination only after the basic artifact flow and eval loop are reliable.

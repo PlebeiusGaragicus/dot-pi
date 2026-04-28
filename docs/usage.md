@@ -151,6 +151,31 @@ resume creatine
 
 `resume` shows the 10 most recent workspaces with numbers. Extra words filter by agent name or workspace name, then you choose the number to resume.
 
+## 5. Reader (Workspace MAS)
+
+Reader ingests a PDF once, renders each page to an image, OCRs each page with a vision model, and keeps page markdown beside the page images for resumable work.
+
+```bash
+reader "/path/to/document.pdf"
+```
+
+**What happens:** `reader` creates `workspaces/reader/<timestamp>/` with `pages/` and `sessions/` subdirectories. The orchestrator first creates `reader-manifest.json`, then dispatches one `ocr-page` subagent per page image. Each page is stored as a pair:
+
+```text
+pages/page-0001.png
+pages/page-0001.md
+```
+
+The OCR workers should run on a vision-capable model. Configure your default model accordingly, or assign `VISION_MODEL` with `dotpi setup` and add `--model ${VISION_MODEL}` to the OCR subagents' `pi-args`. If you use a local vision model, set the OCR subagents' resource pool to `local`; otherwise the default `api` pool lets API-backed OCR run concurrently according to `agent-orchestrator.conf`.
+
+To resume without re-ingesting the PDF:
+
+```bash
+reader --resume
+```
+
+On resume, the orchestrator inspects `reader-manifest.json` and `pages/`, reuses existing page images, and only OCRs missing or failed page markdown.
+
 ### Running evals
 
 The eval runner (`evals/run-eval.sh`) tests MAS configs against scripted prompts in non-interactive mode. Both the MAS command and a prompts file are required:
@@ -168,7 +193,7 @@ The eval runner (`evals/run-eval.sh`) tests MAS configs against scripted prompts
 
 Each prompt runs in its own workspace. Results are organized by eval name (derived from the prompts filename) at `evals/results/<mas>/<eval-name>/<timestamp>/` with per-prompt output files and a JSONL manifest for trajectory analysis. When `--with-retro` is used, retro output is saved to `prompt-N-retro.txt` alongside each prompt's output.
 
-## 5. Trajectory Analysis (Retro)
+## 6. Trajectory Analysis (Retro)
 
 After running a workspace MAS, use the retro MAS to analyze session traces and output files for procedural issues. Retro can run on a free open-source model and produce a structured report that can be fed to a frontier model for deeper analysis.
 
@@ -209,7 +234,7 @@ recon "Read retrospective-report.md and suggest specific prompt or code fixes fo
 
 This two-step pattern keeps costs low: the bulk parsing runs for free on an open-source model, and only the compact report goes to a frontier model.
 
-## 6. Ad-hoc Single Agent Use
+## 7. Ad-hoc Single Agent Use
 
 You don't always need prompt templates. Just describe what you want:
 
@@ -226,7 +251,7 @@ blog "Write a short post comparing our REST and GraphQL endpoints, keep it under
 
 The orchestrator sees its available subagents and decides whether to delegate or handle the task directly.
 
-## 7. Create a Custom MAS
+## 8. Create a Custom MAS
 
 Say you want a MAS for writing documentation:
 
@@ -265,7 +290,7 @@ cd ~/projects/my-api
 docs-mas "Write API reference docs for all endpoints in src/routes/"
 ```
 
-## 8. Sharing Auth Across Agents
+## 9. Sharing Auth Across Agents
 
 Each agent has its own config root, including API authentication. After you authenticate in one agent, share it with others:
 
@@ -279,7 +304,7 @@ dotpi link-auth recon impl
 dotpi link-auth recon blog
 ```
 
-## 9. Check Your Setup
+## 10. Check Your Setup
 
 See what agent configs are available and whether their extensions are properly linked:
 

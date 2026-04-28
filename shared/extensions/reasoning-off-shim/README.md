@@ -35,10 +35,10 @@ It does not override requests that already include any of:
 
 This preserves explicit reasoning settings such as `low`, `medium`, or `high`.
 
-## Link Into An Agent
+## Wiring
 
-From an agent extension directory:
+This extension is part of the standard top-level extension bundle and the
+subagent extension bundle. `dotpi create`, `dotpi create-agent`, and `dotpi sync`
+wire those bundles into agent config roots.
 
-```bash
-ln -s ../../../shared/extensions/reasoning-off-shim reasoning-off-shim
-```
+See `docs/reference/extensions.md` for the bundle layout and rules.

@@ -28,6 +28,8 @@ dot-pi/
 │
 ├── shared/                   # Reusable resources (never used as PI_CODING_AGENT_DIR directly)
 │   ├── extensions/           # Shared extension source code (*.ts files and directories)
+│   ├── extensions-common/    # Symlink bundle for standard top-level agent extensions
+│   ├── extensions-subagents/ # Symlink bundle for default subagent extensions
 │   ├── skills/               # Shared skill definitions (each skill is a directory with SKILL.md)
 │   ├── themes/               # Shared themes (JSON)
 │   ├── bin/                  # Downloaded binaries (fd, rg) — gitignored contents
@@ -67,7 +69,7 @@ Each is a complete `PI_CODING_AGENT_DIR` root:
 
 ```
 agents/<name>/
-├── extensions/               # Symlinked from shared/extensions/ (see Symlink Patterns)
+├── extensions/               # Common bundle symlinks plus MAS-specific extensions
 ├── agents/                   # Subagent config directories or symlinks
 ├── prompts/                  # Prompt templates (slash-command workflows)
 ├── skills/                   # Per-skill symlinks (add with dotpi link-skill)
@@ -91,8 +93,8 @@ Same `PI_CODING_AGENT_DIR` root but without subagent orchestration:
 agents/<name>/
 ├── extensions/
 │   ├── <name>/               # Custom extension (index.ts)
-│   ├── say                   # Shared (default scaffold): TTS / say tool — symlinked from shared
-│   ├── run-finish-notify, run-timer, startup-branding   # Shared (default scaffold)
+│   ├── say                   # Common bundle: TTS / say tool
+│   ├── run-finish-notify, run-timer, startup-branding   # Common bundle
 │   └── ...                   # Optional: e.g. agent-prompt.ts — symlink manually if you use AGENT.md
 ├── AGENT.md                  # (optional, not scaffolded) YAML + body — symlink agent-prompt.ts to load
 ├── SYSTEM.md                 # Starter system prompt (scaffolded by dotpi; replaces pi default)
@@ -268,14 +270,17 @@ Markdown files in `<agentDir>/prompts/` defining reusable workflows. Invoked via
 
 **How it works:**
 
-- **Extensions**: `dotpi create` symlinks `agent-orchestrator` plus standard shared extensions into `<agentDir>/extensions/`. `dotpi create-agent` symlinks `run-finish-notify`, `run-timer`, `startup-branding`, and `say` plus your stub under `extensions/<name>/`. Additional extensions from `shared/extensions/` can be manually symlinked as needed.
+- **Extension implementations**: Shared extension source lives in `shared/extensions/`. Do not move source into bundle directories.
+- **Common top-level extensions**: `shared/extensions-common/` contains symlinks for standard interactive/top-level agent extensions (`run-finish-notify`, `run-timer`, `startup-branding`, `say`, `save`, `reasoning-off-shim`). `dotpi create`, `dotpi create-agent`, and `dotpi sync` link this bundle into top-level `agents/<name>/extensions/`.
+- **Subagent extensions**: `shared/extensions-subagents/` contains default subagent extension symlinks, currently `reasoning-off-shim`. Reusable subagents live canonically under `subagents/<name>/` and are symlinked into MAS roots (`agents/<mas>/agents/<name> -> ../../../subagents/<name>`). `dotpi sync` links the subagent bundle into canonical reusable subagents and MAS-local subagent directories. Subagents do not get the full common top-level bundle.
+- **Specialized extensions**: MAS roots link `agent-orchestrator` explicitly. Other one-off extensions (`agent-prompt`, `tavily`, `moods`, `plan-mode`, etc.) are linked intentionally per agent as needed.
 - **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
 - **Themes**: Each theme JSON in `shared/themes/` is symlinked individually into `<dir>/themes/`.
 - **bin**: A single directory symlink (`bin → ../../shared/bin`) so pi downloads `fd`/`rg` once and all agent configs share them.
 - **models.json**: A single file symlink (`models.json → ../../shared/models.json → ~/.pi/agent/models.json`). All agent configs and bare `pi` share one system config file. `dotpi setup` adds/edits/removes providers in the system file.
 - **settings.json**: A single file symlink (`settings.json → ../../shared/settings.json`) so all agent configs share Pi preferences (theme, defaults, etc.).
 
-All symlinks use relative paths (e.g. `../../../shared/extensions/...` for extensions under `agents/<name>/extensions/`).
+All symlinks use relative paths (e.g. `../../../shared/extensions-common/...` for common extensions under `agents/<name>/extensions/`).
 
 **Do not edit symlink targets** — edit the source in `shared/` instead.
 
@@ -325,6 +330,8 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | Path Pattern | Editable? | Notes |
 |-------------|-----------|-------|
 | `shared/extensions/**/*.ts` | Yes | Shared extension source code |
+| `shared/extensions-common/*` | Yes | Symlink bundle for standard top-level agent extensions |
+| `shared/extensions-subagents/*` | Yes | Symlink bundle for default subagent extensions |
 | `shared/skills/*/SKILL.md` | Yes | Shared skill definitions |
 | `shared/themes/*.json` | Yes | Shared themes |
 | `agents/*/agents/*/SYSTEM.md` | Yes | Subagent system prompts |

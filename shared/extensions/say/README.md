@@ -6,7 +6,7 @@ Speaks streaming assistant output through macOS `say(1)` or Linux `espeak-ng`. S
 
 - `index.ts` -- Streaming line buffer, child-process queue, platform backend selection, commands, and shortcuts
 
-> **Why single-file?** This extension is symlinked into every agent (`extensions/say -> ../../../shared/extensions/say`). Pi's jiti loader with `moduleCache: false` can fail to resolve cross-file imports through symlinks. Per-agent custom extensions (real directories, not symlinks) are safe for multi-file splits.
+> **Why single-file?** This extension is linked into top-level agents through the common extension bundle. Pi's jiti loader with `moduleCache: false` can fail to resolve cross-file imports through symlinks. Per-agent custom extensions (real directories, not symlinks) are safe for multi-file splits.
 
 ## Behavior
 
