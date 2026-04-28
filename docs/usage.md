@@ -106,6 +106,14 @@ deepresearch "What are the latest developments in WebTransport protocol?"
 3. **writer** reads all sources and synthesizes a structured report to `drafts/report.md`
 4. **editor** reviews the draft against sources and produces `report.md`
 
+To give a workspace a memorable name, add a lone `-` and put the name after it:
+
+```bash
+deepresearch - creatine loading protocol
+```
+
+This creates a folder like `workspaces/deepresearch/2026-04-28-091454--creatine-loading-protocol/`. Without a name, dot-pi keeps the timestamp-only folder name.
+
 ### Listing and resuming workspaces
 
 Each run creates a new workspace. To see past runs:
@@ -133,6 +141,15 @@ deepresearch --resume 2026-04-10-125602
 ```
 
 This cd's into the original workspace directory (so all files are present) and opens pi's session selector.
+
+You can also use the global picker across workspace agents:
+
+```bash
+resume
+resume creatine
+```
+
+`resume` shows the 10 most recent workspaces with numbers. Extra words filter by agent name or workspace name, then you choose the number to resume.
 
 ### Running evals
 

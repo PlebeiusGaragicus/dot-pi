@@ -236,13 +236,21 @@ dotpi create --workspace my-research-mas
 dotpi create-agent --workspace my-scraper
 ```
 
-**Resuming a workspace session**: Workspace agents support `--resume` and `--list`:
+**Naming a workspace session**: Add a lone `-` and a name after the agent command:
+```bash
+deepresearch - creatine loading protocol
+```
+This creates a timestamped directory with a slug suffix, e.g. `workspaces/deepresearch/2026-04-28-091454--creatine-loading-protocol/`. Omitting the name keeps the timestamp-only directory.
+
+**Resuming a workspace session**: Workspace agents support `--resume` and `--list`, and dot-pi also provides a global picker:
 ```bash
 deepresearch --list                         # show existing workspaces
 deepresearch --resume                       # resume most recent workspace
 deepresearch --resume 2026-04-10            # resume workspace matching prefix
+resume                                      # choose from the 10 most recent workspaces
+resume creatine                             # filter recent workspaces, then choose by number
 ```
-`--resume` cd's into the existing workspace directory and passes `--resume` to pi, so the session selector opens with the original session available. `--list` shows each workspace with a file count.
+`--resume` cd's into the existing workspace directory and passes `--resume` to pi, so the session selector opens with the original session available. `--list` shows each workspace with a file count. The global `resume` command lists workspace agents together and prompts for a numbered selection.
 
 **Rebuilding symlinks**: Run `dotpi sync` to rebuild the `bin/` symlinks after adding or removing agent configs.
 

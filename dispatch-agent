@@ -5,6 +5,7 @@ set -euo pipefail
 # All agent symlinks in bin/ point here.
 
 AGENT_NAME="$(basename "$0")"
+_pi_args=()
 
 # ── env bootstrap ─────────────────────────────────────────────────────────────
 # When invoked outside a shell that sourced env.sh (e.g. cron, scripts),
@@ -36,6 +37,114 @@ _expand_env_vars() {
     s="${s#*"$var"}"
   done
   printf '%s' "$out$s"
+}
+
+_load_pi_args() {
+  local config_dir="$1" _line
+  _pi_args=()
+  if [ -f "$config_dir/pi-args" ]; then
+    while IFS= read -r _line || [ -n "$_line" ]; do
+      [[ -z "$_line" || "$_line" == \#* ]] && continue
+      _line="$(_expand_env_vars "$_line")"
+      # shellcheck disable=SC2206  # intentional word-splitting so multi-word flags expand
+      _pi_args+=($_line)
+    done < "$config_dir/pi-args"
+  fi
+}
+
+_slugify_workspace_name() {
+  local name="$*"
+  name=$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')
+  name=$(printf '%s' "$name" | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')
+  [ -n "$name" ] && printf '%s' "$name" || printf 'workspace'
+}
+
+_workspace_label() {
+  local agent="$1" path="$2" base files ts title
+  base=$(basename "$path")
+  ts="${base%%--*}"
+  if [[ "$base" == *"--"* ]]; then
+    title="${base#*--}"
+    title="${title//-/ }"
+  else
+    title=""
+  fi
+  files=$(find "$path" -maxdepth 2 -type f 2>/dev/null | wc -l | tr -d ' ')
+  if [ -n "$title" ]; then
+    printf '%-18s  %-15s  %-36s  (%s files)' "$agent" "$ts" "$title" "$files"
+  else
+    printf '%-18s  %-15s  %-36s  (%s files)' "$agent" "$ts" "-" "$files"
+  fi
+}
+
+_resume_workspace_path() {
+  local ws_path="$1"
+  shift
+  ws_path="${ws_path%/}"
+  local agent config_dir
+  agent=$(basename "$(dirname "$ws_path")")
+  config_dir="$DOT_PI_DIR/agents/$agent"
+  [ -d "$config_dir" ] || { echo "No agent config for workspace: $agent" >&2; return 1; }
+  _load_pi_args "$config_dir"
+  echo "Resuming: $ws_path" >&2
+  local _resume_args=()
+  [ -d "$ws_path/sessions" ] && _resume_args+=(--session-dir "$ws_path/sessions")
+  (cd "$ws_path" && PI_CODING_AGENT_DIR="$config_dir" _pi "${_pi_args[@]}" "${_resume_args[@]}" --resume "$@")
+}
+
+_pick_workspace() {
+  local title="$1"
+  shift
+  local paths=("$@")
+  if [ ${#paths[@]} -eq 0 ]; then
+    echo "No workspaces found" >&2
+    return 1
+  fi
+  echo "$title" >&2
+  local i=1 path agent
+  for path in "${paths[@]}"; do
+    agent=$(basename "$(dirname "${path%/}")")
+    printf '%2d) %s\n' "$i" "$(_workspace_label "$agent" "$path")" >&2
+    i=$((i + 1))
+  done
+  local reply
+  while true; do
+    printf 'Number: ' >&2
+    IFS= read -r reply || return 1
+    case "$reply" in
+      ''|*[!0-9]*)
+        echo "Invalid choice; enter a number." >&2
+        ;;
+      *)
+        if [ "$reply" -ge 1 ] && [ "$reply" -le ${#paths[@]} ]; then
+          printf '%s\n' "${paths[$((reply - 1))]}"
+          return 0
+        fi
+        echo "Invalid choice; enter 1-${#paths[@]}." >&2
+        ;;
+    esac
+  done
+}
+
+_collect_workspaces() {
+  local limit="${1:-10}" query="${2:-}" d agent base haystack count=0
+  shopt -s nullglob
+  for d in "$DOT_PI_DIR"/workspaces/*/*/; do
+    [ -d "$d" ] || continue
+    agent=$(basename "$(dirname "${d%/}")")
+    [ -f "$DOT_PI_DIR/agents/$agent/workspace.conf" ] || continue
+    base=$(basename "${d%/}")
+    haystack=$(printf '%s %s %s' "$agent" "$base" "${base//-/ }" | tr '[:upper:]' '[:lower:]')
+    if [ -n "$query" ] && [[ "$haystack" != *"$(printf '%s' "$query" | tr '[:upper:]' '[:lower:]')"* ]]; then
+      continue
+    fi
+    printf '%s\t%s\n' "$(stat -f '%m' "$d" 2>/dev/null || stat -c '%Y' "$d" 2>/dev/null || echo 0)" "${d%/}"
+  done | sort -rn | while IFS=$'\t' read -r _mtime d; do
+    [ -n "$d" ] || continue
+    printf '%s\n' "$d"
+    count=$((count + 1))
+    [ "$count" -ge "$limit" ] && break
+  done
 }
 
 # JSON event stream filter for batch mode.
@@ -140,15 +249,26 @@ _workspace_launch() {
         return 1
       fi
     fi
-    echo "Resuming: $target" >&2
-    local _resume_args=()
-    [ -d "$target/sessions" ] && _resume_args+=(--session-dir "$target/sessions")
-    (cd "$target" && PI_CODING_AGENT_DIR="$config_dir" _pi "${_resume_args[@]}" --resume "$@")
+    _resume_workspace_path "$target" "$@"
     return $?
   fi
 
-  local ws
+  local pi_args=() workspace_name="" arg slug ws
+  while [ $# -gt 0 ]; do
+    arg="$1"
+    shift
+    if [ "$arg" = "-" ]; then
+      workspace_name="$*"
+      break
+    fi
+    pi_args+=("$arg")
+  done
+
   ws="$ws_root/$(date +%Y-%m-%d-%H%M%S)"
+  if [ -n "$workspace_name" ]; then
+    slug="$(_slugify_workspace_name "$workspace_name")"
+    ws="$ws--$slug"
+  fi
   mkdir -p "$ws"
   while IFS= read -r subdir || [ -n "$subdir" ]; do
     [[ -n "$subdir" && "$subdir" != \#* ]] && mkdir -p "$ws/$subdir"
@@ -156,8 +276,26 @@ _workspace_launch() {
   echo "Workspace: $ws" >&2
   local _launch_args=()
   [ -d "$ws/sessions" ] && _launch_args+=(--session-dir "$ws/sessions")
-  (cd "$ws" && PI_CODING_AGENT_DIR="$config_dir" _pi "${_launch_args[@]}" "$@")
+  (cd "$ws" && PI_CODING_AGENT_DIR="$config_dir" _pi "${_pi_args[@]}" "${_launch_args[@]}" "${pi_args[@]}")
   return $?
+}
+
+_resume_global() {
+  local query="$*"
+  local paths=() selected
+  while IFS= read -r selected; do
+    [ -n "$selected" ] && paths+=("$selected")
+  done < <(_collect_workspaces 10 "$query")
+  if [ ${#paths[@]} -eq 0 ]; then
+    if [ -n "$query" ]; then
+      echo "No workspaces matching '$query'" >&2
+    else
+      echo "No workspaces found" >&2
+    fi
+    return 1
+  fi
+  selected=$(_pick_workspace "Recent workspaces:" "${paths[@]}") || return $?
+  _resume_workspace_path "$selected"
 }
 
 # ── run-retro (special case) ──────────────────────────────────────────────────
@@ -281,6 +419,12 @@ if [ "$AGENT_NAME" = "run-retro" ]; then
   exit $?
 fi
 
+# Special dispatch: resume
+if [ "$AGENT_NAME" = "resume" ]; then
+  _resume_global "$@"
+  exit $?
+fi
+
 # Special dispatch: dispatch-agent invoked directly (not via symlink)
 if [ "$AGENT_NAME" = "dispatch-agent" ]; then
   echo "Usage: invoke via an agent symlink (e.g. lm, recon, blog)" >&2
@@ -310,11 +454,17 @@ fi
 # is present. In batch mode we add --mode json so pi emits a JSON event stream,
 # which _json_filter reduces to human-friendly stderr + final text on stdout.
 _batch=false
-if [ ! -t 0 ] || _has_flag "-p" "$@"; then
+_workspace_meta=false
+if [ -f "$config_dir/workspace.conf" ]; then
+  case "${1:-}" in
+    --list|--resume) _workspace_meta=true ;;
+  esac
+fi
+if [ "$_workspace_meta" = false ] && { [ ! -t 0 ] || _has_flag "-p" "$@"; }; then
   _batch=true
 fi
 
-if [ ! -t 0 ] && ! _has_flag "-p" "$@"; then
+if [ "$_workspace_meta" = false ] && [ ! -t 0 ] && ! _has_flag "-p" "$@"; then
   _stdin_prompt=$(cat)
   set -- -p "$_stdin_prompt" "$@"
 fi
@@ -324,17 +474,9 @@ if [ "$_batch" = true ]; then
 fi
 
 # Load default CLI flags from pi-args
-if [ -f "$config_dir/pi-args" ]; then
-  _pi_args=()
-  while IFS= read -r _line || [ -n "$_line" ]; do
-    [[ -z "$_line" || "$_line" == \#* ]] && continue
-    _line="$(_expand_env_vars "$_line")"
-    # shellcheck disable=SC2206  # intentional word-splitting so multi-word flags expand
-    _pi_args+=($_line)
-  done < "$config_dir/pi-args"
-  if [ ${#_pi_args[@]} -gt 0 ]; then
-    set -- "${_pi_args[@]}" "$@"
-  fi
+_load_pi_args "$config_dir"
+if [ ${#_pi_args[@]} -gt 0 ] && [ ! -f "$config_dir/workspace.conf" ]; then
+  set -- "${_pi_args[@]}" "$@"
 fi
 
 # Dispatch: workspace or in-situ
