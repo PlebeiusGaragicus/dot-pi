@@ -1,6 +1,6 @@
 # Commands
 
-Each team and standalone agent is available as a direct command on PATH (via symlinks in `bin/` pointing to `dispatch-agent`). Run `dotpi list` to see all available commands.
+Each MAS and standalone agent is available as a direct command on PATH (via symlinks in `bin/` pointing to `dispatch-agent`). Run `dotpi list` to see all available commands.
 
 ```sh
 # interactive (tty)
@@ -19,7 +19,7 @@ deepresearch -p "WebTransport protocol" > report.md      # progress visible, rep
 deepresearch -p "WebTransport protocol" 2>/dev/null       # silent, stdout only
 recon -p "map the auth flow" > /dev/null                  # progress only, discard result
 
-# workspace management (workspace teams only)
+# workspace management (workspace MAS only)
 deepresearch --list
 deepresearch --resume
 deepresearch --resume 2026-04-10

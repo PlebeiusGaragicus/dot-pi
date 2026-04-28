@@ -2,25 +2,25 @@
 # Sourced by the dotpi dispatcher — do not execute directly.
 
 found=0
-team_found=0
+mas_found=0
 standalone_found=0
 
-echo "Teams:"
+echo "Multi-agent systems:"
 for dir in "$DOT_PI_DIR"/agents/*/; do
   [ -d "$dir" ] || continue
-  [ -e "$dir/extensions/subagent-teams/index.ts" ] || [ -f "$dir/team-prompt.md" ] || continue
+  [ -e "$dir/extensions/agent-orchestrator/index.ts" ] || continue
   name=$(basename "$dir")
   found=1
-  team_found=1
-  agent_count=$(find "$dir/agents" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+  mas_found=1
+  agent_count=$(find "$dir/agents" -mindepth 1 -maxdepth 1 \( -type d -o -type l \) 2>/dev/null | wc -l | tr -d ' ')
   prompt_count=$(find "$dir/prompts" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
   mode="in-situ"
   [ -f "$dir/workspace.conf" ] && mode="workspace"
   ext_ok="no"
-  [ -e "$dir/extensions/subagent-teams/index.ts" ] && ext_ok="yes"
-  echo "  $name  ($mode, $agent_count agents, $prompt_count prompts, extensions linked: $ext_ok)"
+  [ -e "$dir/extensions/agent-orchestrator/index.ts" ] && ext_ok="yes"
+  echo "  $name  ($mode, $agent_count subagents, $prompt_count prompts, orchestrator linked: $ext_ok)"
 done
-if [ "$team_found" -eq 0 ]; then
+if [ "$mas_found" -eq 0 ]; then
   echo "  (none -- run 'dotpi create <name>' to create one)"
 fi
 
@@ -28,7 +28,7 @@ echo ""
 echo "Standalone agents:"
 for dir in "$DOT_PI_DIR"/agents/*/; do
   [ -d "$dir" ] || continue
-  if [ -e "$dir/extensions/subagent-teams/index.ts" ] || [ -f "$dir/team-prompt.md" ]; then
+  if [ -e "$dir/extensions/agent-orchestrator/index.ts" ]; then
     continue
   fi
   name=$(basename "$dir")

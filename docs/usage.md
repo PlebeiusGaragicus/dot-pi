@@ -20,7 +20,7 @@ cd ~/projects/some-api
 recon "Map the authentication flow -- which files handle login, session management, and token refresh?"
 ```
 
-**What happens:** pi starts with only the recon team's agents (scout, planner) visible. The LLM can use the `subagent` tool to delegate to either agent. A typical flow:
+**What happens:** pi starts with the recon MAS config. The orchestrator can use the `subagent` tool to delegate to specialized agents. A typical flow:
 
 1. The LLM calls `subagent` with `{ agent: "scout", task: "Find all authentication-related code..." }`
 2. Scout (Haiku, fast and cheap) greps for auth patterns, reads key files, and returns a structured summary with file paths and line ranges
@@ -58,7 +58,7 @@ This triggers:
 2. **reviewer** reviews the diff (read-only, uses `git diff` to inspect changes)
 3. **worker** applies the review feedback
 
-Or skip the prompt template and just talk to the team directly:
+Or skip the prompt template and talk to the orchestrator directly:
 
 ```bash
 impl "Fix the race condition in src/queue/processor.ts -- the dequeue and ack aren't atomic"
@@ -91,15 +91,15 @@ blog
 
 This skips research and goes straight to write-review-revise.
 
-## 4. Deep Research (Workspace Agent Team)
+## 4. Deep Research (Workspace MAS)
 
-Workspace agent teams launch in a fresh dated directory so artifacts stay isolated.
+Workspace MAS configs launch in a fresh dated directory so artifacts stay isolated.
 
 ```bash
 deepresearch "What are the latest developments in WebTransport protocol?"
 ```
 
-**What happens:** `p` creates `workspaces/deepresearch/<timestamp>/` with `sources/`, `screenshots/`, `drafts/`, and `sessions/` subdirectories, then launches pi inside it. The orchestrator's tools are restricted to `read,find,ls,grep` via `team-prompt.md` frontmatter, so it cannot curl or bash its way through -- it must delegate all work to subagents. Both the orchestrator and all subagent sessions are stored in `sessions/` for unified trajectory analysis. The orchestrator runs a four-step pipeline:
+**What happens:** `deepresearch` creates `workspaces/deepresearch/<timestamp>/` with `sources/`, `screenshots/`, and `sessions/` subdirectories, then launches pi inside it. The orchestrator's `SYSTEM.md` requires research, collection, writing, and editing to go through subagents. Both the orchestrator and all subagent sessions are stored in `sessions/` for unified trajectory analysis. The orchestrator runs a four-step pipeline:
 
 1. **scout** searches the web via Tavily API for relevant sources
 2. **collector** (parallel, one per URL) fetches each page via headless browser, strips boilerplate, saves to `sources/`
@@ -136,7 +136,7 @@ This cd's into the original workspace directory (so all files are present) and o
 
 ### Running evals
 
-The eval runner (`evals/run-eval.sh`) tests agent teams against scripted prompts in non-interactive mode. Both the agent name and a prompts file are required:
+The eval runner (`evals/run-eval.sh`) tests MAS configs against scripted prompts in non-interactive mode. Both the MAS command and a prompts file are required:
 
 ```bash
 # Quick smoke test
@@ -149,11 +149,11 @@ The eval runner (`evals/run-eval.sh`) tests agent teams against scripted prompts
 ./evals/run-eval.sh --with-retro deepresearch evals/deepresearch-short.txt
 ```
 
-Each prompt runs in its own workspace. Results are organized by eval name (derived from the prompts filename) at `evals/results/<team>/<eval-name>/<timestamp>/` with per-prompt output files and a JSONL manifest for trajectory analysis. When `--with-retro` is used, retro output is saved to `prompt-N-retro.txt` alongside each prompt's output.
+Each prompt runs in its own workspace. Results are organized by eval name (derived from the prompts filename) at `evals/results/<mas>/<eval-name>/<timestamp>/` with per-prompt output files and a JSONL manifest for trajectory analysis. When `--with-retro` is used, retro output is saved to `prompt-N-retro.txt` alongside each prompt's output.
 
 ## 5. Trajectory Analysis (Retro)
 
-After running a workspace agent team, use the retro agent team to analyze session traces and output files for procedural issues. The retro agent runs on a free open-source model and produces a structured report that can be fed to a frontier model for deeper analysis.
+After running a workspace MAS, use the retro MAS to analyze session traces and output files for procedural issues. Retro can run on a free open-source model and produce a structured report that can be fed to a frontier model for deeper analysis.
 
 ### Interactive use
 
@@ -207,31 +207,25 @@ impl "Rename the User model to Account everywhere"
 blog "Write a short post comparing our REST and GraphQL endpoints, keep it under 600 words"
 ```
 
-The LLM sees the team's agents and decides whether to delegate via subagent or handle the task directly.
+The orchestrator sees its available subagents and decides whether to delegate or handle the task directly.
 
-## 7. Create a Custom Team
+## 7. Create a Custom MAS
 
-Say you want a team for writing documentation:
+Say you want a MAS for writing documentation:
 
 ```bash
-# Scaffold the team directory (in-situ mode)
-dotpi create docs-team
+# Scaffold the MAS directory (in-situ mode)
+dotpi create docs-mas
 
-# Or as a workspace agent team (creates workspace.conf)
-dotpi create --workspace docs-team
+# Or as a workspace MAS (creates workspace.conf)
+dotpi create --workspace docs-mas
 ```
 
-This creates `agents/docs-team/` with extensions and models symlinked; **`skills/` is empty** until you run `dotpi link-skill docs-team <skill>`. Now add agents:
+This creates `agents/docs-mas/` with extensions and models symlinked; **`skills/` is empty** until you run `dotpi link-skill docs-mas <skill>`. Now add or link subagent configs:
 
 ```bash
-cat > ~/.dot-pi/agents/docs-team/agents/docs-writer.md << 'EOF'
----
-name: writer
-description: Writes clear technical documentation from code and context
-tools: read, grep, find, ls
-skills: skills/searxng
-no-skills: true
----
+mkdir -p ~/.dot-pi/agents/docs-mas/agents/writer
+cat > ~/.dot-pi/agents/docs-mas/agents/writer/SYSTEM.md << 'EOF'
 
 You are a documentation writer. Read the code and produce clear, well-structured
 documentation in markdown. Include code examples from the actual source.
@@ -244,14 +238,14 @@ Output format:
 EOF
 ```
 
-The `no-skills: true` + `skills: skills/searxng` combination means this subagent loads only the searxng skill, ignoring any others in the parent agent's `skills/` directory. Omit both fields to load all parent skills, or set only `no-skills: true` to load none.
+Add `USAGE.md` to document the writer's invocation contract. The `agent-orchestrator` extension appends those contracts to the parent orchestrator prompt automatically.
 
 Rebuild symlinks and use it:
 
 ```bash
 dotpi sync
 cd ~/projects/my-api
-docs-team "Write API reference docs for all endpoints in src/routes/"
+docs-mas "Write API reference docs for all endpoints in src/routes/"
 ```
 
 ## 8. Sharing Auth Across Agents
@@ -277,15 +271,10 @@ dotpi list
 ```
 
 ```
-Teams:
-  blog  (in-situ, 3 agents, 2 prompts, extensions linked: yes)
-  deepresearch  (workspace, 4 agents, 0 prompts, extensions linked: yes)
-  impl  (in-situ, 2 agents, 1 prompts, extensions linked: yes)
-  recon  (in-situ, 2 agents, 1 prompts, extensions linked: yes)
-  retro  (in-situ, 2 agents, 0 prompts, extensions linked: yes)
+Multi-agent systems:
+  deepresearch  (workspace, 4 subagents, 1 prompts, orchestrator linked: yes)
 
 Standalone agents:
-  lm                (in-situ, extensions: 0)
-  twenty-questions  (in-situ, extensions: 1)
-  websearch         (in-situ, extensions: 2)
+  ask  (in-situ, extensions: 1)
+  web  (in-situ, extensions: 1)
 ```

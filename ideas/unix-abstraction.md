@@ -98,7 +98,7 @@ Unix tools don't have two "modes" baked into their identity. They check `isatty(
 
 The same binary, the same flags. The **input source** determines the mode — not a property of the program's identity.
 
-pi already supports `-p` and `--mode json` for non-interactive use (the subagent-teams extension uses both internally). The gap is that the outer shell aliases don't expose this, and there's no convention for stdout-as-result.
+pi already supports `-p` and `--mode json` for non-interactive use (the `agent-orchestrator` extension uses both internally). The gap is that the outer shell aliases don't expose this, and there's no convention for stdout-as-result.
 
 ## In-Situ vs Workspace (cwd and side effects)
 
@@ -120,7 +120,7 @@ Currently in dot-pi, `workspace.conf` makes workspace mode a property of *who th
 
 ## What Already Works (Inner Boundary)
 
-Inside a single pi invocation, the subagent-teams extension already implements the Unix process model. Each subagent call returns a `SingleResult`:
+Inside a single pi invocation, the `agent-orchestrator` extension already implements the Unix process model. Each subagent call returns a `SingleResult`:
 
 ```typescript
 {
@@ -198,7 +198,7 @@ Whether an agent gets a workspace is determined by the presence of `workspace.co
 
 ## Multi-Agent Considerations
 
-Multi-agent teams add dimensions that a simple stdin/stdout model must account for:
+Multi-agent systems add dimensions that a simple stdin/stdout model must account for:
 
 ### Session files as logs
 
@@ -223,7 +223,7 @@ Both are valid "outputs." The convention should be: stdout carries the *summary 
 
 ### Subagents are function calls
 
-Inside a multi-agent team, the orchestrator dispatching a subagent is structurally identical to a program calling a function:
+Inside a MAS, the orchestrator dispatching a subagent is structurally identical to a program calling a function:
 
 - The `task` string is the function argument
 - The returned text is the return value
@@ -301,7 +301,7 @@ When running non-interactively, the final assistant message goes to stdout. `--m
 `workspace.conf` becomes a *default hint* — the alias uses it as the default behavior, but `--workspace`, `--in-situ`, and `--output-dir <path>` flags override. Any agent can run either way.
 
 **3. Exit codes must propagate.**
-The subshell wrappers in `dispatch-agent` must capture and return pi's exit code. The subagent-teams extension already tracks `exitCode` per agent — this needs to bubble up to the shell level.
+The subshell wrappers in `dispatch-agent` must capture and return pi's exit code. The `agent-orchestrator` extension already tracks `exitCode` per agent — this needs to bubble up to the shell level.
 
 Once these three properties hold, the entire system — from tool calls inside agents, through subagent dispatches, up to shell-level composition — speaks the same protocol. The shell's existing `|`, `&&`, `$()`, `>`, and `xargs` operators handle all the wiring. No more bespoke glue functions.
 

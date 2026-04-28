@@ -4,7 +4,7 @@ Custom [pi](https://github.com/PlebeiusGaragicus/pi-mono) agent configs as dotfi
 
 ## What is this?
 
-dot-pi is a dotfiles-style repository for managing multiple **pi coding agent** configurations. Instead of cluttering `~/.pi/` with extensions, agents, and prompts, this repo defines self-contained **team directories** and **standalone agent directories** -- each with its own extensions, skills, and session history.
+dot-pi is a dotfiles-style repository for managing multiple **pi coding agent** configurations. Instead of cluttering `~/.pi/` with extensions, agents, and prompts, this repo defines self-contained **multi-agent systems (MAS)** and **standalone agent directories** -- each with its own extensions, skills, and session history.
 
 Each command (e.g. `recon`, `blog`, `lm`) sets `PI_CODING_AGENT_DIR` to the right directory, and you get a fully isolated pi agent configuration from any working directory.
 
@@ -16,7 +16,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/PlebeiusGaragicus/dot-pi
 
 Or install manually — see [Installation & Setup](install.md) for details.
 
-Then use a team from any project:
+Then use a MAS from any project:
 
 ```bash
 cd /any/project
@@ -24,9 +24,9 @@ recon "Find all authentication code"
 blog "Write a post about this project's architecture"
 ```
 
-## Teams
+## Multi-Agent Systems
 
-Teams are multi-agent configurations with orchestrated delegation (single, parallel, chain). Each team has its own set of specialized subagents, prompt templates, and an orchestrator system prompt. See the **Teams** section in the sidebar for details on each team.
+Multi-agent systems are orchestrated configurations with a top-level agent that delegates through the `subagent` tool. Each MAS has specialized subagents, prompt templates, and an orchestrator system prompt. See the **Multi-Agent Systems** section in the sidebar for bundled examples.
 
 ## Standalone Agents
 
@@ -35,8 +35,8 @@ Standalone agents are single-purpose configurations with custom extensions inste
 ## Creating New Configurations
 
 ```bash
-dotpi create my-team                        # new team
-dotpi create --workspace my-research-team   # new workspace team
+dotpi create my-research-mas                # new MAS
+dotpi create --workspace deepresearch       # new workspace MAS
 dotpi create-agent my-agent                 # new standalone agent
 ```
 

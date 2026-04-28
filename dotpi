@@ -14,7 +14,8 @@ Usage: dotpi <command> [args]
 
 Commands:
   setup                                    Interactive setup wizard (API keys, models, roles)
-  create [--workspace] <team-name>         Create a team-style agent directory with shared extension symlinks
+  create [--workspace] <mas-name>          Create a multi-agent system with an orchestrator and subagents
+  create-mas [--workspace] <mas-name>      Alias for create
   create-agent [--workspace] <agent-name>  Create a standalone agent directory with a stub extension
   list                                     List existing agent configs
   link-skill <agent> <skill> [...]         Symlink one or more shared skills into an agent config
@@ -31,7 +32,7 @@ Options:
 
 Examples:
   dotpi setup
-  dotpi create blog
+  dotpi create research
   dotpi create --workspace deepresearch
   dotpi create-agent twenty-questions
   dotpi create-agent --workspace my-researcher
@@ -49,7 +50,8 @@ shift
 
 case "$cmd" in
   setup)        source "$COMMANDS_DIR/setup.sh" "$@" ;;
-  create)       source "$COMMANDS_DIR/create.sh" "$@" ;;
+  create|create-mas)
+                source "$COMMANDS_DIR/create.sh" "$@" ;;
   create-agent) source "$COMMANDS_DIR/create-agent.sh" "$@" ;;
   list)         source "$COMMANDS_DIR/list.sh" "$@" ;;
   link-skill)   source "$COMMANDS_DIR/link-skill.sh" "$@" ;;

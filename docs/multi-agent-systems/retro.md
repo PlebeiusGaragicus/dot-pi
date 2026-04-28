@@ -1,4 +1,4 @@
-# Retro Team
+# Retro MAS
 
 Retrospective trajectory analysis for pi agent runs. Analyzes JSONL session traces and workspace output files to check procedural compliance -- did the agent follow instructions, use tools correctly, dispatch subagents appropriately, and avoid loops or errors?
 
@@ -6,9 +6,9 @@ Produces a structured `retrospective-report.md` designed for consumption by a fr
 
 ## Orchestrator
 
-The orchestrator has restricted tools (`read,find,ls,grep,write` via `team-prompt.md` frontmatter). It cannot run `bash` directly -- all jq/grep-based JSONL parsing is delegated to the scanner subagent. The orchestrator surveys the workspace, dispatches subagents, and synthesizes findings into the final report.
+The orchestrator has restricted tools and cannot run `bash` directly -- all jq/grep-based JSONL parsing is delegated to the scanner subagent. The orchestrator surveys the workspace, dispatches subagents, and synthesizes findings into the final report.
 
-## Agents
+## Subagents
 
 ### scanner
 
@@ -28,7 +28,7 @@ Analyzes a single JSONL session file for procedural issues. Uses jq and grep one
 
 Inspects workspace output files for completeness and instruction adherence. Checks whether expected deliverables were created, files are non-empty, structure matches instructions, all task parts are addressed, sources are referenced, and no truncation or placeholder text exists. Returns a PASS/FAIL checklist.
 
-When `.source-team-prompt.md` is present in the workspace (symlinked by `run-retro`), the reviewer reads it to understand the source team's expected workflow, agents, and deliverables -- replacing guesswork with ground truth for instruction-adherence checks.
+When `.source-orchestrator-system.md` is present in the workspace (symlinked by `run-retro`), the reviewer reads it to understand the source MAS workflow, subagents, and deliverables -- replacing guesswork with ground truth for instruction-adherence checks.
 
 The reviewer does NOT evaluate writing quality, style, or factual accuracy.
 
@@ -67,7 +67,7 @@ The output report has these sections:
 
 ### Interactive (`retro`)
 
-The retro team runs in-situ. `cd` into the workspace directory to analyze, then run `retro`:
+The retro MAS runs in-situ. `cd` into the workspace directory to analyze, then run `retro`:
 
 ```bash
 cd workspaces/deepresearch/2026-04-12-150258
@@ -90,7 +90,7 @@ run-retro deepresearch -- "focus on citations"  # with steering hint
 
 `--pick` shows a numbered menu (bash `select`, newest workspaces first); choose a number or **Cancel** to abort.
 
-`run-retro` resolves the workspace path, symlinks the source team's `team-prompt.md` into the workspace as `.source-team-prompt.md` (so the reviewer can check outputs against the intended workflow), then runs the retro team with `pi -p` (non-interactive, stdin closed). The team name is included in the prompt so the orchestrator knows the source team.
+`run-retro` resolves the workspace path, symlinks the source MAS `SYSTEM.md` into the workspace as `.source-orchestrator-system.md` (so the reviewer can check outputs against the intended workflow), then runs the retro MAS with `pi -p` (non-interactive, stdin closed). The MAS name is included in the prompt so the orchestrator knows the source workflow.
 
 An internal `--workspace-path` mode is also available for script integration:
 
@@ -124,14 +124,4 @@ recon "Read retrospective-report.md and suggest specific fixes for each issue fo
 
 ## Configuration
 
-All configuration is in `team-prompt.md` YAML frontmatter:
-
-```yaml
----
-name: Retro
-description: Retrospective trajectory analysis. Run from inside a workspace directory.
-tools: read, find, ls, grep, write
----
-```
-
-The body of `team-prompt.md` provides the orchestrator's system prompt with team context and workflow instructions.
+The orchestrator prompt lives in `SYSTEM.md`; default CLI flags live in `pi-args`.

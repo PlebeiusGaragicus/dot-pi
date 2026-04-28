@@ -5,7 +5,7 @@
 pi resolves its config root via `getAgentDir()` in the coding-agent package. This function checks the `PI_CODING_AGENT_DIR` environment variable first. When set, **all** of pi's configuration loads from that directory instead of `~/.pi/agent/`:
 
 - `extensions/` -- auto-discovered TypeScript extensions
-- `agents/` -- agent definition markdown files
+- `agents/` -- subagent config directories for MAS configs
 - `prompts/` -- prompt template files
 - `skills/` -- skill definitions (SKILL.md files)
 - `bin/` -- downloaded tool binaries (fd, rg)
@@ -13,10 +13,10 @@ pi resolves its config root via `getAgentDir()` in the coding-agent package. Thi
 - `settings.json` -- pi settings
 - `models.json` -- custom model providers
 - `auth.json` -- API authentication
-- `team-prompt.md` -- orchestrator config and system prompt (YAML frontmatter parsed by the subagent-teams extension for name, description, tools, model; body appended to system prompt)
+- `SYSTEM.md` / `APPEND_SYSTEM.md` -- system prompts for standalone agents and MAS orchestrators
 - `workspace.conf` -- workspace subdirectory list (triggers workspace mode in dispatch-agent)
 
-This is the mechanism dot-pi exploits for both team-style and standalone agent configurations.
+This is the mechanism dot-pi exploits for both MAS and standalone agent configurations.
 
 ## Directory Layout
 
@@ -33,15 +33,14 @@ dot-pi/
 │   ├── themes/               # Shared themes (JSON)
 │   ├── bin/                  # Downloaded binaries (fd, rg) -- gitignored contents
 │   └── models.json           # Custom model provider config
-├── agents/                   # Team-style and standalone agent directories
+├── agents/                   # MAS and standalone agent directories
 │   └── <name>/               # Each is a complete PI_CODING_AGENT_DIR root
 │       ├── extensions/       # Custom extension (+ shared symlinks)
-│       ├── agents/           # Optional subagent definitions (<name>-agentname.md)
+│       ├── agents/           # Optional subagent config directories
 │       ├── prompts/          # Prompt templates (slash-command workflows)
 │       ├── skills/           # ← individual symlinks to shared/skills/
 │       ├── themes/           # ← individual symlinks to shared/themes/
-│       ├── team-prompt.md    # Team-style orchestrator config, when present
-│       ├── SYSTEM.md         # Standalone system prompt, when present
+│       ├── SYSTEM.md         # Standalone prompt or MAS orchestrator prompt
 │       ├── banner.txt        # Startup branding (ASCII art + usage)
 │       ├── bin/              # ← symlink to shared/bin/
 │       ├── sessions/         # Runtime (gitignored)
@@ -61,7 +60,7 @@ graph TD
   PiMain["pi process starts"]
   ExtLoad["Loads extensions from<br/>agents/recon/extensions/"]
   AgentDiscover["Discovers agents from<br/>agents/recon/agents/"]
-  SubagentTool["subagent-teams extension<br/>registers 'subagent' tool"]
+  SubagentTool["agent-orchestrator extension<br/>registers subagent tool"]
   LLM["LLM decides to use<br/>subagent tool"]
   Spawn["Spawns child pi process<br/>with agent system prompt"]
   Result["Captures structured output<br/>streams back to parent"]
@@ -72,7 +71,7 @@ graph TD
   SubagentTool --> LLM --> Spawn --> Result
 ```
 
-### Workspace Agent Team Flow
+### Workspace MAS Flow
 
 ```mermaid
 graph TD
@@ -80,14 +79,13 @@ graph TD
   WAlias["dispatch-agent calls<br/>workspace launch logic"]
   WDir["Creates dated workspace<br/>workspaces/deepresearch/timestamp/"]
   WPi["pi starts"]
-  WFrontmatter["subagent-teams extension parses<br/>team-prompt.md frontmatter<br/>(sets tools, model, header)"]
-  WTeamPrompt["before_agent_start appends<br/>team-prompt.md body to system prompt"]
+  WSystem["pi loads<br/>SYSTEM.md orchestrator prompt"]
   WSubagent["Orchestrator delegates via<br/>subagent tool (scout, collector, writer, editor)"]
-  WChild["Child pi processes spawn<br/>with PI_IS_SUBAGENT=1"]
+  WChild["Child pi processes spawn<br/>with isolated config"]
   WReport["Final report.md in workspace"]
 
   WUser --> WAlias --> WDir --> WPi
-  WPi --> WFrontmatter --> WTeamPrompt --> WSubagent --> WChild --> WReport
+  WPi --> WSystem --> WSubagent --> WChild --> WReport
 ```
 
 ### Standalone Agent Flow
@@ -106,51 +104,32 @@ graph TD
 
 See [Standalone Agents](standalone-agents.md) for details.
 
-## Team-Style Configuration
+## MAS Configuration
 
-### `team-prompt.md` -- Orchestrator Config and System Prompt
+### `SYSTEM.md` -- Orchestrator Prompt
 
-The `subagent-teams` extension parses `team-prompt.md` YAML frontmatter at startup, then applies configuration on `session_start`. The markdown body is appended to the orchestrator's system prompt via a `before_agent_start` hook.
+In a MAS config, `SYSTEM.md` is the parent orchestrator's system prompt. It should describe when to delegate, which artifacts subagents should produce, and how the final answer should be synthesized.
 
 ```yaml
----
-name: Deep Research
-description: Search, collect, synthesize, report.
-tools: read, find, ls, grep
-model: plebchat/qwen/qwen3-coder-next
----
+# Deep Research Orchestrator
 
-# Deep Research Team
-
-You are the orchestrator for a deep research team...
+You are the orchestrator for a deep research workflow...
 ```
-
-| Field | Effect |
-|-------|--------|
-| `name` | Rendered as a bold accent header at startup |
-| `description` | Rendered below the name in dim text |
-| `tools` | Comma-separated tool whitelist for the orchestrator. The `subagent` tool is always included automatically. Omit to keep all default tools. |
-| `model` | `provider/modelId` format. Sets the orchestrator's model on session start. Omit to use the default. |
-
-All frontmatter configuration is gated on `PI_IS_SUBAGENT` -- subagent child processes do not receive team-level configuration. This works correctly for both interactive sessions and non-interactive runs.
 
 ## Extension Architecture
 
-The `subagent-teams` extension extends the upstream `subagent` example with team-based filtering:
+The `agent-orchestrator` extension extends the upstream `subagent` example with directory-based subagent discovery, usage contracts, session capture, and resource-pool scheduling:
 
 ### Agent Discovery
 
-Agents are markdown files with YAML frontmatter. They're discovered from `<agentDir>/agents/` at each invocation. Teams are derived from:
-
-1. **Filename convention**: `team-agentname.md` (first `-` separates team from name)
-2. **Frontmatter override**: a `team` field takes precedence over filename
+Subagents are pi config directories discovered from `<agentDir>/agents/` and project-local `.pi/agents/`. A subagent is available when its directory contains `SYSTEM.md` or `APPEND_SYSTEM.md`. Optional `USAGE.md` files document invocation contracts that are appended to the orchestrator prompt.
 
 ### Execution Modes
 
 | Mode | Input | Behavior |
 |------|-------|----------|
 | **Single** | `{ agent, task }` | One agent runs one task |
-| **Parallel** | `{ tasks: [...] }` | Up to 8 tasks, 4 concurrent |
+| **Parallel** | `{ tasks: [...] }` | Independent tasks scheduled through resource pools |
 | **Chain** | `{ chain: [...] }` | Sequential pipeline; `{previous}` passes output forward |
 
 ### Prompt Templates
@@ -162,12 +141,12 @@ Prompt templates (`.md` files in `prompts/`) define reusable workflows. They can
 Each agent directory is a complete pi config root. This provides:
 
 - **Extension isolation** -- each agent config loads only its own extensions
-- **Agent isolation** -- only a team-style agent's subagents are visible to the LLM
+- **Agent isolation** -- each MAS exposes only its linked subagents to the orchestrator
 - **Skill isolation** -- per-agent config via individual symlinks, per-subagent via frontmatter (`skills`, `no-skills`)
 - **Session isolation** -- separate conversation history per agent config
 - **Settings isolation** -- per-agent config model preferences and configuration
 
-Shared resources (extensions, themes, models, binaries) are symlinked from `shared/` when you scaffold an agent config. **Skills are opt-in:** link them with `dotpi link-skill` (or `ln -sf`) into `skills/`. Downloaded binaries (`fd`, `rg`) are written once to `shared/bin/` through directory symlinks and shared across all agent configs automatically. Subagents can further restrict which skills they load via frontmatter. Orchestrator tools can be restricted per team-style agent via the `tools` field in `team-prompt.md` frontmatter (e.g. restricting to `read,find,ls,grep` to force subagent delegation).
+Shared resources (extensions, themes, models, binaries) are symlinked from `shared/` when you scaffold an agent config. **Skills are opt-in:** link them with `dotpi link-skill` (or `ln -sf`) into `skills/`. Downloaded binaries (`fd`, `rg`) are written once to `shared/bin/` through directory symlinks and shared across all agent configs automatically. Subagents can further tune their own tools, skills, and model choices through their own config roots.
 
 For shared authentication across agent configs, symlink `auth.json`:
 

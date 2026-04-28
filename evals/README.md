@@ -1,6 +1,6 @@
 # Evals
 
-Serial evaluation runner for testing agent teams against scripted prompts.
+Serial evaluation runner for testing MAS configs against scripted prompts.
 
 ## Usage
 

@@ -9,7 +9,7 @@ dot-pi is a **dotfiles-style** repository for [pi](https://github.com/PlebeiusGa
 
 Two kinds of agent configurations live here:
 
-- **Team-style agents** (`agents/`): Multi-agent setups with the `subagent-teams` extension for orchestrated delegation (single, parallel, chain).
+- **Multi-agent systems (MAS)** (`agents/`): An orchestrator agent using the `agent-orchestrator` extension to delegate to subagent config directories.
 - **Standalone agents** (`agents/`): Single-agent setups with custom extensions and no subagent orchestration.
 
 Either kind can run **in-situ** (in the user's current directory) or as a **workspace** agent (in a fresh dated directory). A `workspace.conf` file marks which mode to use — see "Workspace Agents" under Key Concepts.
@@ -39,7 +39,7 @@ dot-pi/
 │   ├── settings.json.example # Template for shared/settings.json (auto-copied by install / dotpi sync)
 │   └── plebchat-models.json  # Reference catalogue of known plebchat models (manual lookup)
 │
-├── agents/                   # Team-style and standalone agent directories
+├── agents/                   # MAS and standalone agent directories
 ├── workspaces/               # Ephemeral workspace directories (gitignored contents)
 ├── docs/                     # MkDocs documentation source
 └── REFERENCES/               # Local-only sibling checkouts for agent context (gitignored).
@@ -61,18 +61,18 @@ These files are **never tracked**. They're created locally by the installer or `
 | `*/auth.json` | `dotpi link-auth` or set up by pi on first run | Per-agent credentials. |
 | `REFERENCES/*` | Optional manual `git clone`s; see REFERENCE-REPOS.md` | Sibling project source for agents to read. |
 
-### Team Directory Layout (`agents/<name>/`)
+### MAS Directory Layout (`agents/<name>/`)
 
 Each is a complete `PI_CODING_AGENT_DIR` root:
 
 ```
 agents/<name>/
 ├── extensions/               # Symlinked from shared/extensions/ (see Symlink Patterns)
-├── agents/                   # Subagent definitions (team-agentname.md)
+├── agents/                   # Subagent config directories or symlinks
 ├── prompts/                  # Prompt templates (slash-command workflows)
 ├── skills/                   # Per-skill symlinks (add with dotpi link-skill)
 ├── themes/                   # Per-theme symlinks from shared/themes/
-├── team-prompt.md            # Orchestrator config (frontmatter) + system prompt (body)
+├── SYSTEM.md                 # Orchestrator system prompt
 ├── pi-args                   # (optional) Default CLI flags for the orchestrator (read by dispatch-agent)
 ├── banner.txt                # Startup branding (ASCII art + usage text)
 ├── workspace.conf            # (optional) Marks as workspace agent; lists subdirs to pre-create
@@ -109,7 +109,7 @@ agents/<name>/
 └── auth.json                 # API auth (gitignored, may be symlinked)
 ```
 
-No `agents/` subdirectory, no `team-prompt.md`. The main pi process IS the agent. Custom behavior comes from the extension.
+No orchestrator subagent pool is required. The main pi process IS the agent. Custom behavior comes from the extension.
 
 **Prompt and tool customization** (combine as needed):
 
@@ -125,7 +125,7 @@ TypeScript modules in `<agentDir>/extensions/`. Auto-discovered by pi on startup
 
 **Shape**: Default-exported function `(pi: ExtensionAPI) => void`. Can be a single file (`extensions/foo.ts`) or a directory with an entry point (`extensions/foo/index.ts`).
 
-**Multi-file extensions**: An `index.ts` can import sibling `.ts` modules via `./name.js` specifiers (standard Node ESM convention). Example: `subagent-teams/index.ts` imports from `./agents.js`. **Caveat**: multi-file imports may fail in **symlinked** shared extensions (jiti's `moduleCache: false` + symlink resolution can cause "Reflect.get called on non-object"). Keep shared extensions (`shared/extensions/`) as single `index.ts` files. Multi-file splits are safe in per-agent custom extensions (`agents/<name>/extensions/<name>/`) which are real directories, not symlinks.
+**Multi-file extensions**: An `index.ts` can import sibling `.ts` modules via `./name.js` specifiers (standard Node ESM convention). Multi-file splits are safe in real extension directories and in shared extensions that are copied or resolved normally; be careful when changing symlinked extension layouts.
 
 **Imports**:
 ```typescript
@@ -180,35 +180,16 @@ pi.registerTool({
 - `withFileMutationQueue(path, fn)` — serialize file writes
 - `parseFrontmatter<T>(content)` — returns `{ frontmatter: T, body: string }`
 
-### Agent Definitions (Subagent `.md` Files)
+### Subagent Config Directories
 
-Markdown files in `<teamDir>/agents/` with YAML frontmatter. Used by the `subagent-teams` extension.
+Subagents are pi config directories under `<agentDir>/agents/` or project-local `.pi/agents/`. The `agent-orchestrator` extension discovers directories containing `SYSTEM.md` or `APPEND_SYSTEM.md`.
 
-```markdown
----
-name: scout
-description: Fast codebase recon
-tools: read, grep, find, ls, bash
-skills: skills/searxng
-no-skills: true
-model: haiku
-team: recon
----
+Recommended subagent files:
 
-System prompt body (becomes --append-system-prompt for the child pi process).
-```
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `description` | **Yes** | If missing, the file is **skipped** entirely |
-| `name` | No | Defaults from filename (part after first `-`) |
-| `team` | No | Defaults from filename (part before first `-`); overrides filename |
-| `tools` | No | Comma-separated tool whitelist; omit for all defaults |
-| `skills` | No | Comma-separated skill paths (relative to team dir or absolute) |
-| `no-skills` | No | `true` disables auto-discovery; combine with `skills` for explicit-only |
-| `model` | No | Model override for this subagent |
-
-**Naming convention**: `team-agentname.md` — first `-` separates team from agent name. Files without `-` have no team and are visible to all team filters.
+- `SYSTEM.md` or `APPEND_SYSTEM.md` -- the subagent prompt.
+- `README.md` -- short description used in orchestrator listings.
+- `USAGE.md` -- invocation contract appended to the orchestrator prompt.
+- `resource-pool.conf` -- shared resource pool name (`local`, `api`, etc.).
 
 ### Skills
 
@@ -236,7 +217,7 @@ Skills live in `shared/skills/` and are symlinked per-skill into each agent conf
 
 ### Workspace Agents
 
-Any team or standalone agent can run as a **workspace agent** by adding a `workspace.conf` file to its directory. When present, running the command (e.g. `deepresearch`) launches pi in a fresh dated directory (`workspaces/<name>/<timestamp>/`) inside a subshell, so the user's shell stays in its original directory after pi exits.
+Any MAS or standalone agent can run as a **workspace agent** by adding a `workspace.conf` file to its directory. When present, running the command (e.g. `deepresearch`) launches pi in a fresh dated directory (`workspaces/<name>/<timestamp>/`) inside a subshell, so the user's shell stays in its original directory after pi exits.
 
 **`workspace.conf` format**: one subdirectory name per line. Lines starting with `#` are comments. Each listed directory is pre-created in the workspace before pi starts. A missing final newline is tolerated.
 
@@ -251,7 +232,7 @@ sessions
 
 **To scaffold a new workspace agent config**: use the `--workspace` flag with `dotpi`:
 ```bash
-dotpi create --workspace my-research-team
+dotpi create --workspace my-research-mas
 dotpi create-agent --workspace my-scraper
 ```
 
@@ -265,17 +246,13 @@ deepresearch --resume 2026-04-10            # resume workspace matching prefix
 
 **Rebuilding symlinks**: Run `dotpi sync` to rebuild the `bin/` symlinks after adding or removing agent configs.
 
-**Unified session logging**: When a workspace has a `sessions/` directory, both the orchestrator and all subagent sessions are stored there. The workspace launcher passes `--session-dir` to pi, and the `subagent-teams` extension detects the same directory for subagent sessions. This puts the complete run trajectory in one place for retrospective analysis. Legacy `subagent-sessions/` directories are also supported as a fallback.
+**Unified session logging**: When a workspace has a `sessions/` directory, both the orchestrator and all subagent sessions are stored there. The workspace launcher passes `--session-dir` to pi, and `agent-orchestrator` uses the same directory for subagent sessions. This puts the complete run trajectory in one place for retrospective analysis.
 
 Workspace contents are gitignored (`workspaces/*/`).
 
 ### Prompt Templates
 
-Markdown files in `<teamDir>/prompts/` defining reusable workflows. Invoked via `/template-name` in pi chat. Typically chain subagents with `{previous}` placeholders and reference `$@` for user input.
-
-### team-prompt.md
-
-Per-team orchestrator instructions, read by `subagent-teams` on startup and appended to the main agent's system prompt. Describes the team's agents, workflows, and how to use the `subagent` tool.
+Markdown files in `<agentDir>/prompts/` defining reusable workflows. Invoked via `/template-name` in pi chat. Typically chain subagents with `{previous}` placeholders and reference `$@` for user input.
 
 ## Symlink Patterns
 
@@ -283,7 +260,7 @@ Per-team orchestrator instructions, read by `subagent-teams` on startup and appe
 
 **How it works:**
 
-- **Extensions**: `dotpi create` symlinks a standard set of shared extensions into `<agentDir>/extensions/`. Team-style agents get the `subagent-teams` directory extension plus individual file extensions; `dotpi create-agent` symlinks `run-finish-notify.ts`, `startup-branding.ts`, and `say.ts` plus your stub under `extensions/<name>/`. Additional extensions from `shared/extensions/` can be manually symlinked as needed (including `agent-prompt.ts` if you use `AGENT.md`).
+- **Extensions**: `dotpi create` symlinks `agent-orchestrator` plus standard shared extensions into `<agentDir>/extensions/`. `dotpi create-agent` symlinks `run-finish-notify.ts`, `startup-branding.ts`, and `say.ts` plus your stub under `extensions/<name>/`. Additional extensions from `shared/extensions/` can be manually symlinked as needed.
 - **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
 - **Themes**: Each theme JSON in `shared/themes/` is symlinked individually into `<dir>/themes/`.
 - **bin**: A single directory symlink (`bin → ../../shared/bin`) so pi downloads `fd`/`rg` once and all agent configs share them.
@@ -296,21 +273,21 @@ All symlinks use relative paths (e.g. `../../../shared/extensions/...` for exten
 
 ## Common Tasks
 
-### Add a subagent to an existing team
+### Add a subagent to an existing MAS
 
-1. Create `agents/<team>/agents/<team>-<name>.md` with YAML frontmatter (at minimum: `description`)
-2. Write the system prompt in the markdown body
-3. Update `agents/<team>/team-prompt.md` to mention the new agent
-4. Optionally add/update prompt templates in `agents/<team>/prompts/`
+1. Create or link `agents/<mas>/agents/<name>/`
+2. Add `SYSTEM.md` or `APPEND_SYSTEM.md`
+3. Add `README.md`, `USAGE.md`, and optionally `resource-pool.conf`
+4. Update `agents/<mas>/SYSTEM.md` if the orchestrator needs workflow-specific instructions
 
-### Create a new team
+### Create a new MAS
 
 ```bash
-dotpi create <team-name>
-dotpi create --workspace <team-name>   # workspace mode
+dotpi create <mas-name>
+dotpi create --workspace <mas-name>   # workspace mode
 ```
 
-Then: add agent `.md` files to `agents/`, write `team-prompt.md`, add prompt templates.
+Then: add subagent directories under `agents/`, write the orchestrator `SYSTEM.md`, add prompt templates.
 
 ### Create a standalone agent
 
@@ -333,7 +310,7 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 1. Create a directory: `<agentDir>/extensions/<ext-name>/index.ts`
 2. Default-export a function: `(pi: ExtensionAPI) => void`
 3. Use `pi.on(...)` for lifecycle hooks and `pi.registerTool(...)` for tools
-4. See `shared/extensions/subagent-teams/index.ts` (1025 lines, full tool + TUI) and `agents/twenty-questions/extensions/twenty-questions/index.ts` (minimal hook + TUI overlay) as examples
+4. See `shared/extensions/agent-orchestrator/index.ts` (full subagent tool + TUI) and `agents/twenty-questions/extensions/twenty-questions/index.ts` (minimal hook + TUI overlay) as examples
 
 ## Files You Should and Shouldn't Edit
 
@@ -342,16 +319,15 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `shared/extensions/**/*.ts` | Yes | Shared extension source code |
 | `shared/skills/*/SKILL.md` | Yes | Shared skill definitions |
 | `shared/themes/*.json` | Yes | Shared themes |
-| `agents/*/agents/*.md` | Yes | Subagent definitions |
+| `agents/*/agents/*/SYSTEM.md` | Yes | Subagent system prompts |
+| `agents/*/agents/*/USAGE.md` | Yes | Subagent invocation contracts |
 | `agents/*/prompts/*.md` | Yes | Prompt templates |
-| `agents/*/team-prompt.md` | Yes | Team orchestrator instructions |
 | `*/banner.txt` | Yes | Startup branding (ASCII art + usage text) |
 | `*/workspace.conf` | Yes | Workspace subdirectory list (presence marks workspace mode) |
 | `agents/*/AGENT.md` | Yes | Agent prompt config (frontmatter: tools, model; body: system prompt append) |
 | `agents/*/SYSTEM.md` | Yes | Replaces pi's default system prompt (pi-native) |
 | `agents/*/APPEND_SYSTEM.md` | Yes | Appends to pi's default system prompt (pi-native) |
 | `agents/*/pi-args` | Yes | Default CLI flags (read by `dispatch-agent`) |
-| `agents/*/pi-args` | Yes | Optional default CLI flags for the team orchestrator (read by `dispatch-agent`) |
 | `agents/*/extensions/**/*.ts` | Yes | Custom agent extensions |
 | `dotpi` | Yes | CLI dispatcher (setup, create, list, link-skill, link-auth) |
 | `commands/*.sh` | Yes | Subcommand scripts (sourced by dotpi) |

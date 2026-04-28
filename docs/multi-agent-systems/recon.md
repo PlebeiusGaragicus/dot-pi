@@ -1,8 +1,8 @@
-# Recon Team
+# Recon MAS
 
 Fast codebase reconnaissance and implementation planning.
 
-## Agents
+## Subagents
 
 ### scout
 

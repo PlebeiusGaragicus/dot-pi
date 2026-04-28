@@ -2,7 +2,7 @@
 
 ### pdf digester
 
-OCR.  likely a team.  breaks down PDFs by page, OCR's each, stores markdown / HTML result
+OCR. Likely a MAS. Breaks down PDFs by page, OCRs each, stores markdown / HTML result
 
 resume a session to avoid re-computing PDF
 
@@ -22,7 +22,7 @@ it has a webui!  I must reverse engineer and learn to use this
 
 ### the big idea
 
-an agent, or team, "agent program", "workflow", "agent workflow" can be used on the CLi like any unix utility.
+an agent, or MAS, "agent program", "workflow", "agent workflow" can be used on the CLI like any unix utility.
 
 it will make writing shell programs easier.
 

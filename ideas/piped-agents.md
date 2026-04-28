@@ -1,6 +1,6 @@
 I want to consider @unix-abstraction.md philosophy and using agents like unix utilities / "filters"
 
-For example: let's say we transform our deepresearch agent team into a series of individual unix-like primitives. So, instead of calling an agent team I string together a series of individual agents with `|` wherein I may call:
+For example: let's say we transform our deepresearch MAS into a series of individual unix-like primitives. So, instead of calling a MAS I string together a series of individual agents with `|` wherein I may call:
 
 ```sh
 # Sketch (see “what data moves across the pipe?” for a runnable layout with PIPE_RUN_DIR)
@@ -105,15 +105,15 @@ If `final-report` must read the draft from stdin, pass the template via `-p` or 
 
 ---
 
-## stages vs. one team
+## stages vs. one MAS
 
-| Piped agent stages | Single team + subagent chain |
+| Piped agent stages | Single MAS + subagent chain |
 |------------------|------------------------------|
 | Each stage is a separate pi process—slower, more tokens if context is re-explained | One orchestrator, shared session, `{previous}` as the pipe |
 | Stages are reusable CLIs: swap `summarize` (or another summarizer agent) and test in isolation | Tighter coupling; best when steps are not useful alone |
-| Contract is **explicit** (stdout + files); easier to script in bash, `make`, CI | Contract is implicit in team prompts and tool use |
+| Contract is **explicit** (stdout + files); easier to script in bash, `make`, CI | Contract is implicit in orchestrator prompts and tool use |
 
-Use **pipes** when each primitive should stand alone like `grep`/`sort`. Use a **team** when you want one brain scheduling work and recovering from failures across steps.
+Use **pipes** when each primitive should stand alone like `grep`/`sort`. Use a **MAS** when you want one orchestrator scheduling work and recovering from failures across steps.
 
 ---
 

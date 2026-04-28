@@ -1,8 +1,8 @@
-# Impl Team
+# Impl MAS
 
 Code implementation and review.
 
-## Agents
+## Subagents
 
 ### worker
 

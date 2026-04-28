@@ -1,7 +1,7 @@
 #!/bin/bash
-# Serial evaluation runner for workspace agent teams.
+# Serial evaluation runner for workspace multi-agent systems.
 # Reads one prompt per line from a prompts file, runs each through
-# p <team> -p "..." (non-interactive mode), and logs results to a
+# <mas> -p "..." (non-interactive mode), and logs results to a
 # JSONL manifest for later trajectory analysis.
 #
 # Usage:
@@ -29,8 +29,8 @@ if [ "${1:-}" = "--with-retro" ]; then
   shift
 fi
 
-TEAM="${1:?Usage: $0 [--with-retro] <team> <prompts-file>}"
-PROMPTS_FILE="${2:?Usage: $0 [--with-retro] <team> <prompts-file>}"
+MAS="${1:?Usage: $0 [--with-retro] <mas> <prompts-file>}"
+PROMPTS_FILE="${2:?Usage: $0 [--with-retro] <mas> <prompts-file>}"
 
 if [ ! -f "$PROMPTS_FILE" ]; then
   echo "Error: prompts file not found: $PROMPTS_FILE" >&2
@@ -44,12 +44,12 @@ fi
 
 EVAL_NAME="$(basename "$PROMPTS_FILE" .txt)"
 EVAL_ID="$(date +%Y-%m-%d-%H%M%S)"
-RESULTS_DIR="$SCRIPT_DIR/results/$TEAM/$EVAL_NAME/$EVAL_ID"
-WS_ROOT="$DOT_PI_DIR/workspaces/$TEAM"
+RESULTS_DIR="$SCRIPT_DIR/results/$MAS/$EVAL_NAME/$EVAL_ID"
+WS_ROOT="$DOT_PI_DIR/workspaces/$MAS"
 mkdir -p "$RESULTS_DIR"
 
 echo "=== Eval Run: $EVAL_ID ==="
-echo "Team:    $TEAM"
+echo "MAS:     $MAS"
 echo "Eval:    $EVAL_NAME"
 echo "Prompts: $PROMPTS_FILE"
 echo "Results: $RESULTS_DIR"
@@ -71,7 +71,7 @@ while IFS= read -r prompt || [ -n "$prompt" ]; do
 
   start=$(date +%s)
   exit_code=0
-  "$TEAM" -p "$prompt" < /dev/null \
+  "$MAS" -p "$prompt" < /dev/null \
     > "$RESULTS_DIR/prompt-${prompt_num}-output.txt" 2>&1 \
     || exit_code=$?
   duration=$(( $(date +%s) - start ))

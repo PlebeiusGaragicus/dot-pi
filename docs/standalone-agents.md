@@ -1,6 +1,6 @@
 # Standalone Agents
 
-Standalone agents are single-purpose pi configurations with custom extensions. Unlike team-style agents, they don't use subagent orchestration — the main pi process IS the agent, and behavior is customized entirely through extensions.
+Standalone agents are single-purpose pi configurations with custom extensions. Unlike MAS configs, they don't use subagent orchestration — the main pi process IS the agent, and behavior is customized through prompts, CLI args, and extensions.
 
 ## When to Use
 
@@ -10,7 +10,7 @@ Use a standalone agent when you want:
 - A focused, single-purpose agent (game, utility, specialized workflow)
 - A playground for experimenting with the [extension API](reference/extensions.md)
 
-Use a [team](architecture.md) when you want multiple specialized subagents that collaborate.
+Use a [multi-agent system](architecture.md) when you want an orchestrator to coordinate multiple specialized subagents.
 
 ## Directory Layout
 
@@ -35,14 +35,14 @@ agents/<name>/
 └── settings.json             # Pi settings: theme, quietStartup (gitignored)
 ```
 
-The directory is a complete `PI_CODING_AGENT_DIR` root, just like a team directory. The key differences:
+The directory is a complete `PI_CODING_AGENT_DIR` root, just like a MAS directory. The key differences:
 
-| | Team | Standalone Agent |
+| | MAS | Standalone Agent |
 |--|------|-----------------|
-| `subagent-teams` extension | Symlinked | Not present |
-| `agents/` subdirectory | Subagent definitions | Not present |
+| `agent-orchestrator` extension | Symlinked | Not present |
+| `agents/` subdirectory | Subagent config directories | Not present |
 | `prompts/` subdirectory | Workflow templates | Not present |
-| `team-prompt.md` | Orchestrator instructions | `SYSTEM.md` / `APPEND_SYSTEM.md`, optional `AGENT.md` + `agent-prompt.ts` |
+| `SYSTEM.md` | Orchestrator instructions | Standalone system prompt |
 | Custom extension | Optional | Core of the agent |
 
 ## Creating a Standalone Agent
@@ -81,7 +81,7 @@ Use `--no-context-files` for non-coding agents and workspace agents that should 
 
 **Optional: `AGENT.md` (via manually linked `agent-prompt` extension)**
 
-YAML frontmatter + markdown body, similar to `team-prompt.md` for team-style agents. **`dotpi create-agent` does not symlink `agent-prompt`.** To use it:
+YAML frontmatter + markdown body for extra prompt and model/tool configuration. **`dotpi create-agent` does not symlink `agent-prompt`.** To use it:
 
 ```bash
 ln -sf ../../../shared/extensions/agent-prompt agents/<name>/extensions/agent-prompt
@@ -178,7 +178,7 @@ const myFile = path.join(agentDir, "my-config.json");
 
 ### Sharing Auth
 
-To reuse authentication from a team:
+To reuse authentication from another agent or MAS:
 
 ```bash
 dotpi link-auth recon my-agent

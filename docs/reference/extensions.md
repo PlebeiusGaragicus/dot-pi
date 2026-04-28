@@ -238,7 +238,7 @@ Use `theme.fg(colorName, text)` with these color names:
 | `"dim"` | Very subtle text (previews, counts) |
 | `"error"` | Error indicators |
 | `"success"` | Success indicators |
-| `"warning"` | Warnings, team labels |
+| `"warning"` | Warnings and labels |
 | `"toolTitle"` | Tool name in headers |
 | `"toolOutput"` | Tool output content |
 
@@ -295,11 +295,11 @@ Key patterns:
 - Falls back to terminal escape codes (OSC 777 for most terminals, OSC 99 for Kitty)
 - Checks `process.stdout.isTTY` to skip when not in a terminal
 
-### Example: Subagent Teams
+### Example: Agent Orchestrator
 
-The most complex extension in the repo — registers a `subagent` tool with three execution modes, TUI rendering, and team-based agent discovery.
+The most complex extension in the repo — registers a `subagent` tool with three execution modes, TUI rendering, directory-based subagent discovery, and resource-pool scheduling.
 
-Source: `shared/extensions/subagent-teams/index.ts` (+ `agents.ts`)
+Source: `shared/extensions/agent-orchestrator/index.ts` (+ `agents.ts`)
 
 Key patterns:
 
@@ -308,4 +308,4 @@ Key patterns:
 - Spawns child pi processes via `node:child_process` with `PI_IS_SUBAGENT=1` in their env
 - Streams partial results via `onUpdate` callback
 - Complex `renderCall` and `renderResult` with collapsed/expanded views
-- Reads `team-prompt.md` via `before_agent_start` hook for orchestrator prompt injection (gated on `!process.env.PI_IS_SUBAGENT` so subagents don't receive it)
+- Discovers subagent config directories and appends their `USAGE.md` contracts to the orchestrator prompt

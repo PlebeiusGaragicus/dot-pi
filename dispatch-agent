@@ -163,25 +163,25 @@ _workspace_launch() {
 # ── run-retro (special case) ──────────────────────────────────────────────────
 
 _run_retro() {
-  local ws_path="" hint="" team=""
+  local ws_path="" hint="" mas=""
 
   if [ "${1:-}" = "--workspace-path" ]; then
     [ -z "${2:-}" ] && { echo "Error: --workspace-path requires a path" >&2; return 1; }
     ws_path="$2"
     shift 2
-    team=$(basename "$(dirname "$ws_path")")
+    mas=$(basename "$(dirname "$ws_path")")
     if [ "${1:-}" = "--" ]; then shift; hint="$*"; fi
   else
-    team="${1:?Usage: run-retro <team> [--list|--pick] [date-prefix] [-- hint]}"
+    mas="${1:?Usage: run-retro <mas> [--list|--pick] [date-prefix] [-- hint]}"
     shift
-    local ws_root="$DOT_PI_DIR/workspaces/$team"
+    local ws_root="$DOT_PI_DIR/workspaces/$mas"
 
     if [ "${1:-}" = "--list" ]; then
       if [ ! -d "$ws_root" ] || [ -z "$(ls -A "$ws_root" 2>/dev/null)" ]; then
-        echo "No workspaces for $team"
+        echo "No workspaces for $mas"
         return 0
       fi
-      echo "Workspaces for $team:"
+      echo "Workspaces for $mas:"
       for d in "$ws_root"/*/; do
         [ -d "$d" ] || continue
         local ts files has_retro=""
@@ -208,10 +208,10 @@ _run_retro() {
         pick_labels+=("$_ts  ($_files files)$_hr")
       done < <(ls -dt "$ws_root"/*/ 2>/dev/null)
       if [ ${#pick_paths[@]} -eq 0 ]; then
-        echo "No workspaces for $team" >&2
+        echo "No workspaces for $mas" >&2
         return 1
       fi
-      echo "Select a workspace for $team:"
+      echo "Select a workspace for $mas:"
       local PS3="Number: " _choice
       select _choice in "${pick_labels[@]}" "Cancel"; do
         if [ "$_choice" = "Cancel" ]; then echo "Cancelled." >&2; return 1; fi
@@ -229,7 +229,7 @@ _run_retro() {
       shift
     else
       ws_path=$(ls -dt "$ws_root"/*/ 2>/dev/null | head -1)
-      [ -z "$ws_path" ] && { echo "No workspaces for $team" >&2; return 1; }
+      [ -z "$ws_path" ] && { echo "No workspaces for $mas" >&2; return 1; }
     fi
 
     if [ "${1:-}" = "--" ]; then shift; hint="$*"; fi
@@ -237,12 +237,12 @@ _run_retro() {
 
   [ ! -d "$ws_path" ] && { echo "Error: workspace not found: $ws_path" >&2; return 1; }
 
-  local team_prompt="$DOT_PI_DIR/agents/$team/team-prompt.md"
-  if [ -f "$team_prompt" ] && [ ! -e "$ws_path/.source-team-prompt.md" ]; then
-    ln -s "$team_prompt" "$ws_path/.source-team-prompt.md"
+  local source_system="$DOT_PI_DIR/agents/$mas/SYSTEM.md"
+  if [ -f "$source_system" ] && [ ! -e "$ws_path/.source-orchestrator-system.md" ]; then
+    ln -s "$source_system" "$ws_path/.source-orchestrator-system.md"
   fi
 
-  local prompt="Analyze this $team workspace."
+  local prompt="Analyze this $mas MAS workspace."
   [ -n "$hint" ] && prompt="$prompt Focus: $hint"
 
   local retro_dir="$DOT_PI_DIR/agents/retro"
@@ -265,7 +265,7 @@ _list_available() {
       local name mode kind
       name=$(basename "$d")
       mode=$([ -f "$d/workspace.conf" ] && echo workspace || echo in-situ)
-      kind=$([ -e "$d/extensions/subagent-teams/index.ts" ] || [ -f "$d/team-prompt.md" ] && echo team || echo agent)
+      kind=$([ -e "$d/extensions/agent-orchestrator/index.ts" ] && echo mas || echo agent)
       printf '%s\t%s\t%s\n' "$name" "$kind" "$mode"
     done
   } | sort -t $'\t' -k1,1 | while IFS=$'\t' read -r name kind mode; do

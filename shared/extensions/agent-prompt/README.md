@@ -1,6 +1,6 @@
 # Agent Prompt Extension
 
-Standalone-agent equivalent of `team-prompt.md`. Reads `AGENT.md` from the agent directory at startup and uses it to configure tools, model, and the system prompt.
+Optional standalone-agent prompt frontmatter. Reads `AGENT.md` from the agent directory at startup and uses it to configure tools, model, and the system prompt.
 
 ## Files
 

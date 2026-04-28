@@ -44,14 +44,15 @@ nav:
   - Usage Guide: usage.md
   - Architecture: architecture.md
   - Standalone Agents: standalone-agents.md
-  - Teams:
-    - Recon: teams/recon.md
-    - Impl: teams/impl.md
-    - Blog: teams/blog.md
-    - Deep Research: teams/deepresearch.md
-    - Retro: teams/retro.md
+  - Multi-Agent Systems:
+    - Recon: multi-agent-systems/recon.md
+    - Impl: multi-agent-systems/impl.md
+    - Blog: multi-agent-systems/blog.md
+    - Deep Research: multi-agent-systems/deepresearch.md
+    - Retro: multi-agent-systems/retro.md
   - Reference:
     - Writing Extensions: reference/extensions.md
-    - Subagent Extension: reference/subagent-teams.md
+    - Agent Orchestrator: reference/agent-orchestrator.md
     - Subagent Concurrency: reference/subagent-concurrency.md
+    - Multi-Agent Systems: reference/multi-agent-systems.md
     - Continuous Integration: ci.md

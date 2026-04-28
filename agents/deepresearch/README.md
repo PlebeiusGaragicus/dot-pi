@@ -1,6 +1,6 @@
 # deepresearch
 
-Deep research team — search, collect, synthesize, report. Each run gets its own workspace directory.
+Deep research MAS — search, collect, synthesize, report. Each run gets its own workspace directory.
 
 ## Usage
 

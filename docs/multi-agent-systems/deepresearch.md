@@ -1,4 +1,4 @@
-# Deep Research Team
+# Deep Research MAS
 
 Comprehensive web research with source collection, synthesis, and editorial review. Operates in workspace mode -- each run gets its own dated directory with structured output.
 
@@ -8,7 +8,7 @@ The orchestrator has restricted tools (`read,find,ls,grep,subagent` via `pi-args
 
 Deepresearch owns its top-level prompt in `SYSTEM.md`. Subagents are imported through symlinks in `agents/deepresearch/agents/`, and `agent-orchestrator` collages each linked subagent's `USAGE.md` into the parent prompt.
 
-## Agents
+## Subagents
 
 ### scout
 
@@ -77,12 +77,10 @@ Runtime configuration is file-based:
 - `agents/` -- symlink imports of reusable subagents
 - `workspace.conf` -- workspace directories
 
-The body of `team-prompt.md` provides the orchestrator's system prompt with team context and workflow instructions.
-
 | File | Purpose |
 |------|---------|
 | `workspace.conf` | Lists subdirectories to pre-create (`sources`, `screenshots`, `drafts`, `sessions`) |
-| `team-prompt.md` | Orchestrator config (frontmatter) and system prompt (body) |
+| `SYSTEM.md` | Orchestrator system prompt |
 
 ## Usage
 

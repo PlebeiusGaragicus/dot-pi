@@ -41,7 +41,7 @@ Then reload your shell:
 source ~/.zshrc  # or source ~/.bashrc
 ```
 
-This puts all team and standalone agent commands on your PATH (e.g. `recon`, `blog`, `lm`).
+This puts all MAS and standalone agent commands on your PATH (e.g. `deepresearch`, `ask`, `web`).
 
 `DOT_PI_DIR` is auto-detected from `env.sh`'s location, so the repo can live anywhere.
 
@@ -114,9 +114,9 @@ Check that your agent configs are set up and extensions are linked:
 dotpi list
 ```
 
-You should see each team-style agent with its subagent/prompt counts and extension link status, followed by any standalone agents.
+You should see each MAS with its subagent/prompt counts and orchestrator extension status, followed by any standalone agents.
 
-Test a team:
+Test a MAS:
 
 ```bash
 cd /any/project
@@ -149,15 +149,16 @@ The uninstaller removes `~/.dot-pi` and attempts to clean dot-pi lines from your
 
 Interactive wizard that configures model providers, fetches available models, and assigns model roles. Supports multiple providers (Ollama, LM Studio, custom endpoints). Re-run anytime to add, edit, or remove providers.
 
-### `dotpi create <team-name>`
+### `dotpi create <mas-name>`
 
-Creates a new team-style agent directory at `agents/<team-name>/` with shared extension symlinks, theme symlinks, and a starter `team-prompt.md`. Use `--workspace` for workspace mode.
+Creates a new MAS directory at `agents/<mas-name>/` with shared extension symlinks, theme symlinks, the `agent-orchestrator` extension, and a starter `SYSTEM.md`. Use `--workspace` for workspace mode.
 
-After creating a team, you need to:
+After creating a MAS, you need to:
 
-1. **Add agents** -- create `.md` files in `agents/<team-name>/agents/` with YAML frontmatter (`name`, `description`, optionally `tools`, `skills`, `no-skills`, `model`, `team`) and a system prompt body.
-2. **Add prompts** (optional) -- create `.md` files in `agents/<team-name>/prompts/` that define chain/parallel workflows.
-3. **Rebuild symlinks** -- run `dotpi sync` to rebuild bin/ symlinks so the new team is available as a command.
+1. **Add subagents** -- add or link subagent config directories under `agents/<mas-name>/agents/`. Each subagent should have `SYSTEM.md` or `APPEND_SYSTEM.md`, and can include `USAGE.md` plus `resource-pool.conf`.
+2. **Edit the orchestrator** -- update `agents/<mas-name>/SYSTEM.md` with the workflow and delegation policy.
+3. **Add prompts** (optional) -- create `.md` files in `agents/<mas-name>/prompts/` for reusable workflows.
+4. **Rebuild symlinks** -- run `dotpi sync` so the new MAS is available as a command.
 
 ### `dotpi create-agent <agent-name>`
 
@@ -165,7 +166,7 @@ Creates a standalone agent directory at `agents/<agent-name>/` with a stub exten
 
 ### `dotpi list`
 
-Shows all team-style and standalone agents with their counts and status.
+Shows all MAS and standalone agents with their counts and status.
 
 ### `dotpi link-skill <agent> <skill> [<skill> ...]`
 

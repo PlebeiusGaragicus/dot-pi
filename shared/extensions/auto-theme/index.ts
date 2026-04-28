@@ -5,7 +5,7 @@
  * the agent directory's themes/ folder. The first match that isn't
  * already active gets applied.
  *
- * This lets dot-pi teams and agents ship a default theme via symlinks
+ * This lets dot-pi MAS configs and agents ship a default theme via symlinks
  * into themes/ without relying on gitignored settings.json.
  */
 

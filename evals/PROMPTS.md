@@ -20,7 +20,7 @@ use in the `pi-mono` repo
 When the user invokes a skill with /skill-name - does it have input arguments like prompts do?
 ```
 
-## `deep research` team
+## `deep research` MAS
 
 ### Tavily API
 

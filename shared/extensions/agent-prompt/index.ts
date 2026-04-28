@@ -1,5 +1,5 @@
 /**
- * Agent Prompt — standalone agent equivalent of team-prompt.md.
+ * Agent Prompt — optional standalone-agent prompt frontmatter.
  *
  * Reads AGENT.md from PI_CODING_AGENT_DIR at startup.
  * YAML frontmatter: tools (comma list), model (provider/id).

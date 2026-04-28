@@ -1,8 +1,8 @@
-# Blog Team
+# Blog MAS
 
 Blog post research, writing, and editing.
 
-## Agents
+## Subagents
 
 ### researcher
 
@@ -42,7 +42,7 @@ Full blog workflow:
 3. **editor** reviews and polishes the draft
 
 ```
-/research-write-edit how we built our agent team system with pi
+/research-write-edit how we built our MAS system with pi
 ```
 
 ### `/write-and-edit`
