@@ -6,7 +6,7 @@ This matters for self-hosted inference. Two different local subagents can still 
 
 ## Logical Parallelism vs Physical Concurrency
 
-When an orchestrator submits a `tasks` batch, it is saying the tasks are independent and may be scheduled in parallel:
+When an orchestrator submits a `tasks` batch, or emits multiple independent `subagent` tool calls, it is saying the tasks are independent and may be scheduled in parallel:
 
 ```json
 {
@@ -17,7 +17,7 @@ When an orchestrator submits a `tasks` batch, it is saying the tasks are indepen
 }
 ```
 
-`agent-orchestrator` decides how many actually run at once. With a `local=1` pool limit, these tasks queue and run one at a time even though the workflow remains logically parallel.
+`agent-orchestrator` decides how many actually run at once. With a `local=1` pool limit, these tasks queue and run one at a time inside the orchestrator process even though the workflow remains logically parallel.
 
 ## Subagent Resource Pools
 
@@ -62,6 +62,8 @@ Rules:
 - Missing pool limit uses `default`.
 - Invalid limits are ignored.
 - Limits less than `1` are ignored.
+
+Pool limits are enforced in-process by the active `agent-orchestrator` extension. This means all subagent launches from one running orchestrator share the same pool queue, regardless of whether they came from a single call, a `tasks` batch, a chain step, or multiple separate tool calls in the same assistant turn.
 
 ## Why Prompts Do Not Choose Concurrency
 

@@ -35,6 +35,39 @@ function formatTokens(count: number): string {
 	return `${(count / 1000000).toFixed(1)}M`;
 }
 
+let contextWindowByModel: Map<string, number> | null = null;
+
+function getContextWindowByModel(): Map<string, number> {
+	if (contextWindowByModel) return contextWindowByModel;
+
+	const models = new Map<string, number>();
+	const modelsPath = path.join(getAgentDir(), "models.json");
+
+	try {
+		const config = JSON.parse(fs.readFileSync(modelsPath, "utf-8")) as {
+			providers?: Record<string, { models?: Array<{ id?: string; contextWindow?: number }> }>;
+		};
+
+		for (const provider of Object.values(config.providers ?? {})) {
+			for (const model of provider.models ?? []) {
+				if (model.id && typeof model.contextWindow === "number" && model.contextWindow > 0) {
+					models.set(model.id, model.contextWindow);
+				}
+			}
+		}
+	} catch {
+		/* Keep rendering resilient if models.json is missing or malformed. */
+	}
+
+	contextWindowByModel = models;
+	return contextWindowByModel;
+}
+
+function getContextWindow(model?: string): number | undefined {
+	if (!model) return undefined;
+	return getContextWindowByModel().get(model);
+}
+
 function formatUsageStats(
 	usage: {
 		input: number;
@@ -55,7 +88,13 @@ function formatUsageStats(
 	if (usage.cacheWrite) parts.push(`W${formatTokens(usage.cacheWrite)}`);
 	if (usage.cost) parts.push(`$${usage.cost.toFixed(4)}`);
 	if (usage.contextTokens && usage.contextTokens > 0) {
-		parts.push(`ctx:${formatTokens(usage.contextTokens)}`);
+		const contextWindow = getContextWindow(model);
+		if (contextWindow) {
+			const pct = (usage.contextTokens / contextWindow) * 100;
+			parts.push(`ctx:${formatTokens(usage.contextTokens)}/${formatTokens(contextWindow)} ${pct.toFixed(1)}%`);
+		} else {
+			parts.push(`ctx:${formatTokens(usage.contextTokens)}`);
+		}
 	}
 	if (model) parts.push(model);
 	return parts.join(" ");
@@ -273,72 +312,49 @@ function getPoolLimit(pool: string, limits: Record<string, number>): number {
 	return Math.max(1, limits[pool] ?? limits.default ?? 1);
 }
 
-type ParallelTaskItem = { agent: string; task: string; cwd?: string };
+interface ResourcePoolState {
+	active: number;
+	queue: Array<() => void>;
+}
 
-async function mapWithResourcePoolLimits<TOut>(
-	tasks: ParallelTaskItem[],
-	agents: AgentConfig[],
-	poolLimits: Record<string, number>,
-	onSchedulerUpdate: (running: number, queued: number, done: number) => void,
-	onTaskStart: (index: number) => void,
-	fn: (item: ParallelTaskItem, index: number) => Promise<TOut>,
-): Promise<TOut[]> {
-	if (tasks.length === 0) return [];
+const resourcePoolStates = new Map<string, ResourcePoolState>();
 
-	const results: TOut[] = new Array(tasks.length);
-	const runningByPool = new Map<string, number>();
-	const completed = new Set<number>();
-	const running = new Set<number>();
-	const queued = tasks.map((_, index) => index);
+function getResourcePoolState(pool: string): ResourcePoolState {
+	let state = resourcePoolStates.get(pool);
+	if (!state) {
+		state = { active: 0, queue: [] };
+		resourcePoolStates.set(pool, state);
+	}
+	return state;
+}
 
-	const getTaskPool = (index: number): string => {
-		const agent = agents.find((a) => a.name === tasks[index].agent);
-		return agent?.resourcePool || DEFAULT_RESOURCE_POOL;
+async function acquireResourcePoolSlot(pool: string, limits: Record<string, number>): Promise<() => void> {
+	const state = getResourcePoolState(pool);
+	const limit = getPoolLimit(pool, limits);
+
+	if (state.active >= limit) {
+		await new Promise<void>((resolve) => {
+			state.queue.push(() => {
+				state.active++;
+				resolve();
+			});
+		});
+	} else {
+		state.active++;
+	}
+
+	let released = false;
+
+	return () => {
+		if (released) return;
+		released = true;
+		state.active = Math.max(0, state.active - 1);
+		while (state.active < limit && state.queue.length > 0) {
+			const next = state.queue.shift();
+			if (!next) return;
+			next();
+		}
 	};
-
-	return await new Promise<TOut[]>((resolve, reject) => {
-		const emit = () => onSchedulerUpdate(running.size, queued.length, completed.size);
-
-		const maybeStart = () => {
-			emit();
-			if (completed.size === tasks.length) {
-				resolve(results);
-				return;
-			}
-
-			let started = false;
-			for (let i = 0; i < queued.length; i++) {
-				const taskIndex = queued[i];
-				const pool = getTaskPool(taskIndex);
-				const runningForPool = runningByPool.get(pool) ?? 0;
-				if (runningForPool >= getPoolLimit(pool, poolLimits)) continue;
-
-				queued.splice(i, 1);
-				i--;
-				started = true;
-				running.add(taskIndex);
-				runningByPool.set(pool, runningForPool + 1);
-				onTaskStart(taskIndex);
-				emit();
-
-				fn(tasks[taskIndex], taskIndex)
-					.then((result) => {
-						results[taskIndex] = result;
-					})
-					.catch(reject)
-					.finally(() => {
-						running.delete(taskIndex);
-						runningByPool.set(pool, Math.max(0, (runningByPool.get(pool) ?? 1) - 1));
-						completed.add(taskIndex);
-						maybeStart();
-					});
-			}
-
-			if (!started) emit();
-		};
-
-		maybeStart();
-	});
 }
 
 function buildUsageCatalog(agents: AgentConfig[]): string | null {
@@ -373,6 +389,7 @@ async function runSingleAgent(
 	signal: AbortSignal | undefined,
 	onUpdate: OnUpdateCallback | undefined,
 	makeDetails: (results: SingleResult[]) => SubagentDetails,
+	onStart?: () => void,
 ): Promise<SingleResult> {
 	const agent = agents.find((a) => a.name === agentName);
 
@@ -430,8 +447,14 @@ async function runSingleAgent(
 	};
 
 	args.push(`Task: ${task}`);
-		let wasAborted = false;
+	let wasAborted = false;
+	const releaseResourcePoolSlot = await acquireResourcePoolSlot(
+		agent.resourcePool || DEFAULT_RESOURCE_POOL,
+		readResourcePoolLimits(getAgentDir()),
+	);
 
+	try {
+		onStart?.();
 		const exitCode = await new Promise<number>((resolve) => {
 			const invocation = getPiInvocation(args);
 			const proc = spawn(invocation.command, invocation.args, {
@@ -514,7 +537,10 @@ async function runSingleAgent(
 
 		currentResult.exitCode = exitCode;
 		if (wasAborted) throw new Error("Subagent was aborted");
-	return currentResult;
+		return currentResult;
+	} finally {
+		releaseResourcePoolSlot();
+	}
 }
 
 const TaskItem = Type.Object({
@@ -740,30 +766,9 @@ export default function (pi: ExtensionAPI) {
 					}
 				};
 
-				const poolLimits = readResourcePoolLimits(getAgentDir());
-				const emitSchedulerUpdate = (running: number, queued: number, done: number) => {
-					if (onUpdate) {
-						onUpdate({
-							content: [
-								{
-									type: "text",
-									text: `Parallel: ${done}/${allResults.length} done, ${running} running, ${queued} queued...`,
-								},
-							],
-							details: makeDetails("parallel")([...allResults]),
-						});
-					}
-				};
-
-				const results = await mapWithResourcePoolLimits(
-					params.tasks,
-					agents,
-					poolLimits,
-					emitSchedulerUpdate,
-					(index) => {
-						allResults[index].exitCode = -1;
-					},
-					async (t, index) => {
+				emitParallelUpdate();
+				const results = await Promise.all(
+					params.tasks.map(async (t, index) => {
 						const result = await runSingleAgent(
 							ctx.cwd,
 							agents,
@@ -780,11 +785,15 @@ export default function (pi: ExtensionAPI) {
 								}
 							},
 							makeDetails("parallel"),
+							() => {
+								allResults[index].exitCode = -1;
+								emitParallelUpdate();
+							},
 						);
 						allResults[index] = result;
 						emitParallelUpdate();
 						return result;
-					},
+					}),
 				);
 
 				const successCount = results.filter((r) => r.exitCode === 0).length;
