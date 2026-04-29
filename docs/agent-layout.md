@@ -50,7 +50,6 @@ agents/example-mas/
         ├── APPEND_SYSTEM.md
         ├── USAGE.md
         ├── pi-args
-        ├── resource-pool.conf
         ├── extensions/
         │   └── reasoning-off-shim -> ../../../../../shared/extensions-subagents/reasoning-off-shim
         ├── prompts/
@@ -226,15 +225,24 @@ Some files affect agent behavior but do not live inside a specific `agents/<name
 
 ### `agent-orchestrator.conf`
 
-Optional dot-pi root config for MAS pool limits. It is read by the `agent-orchestrator` extension when scheduling subagent work.
+Optional dot-pi root config for limited local-provider concurrency. It is read by the `agent-orchestrator` extension when scheduling subagent work.
 
 ```ini
 local=1
-api=4
 default=1
 ```
 
-Subagents select a pool with `resource-pool.conf`. See [Subagent Concurrency](reference/subagent-concurrency.md) for the full scheduling model.
+Subagents select models with `pi-args`; `agent-orchestrator` derives scheduling from the resolved model provider. See [Subagent Concurrency](reference/subagent-concurrency.md) for the full scheduling model.
+
+### `local-providers.conf`
+
+Optional dot-pi root config listing providers backed by limited local or self-hosted compute:
+
+```text
+plebchat
+```
+
+Any provider not listed is treated as API-backed and unbounded. If this file is missing, `plebchat` is still treated as local by default.
 
 ### `bin/<agent>`
 
@@ -279,7 +287,6 @@ Recommended subagent files:
 - `README.md`: short human-readable capability description; also used in orchestrator listings.
 - `USAGE.md`: invocation contract appended to the orchestrator prompt.
 - `pi-args`: subagent-specific tool, context-file, and skill flags.
-- `resource-pool.conf`: physical concurrency pool name such as `local` or `api`.
 - `extensions/reasoning-off-shim`: linked through `shared/extensions-subagents/` because subagents launch as separate pi processes.
 
 Subagents can also have their own `skills/`, `prompts/`, `themes/`, `sessions/`, `models.json`, `settings.json`, and `auth.json` if needed. Keep the root minimal unless the subagent actually needs those capabilities.

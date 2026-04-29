@@ -191,7 +191,7 @@ Recommended subagent files:
 - `SYSTEM.md` or `APPEND_SYSTEM.md` -- the subagent prompt.
 - `README.md` -- short description used in orchestrator listings.
 - `USAGE.md` -- invocation contract appended to the orchestrator prompt.
-- `resource-pool.conf` -- shared resource pool name (`local`, `api`, etc.).
+- `pi-args` -- subagent-specific tools, context-file behavior, and model alias.
 
 ### Skills
 
@@ -290,7 +290,7 @@ All symlinks use relative paths (e.g. `../../../shared/extensions-common/...` fo
 
 1. Create or link `agents/<mas>/agents/<name>/`
 2. Add `SYSTEM.md` or `APPEND_SYSTEM.md`
-3. Add `README.md`, `USAGE.md`, and optionally `resource-pool.conf`
+3. Add `README.md`, `USAGE.md`, and subagent-specific `pi-args` when needed
 4. Update `agents/<mas>/SYSTEM.md` if the orchestrator needs workflow-specific instructions
 
 ### Create a new MAS

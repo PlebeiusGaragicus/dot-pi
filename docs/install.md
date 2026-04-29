@@ -161,7 +161,7 @@ Creates a new MAS directory at `agents/<mas-name>/` with shared extension symlin
 
 After creating a MAS, you need to:
 
-1. **Add subagents** -- add or link subagent config directories under `agents/<mas-name>/agents/`. Each subagent should have `SYSTEM.md` or `APPEND_SYSTEM.md`, and can include `USAGE.md` plus `resource-pool.conf`.
+1. **Add subagents** -- add or link subagent config directories under `agents/<mas-name>/agents/`. Each subagent should have `SYSTEM.md` or `APPEND_SYSTEM.md`, and can include `USAGE.md` plus subagent-specific `pi-args`.
 2. **Edit the orchestrator** -- update `agents/<mas-name>/SYSTEM.md` with the workflow and delegation policy.
 3. **Add prompts** (optional) -- create `.md` files in `agents/<mas-name>/prompts/` for reusable workflows.
 4. **Rebuild symlinks** -- run `dotpi sync` so the new MAS is available as a command.

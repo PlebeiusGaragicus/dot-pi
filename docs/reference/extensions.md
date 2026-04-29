@@ -364,7 +364,7 @@ Key patterns:
 
 ### Example: Agent Orchestrator
 
-The most complex extension in the repo — registers a `subagent` tool with three execution modes, TUI rendering, directory-based subagent discovery, and resource-pool scheduling.
+The most complex extension in the repo — registers a `subagent` tool with three execution modes, TUI rendering, directory-based subagent discovery, and provider-derived scheduling.
 
 Source: `shared/extensions/agent-orchestrator/index.ts` (+ `agents.ts`)
 

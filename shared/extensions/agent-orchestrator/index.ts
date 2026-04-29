@@ -29,6 +29,7 @@ const MODEL_DEFAULT_ALIASES = ["DEFAULT_AGENTIC_MODEL", "DEFAULT_FAST_MODEL", "D
 const MAX_PARALLEL_TASKS = 8;
 const COLLAPSED_ITEM_COUNT = 10;
 const DEFAULT_RESOURCE_POOL = "local";
+const DEFAULT_LOCAL_PROVIDERS = ["plebchat"];
 
 function formatTokens(count: number): string {
 	if (count < 1000) return count.toString();
@@ -359,6 +360,60 @@ function findDotPiRoot(startDir: string): string {
 	}
 }
 
+function readDefaultProvider(agentDir: string): string | null {
+	const settingsPath = path.join(findDotPiRoot(agentDir), "shared", "settings.json");
+	try {
+		const settings = JSON.parse(fs.readFileSync(settingsPath, "utf-8")) as { defaultProvider?: unknown };
+		return typeof settings.defaultProvider === "string" && settings.defaultProvider ? settings.defaultProvider : null;
+	} catch {
+		return null;
+	}
+}
+
+function getModelArg(args: string[]): string | null {
+	for (let i = 0; i < args.length; i++) {
+		if (args[i] !== "--model") continue;
+		const value = args[i + 1];
+		if (!value || value.startsWith("--")) return null;
+		return value;
+	}
+	return null;
+}
+
+function getProviderFromModel(model: string | null): string | null {
+	if (!model) return null;
+	const slashIndex = model.indexOf("/");
+	if (slashIndex <= 0) return null;
+	return model.slice(0, slashIndex);
+}
+
+function resolveModelProvider(agentDir: string, piArgs: string[]): string | null {
+	return getProviderFromModel(getModelArg(piArgs)) ?? readDefaultProvider(agentDir);
+}
+
+function sanitizeProvider(provider: string): string {
+	return provider.trim().replace(/[^A-Za-z0-9_.-]/g, "");
+}
+
+function readLocalProviders(agentDir: string): Set<string> {
+	const configPath = path.join(findDotPiRoot(agentDir), "local-providers.conf");
+	if (!fs.existsSync(configPath)) return new Set(DEFAULT_LOCAL_PROVIDERS);
+
+	const providers = new Set<string>();
+	try {
+		for (const rawLine of fs.readFileSync(configPath, "utf-8").split(/\r?\n/)) {
+			const line = rawLine.trim();
+			if (!line || line.startsWith("#")) continue;
+			const provider = sanitizeProvider(line.split(/\s+/, 1)[0] ?? "");
+			if (provider) providers.add(provider);
+		}
+	} catch {
+		return providers;
+	}
+
+	return providers;
+}
+
 function readResourcePoolLimits(agentDir: string): Record<string, number> {
 	const root = findDotPiRoot(agentDir);
 	const configPath = path.join(root, "agent-orchestrator.conf");
@@ -430,6 +485,12 @@ async function acquireResourcePoolSlot(pool: string, limits: Record<string, numb
 			next();
 		}
 	};
+}
+
+async function acquireProviderSlot(agentDir: string, piArgs: string[]): Promise<() => void> {
+	const provider = resolveModelProvider(agentDir, piArgs);
+	if (!provider || !readLocalProviders(agentDir).has(provider)) return () => {};
+	return acquireResourcePoolSlot(DEFAULT_RESOURCE_POOL, readResourcePoolLimits(getAgentDir()));
 }
 
 function buildUsageCatalog(agents: AgentConfig[]): string | null {
@@ -524,10 +585,7 @@ async function runSingleAgent(
 
 	args.push(`Task: ${task}`);
 	let wasAborted = false;
-	const releaseResourcePoolSlot = await acquireResourcePoolSlot(
-		agent.resourcePool || DEFAULT_RESOURCE_POOL,
-		readResourcePoolLimits(getAgentDir()),
-	);
+	const releaseResourcePoolSlot = await acquireProviderSlot(agent.dir, piArgs);
 
 	try {
 		onStart?.();
@@ -671,7 +729,7 @@ export default function (pi: ExtensionAPI) {
 			const lines = discovery.agents
 				.slice()
 				.sort((a, b) => a.name.localeCompare(b.name))
-				.map((agent) => `- ${agent.name} [${agent.resourcePool}]: ${agent.description}\n  ${agent.dir}`);
+				.map((agent) => `- ${agent.name}: ${agent.description}\n  ${agent.dir}`);
 			ctx.ui.notify(`Subagents\n\n${lines.join("\n")}`, "info");
 		},
 	});

@@ -1,0 +1,4 @@
+--model
+$DEFAULT_AGENTIC_MODEL
+--tools bash,read,write,ls
+--no-context-files

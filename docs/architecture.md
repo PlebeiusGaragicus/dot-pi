@@ -118,7 +118,7 @@ You are the orchestrator for a deep research workflow...
 
 ## Extension Architecture
 
-The `agent-orchestrator` extension extends the upstream `subagent` example with directory-based subagent discovery, usage contracts, session capture, and resource-pool scheduling:
+The `agent-orchestrator` extension extends the upstream `subagent` example with directory-based subagent discovery, usage contracts, session capture, and provider-derived scheduling:
 
 ### Agent Discovery
 
@@ -129,7 +129,7 @@ Subagents are pi config directories discovered from `<agentDir>/agents/` and pro
 | Mode | Input | Behavior |
 |------|-------|----------|
 | **Single** | `{ agent, task }` | One agent runs one task |
-| **Parallel** | `{ tasks: [...] }` | Independent tasks scheduled through resource pools |
+| **Parallel** | `{ tasks: [...] }` | Independent tasks scheduled from resolved model providers |
 | **Chain** | `{ chain: [...] }` | Sequential pipeline; `{previous}` passes output forward |
 
 ### Prompt Templates

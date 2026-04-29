@@ -2,7 +2,7 @@
 
 This is the definitive guide to dot-pi's multi-agent implementation. For the file-by-file anatomy of an agent config root, start with [Agent Layout](../agent-layout.md). This page explains how those files work together to create an orchestrated multi-agent system.
 
-In dot-pi, a multi-agent system (MAS) is a top-level orchestrator agent plus a pool of specialized subagents. The orchestrator owns the user conversation, decomposes work, calls subagents through the `subagent` tool, and synthesizes the final answer. Subagents run as isolated pi child processes with their own context windows, tools, prompts, and resource-pool settings.
+In dot-pi, a multi-agent system (MAS) is a top-level orchestrator agent plus a pool of specialized subagents. The orchestrator owns the user conversation, decomposes work, calls subagents through the `subagent` tool, and synthesizes the final answer. Subagents run as isolated pi child processes with their own context windows, tools, prompts, and model settings.
 
 This is a centralized orchestration model. It is closer to supervisor-worker and pipeline systems than to fully decentralized swarms.
 
@@ -24,7 +24,6 @@ agents/deepresearch/
         ├── SYSTEM.md
         ├── USAGE.md
         ├── pi-args
-        ├── resource-pool.conf
         └── extensions/
             └── reasoning-off-shim -> ../../../../../shared/extensions-subagents/reasoning-off-shim
 ```
@@ -51,7 +50,7 @@ This isolation is the main reason to use a MAS. Subagents can explore, write, re
 | Blackboard or shared workspace | Workspace directory and artifact files such as `sources/` or `report.md` |
 | Tool restriction | Subagent-specific `pi-args`, skills, and extensions |
 | Evaluation agent | A reviewer, editor, scanner, auditor, or retro subagent |
-| Resource scheduler | `resource-pool.conf` plus root `agent-orchestrator.conf` |
+| Resource scheduler | subagent `pi-args`, `local-providers.conf`, and `agent-orchestrator.conf` |
 
 ## Orchestrator Root
 
@@ -64,7 +63,7 @@ Key files:
 - `extensions/agent-orchestrator`: registers the `subagent` tool and handles discovery, prompt augmentation, scheduling, and child process launches.
 - `workspace.conf`: optional, but common for MAS configs that create durable artifacts.
 
-The optional repo-level `agent-orchestrator.conf` file configures pool limits for physical subagent concurrency.
+The optional repo-level `agent-orchestrator.conf` file configures local-provider limits for physical subagent concurrency.
 
 The orchestrator should normally coordinate rather than perform specialist work itself. If a task belongs to a subagent role, encode that policy in the root `SYSTEM.md`.
 
@@ -85,7 +84,6 @@ Recommended files:
 - `README.md`: short description used in orchestrator listings.
 - `USAGE.md`: invocation contract appended to the orchestrator prompt.
 - `pi-args`: tool, model, context-file, and skill restrictions for this subagent.
-- `resource-pool.conf`: shared concurrency pool name, usually `local` or `api`.
 - `extensions/reasoning-off-shim`: linked from `shared/extensions-subagents/` because every subagent is its own pi config root.
 
 Subagents do not get the top-level common extension bundle. They are non-interactive child processes, so only extensions in `shared/extensions-subagents/` are wired into them by `dotpi sync`. For reusable symlinked subagents, `sync` wires the canonical `subagents/<name>/` directory rather than treating the MAS link as the source of truth.
@@ -117,7 +115,6 @@ The appended information includes:
 
 - subagent names
 - short descriptions from `README.md`
-- resource pool names from `resource-pool.conf`
 - invocation contracts from `USAGE.md`
 
 This keeps the root `SYSTEM.md` focused on orchestration policy while each subagent owns its own capability contract.
@@ -166,7 +163,7 @@ Run logically independent tasks:
 }
 ```
 
-The tasks are independent from the prompt's point of view. Physical concurrency is still controlled by resource pools.
+The tasks are independent from the prompt's point of view. Physical concurrency is still controlled by provider-derived scheduling.
 
 ### Chain
 
@@ -185,19 +182,28 @@ The `{previous}` placeholder is replaced with the prior step's output. Use chain
 
 ## Resource Scheduling
 
-The LLM expresses logical independence; config controls physical concurrency.
-
-Each subagent can declare the shared resource it consumes:
+The LLM expresses logical independence; config controls physical concurrency. Subagents declare model intent with `pi-args`:
 
 ```text
-agents/<mas>/agents/<subagent>/resource-pool.conf
+agents/<mas>/agents/<subagent>/pi-args
 ```
 
 ```text
-local
+--model
+$DEFAULT_AGENTIC_MODEL
 ```
 
-Pool limits are configured at the dot-pi root:
+Providers backed by limited local or self-hosted compute are listed at the dot-pi root:
+
+```text
+local-providers.conf
+```
+
+```text
+plebchat
+```
+
+Local limits are configured at the dot-pi root:
 
 ```text
 agent-orchestrator.conf
@@ -205,11 +211,10 @@ agent-orchestrator.conf
 
 ```ini
 local=1
-api=4
 default=1
 ```
 
-This matters most for self-hosted inference. Ten OCR tasks may be logically independent, but if they all hit one local GPU, the `local` pool should probably run them one at a time. API-backed tasks can often use a larger `api` pool.
+This matters most for self-hosted inference. Ten OCR tasks may be logically independent, but if they all resolve to a provider listed in `local-providers.conf`, the local limit should probably run them one at a time. API-backed providers are treated as unbounded and are not throttled by the local limit.
 
 For the exact rules, see [Subagent Concurrency](subagent-concurrency.md).
 
@@ -267,7 +272,7 @@ Swarms let agents coordinate peer-to-peer through shared memory or task queues. 
 - Put workflow policy in the orchestrator `SYSTEM.md`, not in every subagent.
 - Prefer artifact handoffs for large outputs. Return concise status from subagents and write durable deliverables to the workspace.
 - Restrict capabilities structurally through tools, skills, and config. Do not rely only on prompt instructions for safety boundaries.
-- Use `parallel` only for logically independent work. Let `agent-orchestrator` resource pools decide physical concurrency.
+- Use `parallel` only for logically independent work. Let `agent-orchestrator` provider-derived scheduling decide physical concurrency.
 - Add evaluator subagents for high-risk outputs: citations, code changes, factual claims, security findings, or final reports.
 - Keep session logs and manifests. Traceability is what makes MAS failures debuggable.
 - Evaluate workflows with scripted prompts before tuning prompts by feel.
@@ -285,7 +290,7 @@ Swarms let agents coordinate peer-to-peer through shared memory or task queues. 
 
 ## How This Maps To dot-pi
 
-Start with a simple orchestrator-worker design. Add pipelines when the workflow is stable, evaluator agents when quality matters, and resource pools when concurrency meets real infrastructure limits. Reach for more experimental patterns like debate or swarm coordination only after the basic artifact flow and eval loop are reliable.
+Start with a simple orchestrator-worker design. Add pipelines when the workflow is stable, evaluator agents when quality matters, and provider-derived scheduling when concurrency meets real infrastructure limits. Reach for more experimental patterns like debate or swarm coordination only after the basic artifact flow and eval loop are reliable.
 
 Use [Agent Layout](../agent-layout.md) as the source of truth for where files live. Use this page as the source of truth for how the orchestrator and subagents interact.
 

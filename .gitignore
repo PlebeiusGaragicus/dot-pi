@@ -3,6 +3,7 @@
 .exa
 .tavily.env
 .tts-wpm
+.browser-control/
 model-defaults
 shared/models.json
 shared/settings.json
@@ -39,6 +40,8 @@ shared/bin/*
 
 # Typecheck node_modules (devDeps for extension type-checking)
 tests/node_modules/
+utilities/browser-runtime/node_modules/
+utilities/browser-runtime/dist/
 
 REFERENCES/*
 IGNORE/

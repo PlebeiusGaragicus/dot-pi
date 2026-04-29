@@ -166,7 +166,7 @@ pages/page-0001.png
 pages/page-0001.md
 ```
 
-The OCR workers should run on a vision-capable model. Configure `DEFAULT_VLM_MODEL` with `dotpi model-defaults`, or use `/model-default` from an OCR subagent context for a subagent-local `.model` override. The OCR subagents reference `$DEFAULT_VLM_MODEL` from their `pi-args`. If you use a local vision model, set the OCR subagents' resource pool to `local`; otherwise the default `api` pool lets API-backed OCR run concurrently according to `agent-orchestrator.conf`.
+The OCR workers should run on a vision-capable model. Configure `DEFAULT_VLM_MODEL` with `dotpi model-defaults`, or use `/model-default` from an OCR subagent context for a subagent-local `.model` override. The OCR subagents reference `$DEFAULT_VLM_MODEL` from their `pi-args`. If the resolved provider is listed in `local-providers.conf`, OCR is throttled by the local limit in `agent-orchestrator.conf`; otherwise it is treated as API-backed and unbounded.
 
 To resume without re-ingesting the PDF:
 

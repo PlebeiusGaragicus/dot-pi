@@ -1,0 +1,5 @@
+--model
+$DEFAULT_AGENTIC_MODEL
+--tools read,find,ls,write
+--no-skills
+--no-context-files

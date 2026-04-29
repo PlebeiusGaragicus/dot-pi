@@ -15,7 +15,7 @@ Reader owns its top-level workflow in `SYSTEM.md`. Subagents live under `agents/
 | Field | Value |
 |-------|-------|
 | Tools | bash, read, write, ls |
-| Resource pool | local |
+| Model | `$DEFAULT_AGENTIC_MODEL` |
 
 Renders one PDF into zero-padded PNG files under `pages/` and writes `reader-manifest.json`. It prefers Poppler (`pdfinfo`, `pdftoppm`) and falls back to ImageMagick when available.
 
@@ -24,8 +24,7 @@ Renders one PDF into zero-padded PNG files under `pages/` and writes `reader-man
 | Field | Value |
 |-------|-------|
 | Tools | read, write, ls |
-| Model | vision-capable model recommended |
-| Resource pool | api |
+| Model | `$DEFAULT_VLM_MODEL` |
 
 OCRs exactly one page image and writes exactly one markdown file beside it. The page markdown includes YAML frontmatter with page number, image path, OCR status, confidence, review flag, and warnings.
 
@@ -34,8 +33,7 @@ OCRs exactly one page image and writes exactly one markdown file beside it. The 
 | Field | Value |
 |-------|-------|
 | Tools | read, write, ls |
-| Model | vision-capable model recommended |
-| Resource pool | api |
+| Model | `$DEFAULT_VLM_MODEL` |
 
 Reviews one uncertain page transcription against the source image and replaces that page's markdown with corrected content.
 
@@ -45,7 +43,7 @@ Reviews one uncertain page transcription against the source image and replaces t
 |-------|-------|
 | Tools | read, find, ls, write |
 | Skills | none |
-| Resource pool | local |
+| Model | `$DEFAULT_AGENTIC_MODEL` |
 
 Reads page markdown files in order and produces `document.md`, plus `summary.md` when requested. It does not OCR images or modify page files.
 
@@ -90,7 +88,7 @@ Runtime configuration is file-based:
 | `agents/*/extensions/reasoning-off-shim` | Subagent extension bundle link for the same provider-request shim |
 | `agents/ocr-page/pi-args` | Restricts OCR workers to page read/write tools |
 
-For OCR, configure `DEFAULT_VLM_MODEL` with `dotpi model-defaults`, or use `/model-default` from an OCR subagent context for a subagent-local `.model` override. The OCR subagents reference `$DEFAULT_VLM_MODEL` from their `pi-args`. If OCR runs against a local model instead of an API-backed model, change `ocr-page/resource-pool.conf` and `page-auditor/resource-pool.conf` from `api` to `local`.
+For OCR, configure `DEFAULT_VLM_MODEL` with `dotpi model-defaults`, or use `/model-default` from an OCR subagent context for a subagent-local `.model` override. The OCR subagents reference `$DEFAULT_VLM_MODEL` from their `pi-args`. If the resolved provider is listed in `local-providers.conf`, OCR is throttled by the local limit in `agent-orchestrator.conf`; otherwise it is treated as API-backed and unbounded.
 
 Reader gets `reasoning-off-shim` through the standard top-level extension bundle, and reader subagents get it through the subagent extension bundle. Run `dotpi sync` after adding a reader subagent so its default subagent extensions are wired.
 
