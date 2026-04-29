@@ -1,7 +1,6 @@
 # dotpi list — list existing agent configs
 # Sourced by the dotpi dispatcher — do not execute directly.
 
-found=0
 mas_found=0
 standalone_found=0
 
@@ -10,7 +9,6 @@ for dir in "$DOT_PI_DIR"/agents/*/; do
   [ -d "$dir" ] || continue
   [ -e "$dir/extensions/agent-orchestrator/index.ts" ] || continue
   name=$(basename "$dir")
-  found=1
   mas_found=1
   agent_count=$(find "$dir/agents" -mindepth 1 -maxdepth 1 \( -type d -o -type l \) 2>/dev/null | wc -l | tr -d ' ')
   prompt_count=$(find "$dir/prompts" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
@@ -32,7 +30,6 @@ for dir in "$DOT_PI_DIR"/agents/*/; do
     continue
   fi
   name=$(basename "$dir")
-  found=1
   standalone_found=1
   mode="in-situ"
   [ -f "$dir/workspace.conf" ] && mode="workspace"

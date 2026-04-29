@@ -46,15 +46,14 @@ resolve_models_file() {
 }
 
 read_export_var() {
-  local file="$1" varname="$2" value
+  local file="$1" varname="$2" value expect_prefix
   if [ -f "$file" ]; then
     value=$(sed -nE "s/^export[[:space:]]+${varname}=(.*)$/\1/p" "$file" | head -1)
-    case "$value" in
-      \"\$\{${varname}:-*})
-        value="${value#\"\$\{${varname}:-}"
-        value="${value%\}\"}"
-        ;;
-    esac
+    expect_prefix=$(printf '"${%s:-' "$varname")
+    if [[ "$value" == "$expect_prefix"* ]]; then
+      value="${value#"$expect_prefix"}"
+      value="${value%\}\"}"
+    fi
     printf '%s\n' "$value"
   fi
 }

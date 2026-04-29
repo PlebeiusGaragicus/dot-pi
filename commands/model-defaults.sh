@@ -1,12 +1,10 @@
 # dotpi model-defaults — configure local fallback model aliases.
 # Sourced by the dotpi dispatcher — do not execute directly.
 
-for _cmd in jq; do
-  command -v "$_cmd" &>/dev/null || {
-    echo "Error: '$_cmd' is required. Install it first."
-    exit 1
-  }
-done
+command -v jq &>/dev/null || {
+  echo "Error: 'jq' is required. Install it first."
+  exit 1
+}
 
 defaults_file="$DOT_PI_DIR/model-defaults"
 write_model_defaults_file "$defaults_file"
