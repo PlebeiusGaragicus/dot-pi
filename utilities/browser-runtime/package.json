@@ -1,0 +1,32 @@
+{
+  "name": "@dot-pi/browser-runtime",
+  "version": "0.1.0",
+  "description": "Persistent Playwright Chromium runtime for the dot-pi browser agent.",
+  "type": "module",
+  "bin": {
+    "browser-control": "./dist/browser-control"
+  },
+  "scripts": {
+    "dev": "bun run src/cli.ts",
+    "server": "bun run src/server.ts",
+    "build": "bun build --compile src/cli.ts --outfile dist/browser-control && chmod +x dist/browser-control",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "playwright": "^1.58.2"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.13",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "keywords": [
+    "browser",
+    "automation",
+    "playwright",
+    "chromium",
+    "dot-pi"
+  ]
+}
