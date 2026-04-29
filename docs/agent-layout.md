@@ -21,7 +21,7 @@ agents/example-mas/
 ├── AGENT.md
 ├── pi-args
 ├── banner.txt
-├── workspace.env
+├── bootstrap.sh
 ├── auth.json
 ├── models.json -> ../../shared/models.json
 ├── settings.json -> ../../shared/settings.json
@@ -112,26 +112,29 @@ Startup branding displayed by the `startup-branding` extension. The scaffold wri
 
 Edit this as ordinary text if you want the agent command to show different startup copy.
 
-### `workspace.env`
+### `bootstrap.sh`
 
-Presence of this file switches the command into workspace mode. Instead of running in the current directory, `dispatch-agent` creates a dated workspace under:
+This sourced shell script prepares the launch environment before pi starts. If it contains a top-level `WORKSPACE_AGENT=1` line, the command runs in workspace mode. Instead of running in the current directory, `dispatch-agent` creates a dated workspace under:
 
 ```text
 workspaces/<agent>/<YYYY-mm-dd-HHMMSS>/
 ```
 
-The file uses simple `KEY=value` lines. Blank lines and `#` comments are ignored. Values may be quoted and may reference `DOT_PI_DIR`, `AGENT_NAME`, `AGENT_DIR`, and `WORKSPACE_DIR`; shell code, `export`, command substitution, arrays, and multiline values are not supported.
-
 ```bash
-WORKSPACE_DIRS="sources drafts sessions"
-OUTPUT_DIR="$WORKSPACE_DIR/drafts"
+WORKSPACE_AGENT=1
+export WORKSPACE_AGENT
+
+mkdir -p "$WORKSPACE_DIR/sources" "$WORKSPACE_DIR/drafts" "$WORKSPACE_DIR/sessions"
+export OUTPUT_DIR="$WORKSPACE_DIR/drafts"
 ```
 
-`WORKSPACE_DIRS` is a space-separated list of subdirectories to create in the workspace before pi starts. Other keys are exported to the pi process on both fresh launches and `--resume`.
+Because the script is sourced, exported variables persist into pi. Use it to create workspace directories, set env vars, initialize daemons, and run health checks. It runs on fresh launches, `--resume`, and in-situ launches for agents that define it.
+
+The launcher provides `DOT_PI_DIR`, `AGENT_NAME`, `AGENT_DIR`, `WORKSPACE_AGENT`, `WORKSPACE_DIR` for workspace agents, `DOTPI_BOOTSTRAP_PHASE` (`fresh`, `resume`, or `in-situ`), and `BOOTSTRAP_LOG`. Bootstrap stdout/stderr is captured in `BOOTSTRAP_LOG`; for workspace agents the default is `$WORKSPACE_DIR/bootstrap.log`.
 
 If the workspace contains a `sessions/` directory, `dispatch-agent` passes `--session-dir <workspace>/sessions` so the orchestrator and subagents can keep their session logs with the workspace artifacts.
 
-`workspace.conf` is deprecated and no longer used by current launchers.
+`workspace.env` is deprecated but still supported as a compatibility fallback. `workspace.conf` is deprecated and no longer used by current launchers.
 
 ### `models.json`
 
@@ -242,10 +245,10 @@ Subagents select models with `pi-args`; `agent-orchestrator` derives scheduling 
 Optional dot-pi root config listing providers backed by limited local or self-hosted compute:
 
 ```text
-plebchat
+lmstudio
 ```
 
-Any provider not listed is treated as API-backed and unbounded. If this file is missing, `plebchat` is still treated as local by default.
+Any provider not listed is treated as API-backed and unbounded. If this file is missing, `lmstudio` is still treated as local by default.
 
 ### `bin/<agent>`
 
@@ -306,7 +309,7 @@ agents/example-standalone/
 ├── AGENT.md
 ├── pi-args
 ├── banner.txt
-├── workspace.env
+├── bootstrap.sh
 ├── auth.json
 ├── models.json -> ../../shared/models.json
 ├── settings.json -> ../../shared/settings.json
@@ -361,7 +364,7 @@ Usually edited by humans:
 - `APPEND_SYSTEM.md`
 - `pi-args`
 - `banner.txt`
-- `workspace.env`
+- `bootstrap.sh`
 - `prompts/*.md`
 - `agents/*/README.md`
 - `agents/*/SYSTEM.md`

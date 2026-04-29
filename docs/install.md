@@ -157,7 +157,7 @@ Interactive in-agent command for local overrides. With no args, it opens a menu 
 
 ### `dotpi create <mas-name>`
 
-Creates a new MAS directory at `agents/<mas-name>/` with shared extension symlinks, theme symlinks, the `agent-orchestrator` extension, and a starter `SYSTEM.md`. Use `--workspace` for workspace mode.
+Creates a new MAS directory at `agents/<mas-name>/` with shared extension symlinks, theme symlinks, the `agent-orchestrator` extension, and a starter `SYSTEM.md`. Use `--workspace` to scaffold a `bootstrap.sh` that marks the MAS as a workspace agent.
 
 After creating a MAS, you need to:
 
@@ -168,7 +168,7 @@ After creating a MAS, you need to:
 
 ### `dotpi create-agent <agent-name>`
 
-Creates a standalone agent directory at `agents/<agent-name>/` with a stub extension and shared symlinks. Use `--workspace` for workspace mode. Run `dotpi sync` to add the new agent to bin/.
+Creates a standalone agent directory at `agents/<agent-name>/` with a stub extension and shared symlinks. Use `--workspace` to scaffold a `bootstrap.sh` that marks the agent as a workspace agent. Run `dotpi sync` to add the new agent to bin/.
 
 ### `dotpi list`
 

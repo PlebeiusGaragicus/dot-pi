@@ -12,7 +12,7 @@ Two kinds of agent configurations live here:
 - **Multi-agent systems (MAS)** (`agents/`): An orchestrator agent using the `agent-orchestrator` extension to delegate to subagent config directories.
 - **Standalone agents** (`agents/`): Single-agent setups with custom extensions and no subagent orchestration.
 
-Either kind can run **in-situ** (in the user's current directory) or as a **workspace** agent (in a fresh dated directory). A `workspace.env` file marks which mode to use — see "Workspace Agents" under Key Concepts.
+Either kind can run **in-situ** (in the user's current directory) or as a **workspace** agent (in a fresh dated directory). A `bootstrap.sh` file with `WORKSPACE_AGENT=1` marks workspace mode — see "Workspace Agents" under Key Concepts.
 
 ## Directory Structure
 
@@ -39,7 +39,7 @@ dot-pi/
 ├── bootstrap/                # Tracked seed/template files (copied into place on first run)
 │   ├── model-defaults.example # Template for local fallback model aliases (-> ./model-defaults)
 │   ├── settings.json.example # Template for shared/settings.json (auto-copied by install / dotpi sync)
-│   └── plebchat-models.json  # Reference catalogue of known plebchat models (manual lookup)
+│   └── lmstudio-models.json  # Reference catalogue of known LM Studio models (manual lookup)
 │
 ├── agents/                   # MAS and standalone agent directories
 ├── workspaces/               # Ephemeral workspace directories (gitignored contents)
@@ -77,7 +77,7 @@ agents/<name>/
 ├── SYSTEM.md                 # Orchestrator system prompt
 ├── pi-args                   # (optional) Default CLI flags for the orchestrator (read by dispatch-agent)
 ├── banner.txt                # Startup branding (ASCII art + usage text)
-├── workspace.env             # (optional) Marks as workspace agent; directories and env
+├── bootstrap.sh              # (optional) Launch setup; WORKSPACE_AGENT=1 marks workspace mode
 ├── bin/                      # → shared/bin/
 ├── models.json               # → shared/models.json
 ├── sessions/                 # Runtime (gitignored)
@@ -103,7 +103,7 @@ agents/<name>/
 ├── skills/                   # Per-skill symlinks from shared/skills/ (use dotpi link-skill to add)
 ├── themes/                   # Per-theme symlinks from shared/themes/
 ├── banner.txt                # Startup branding (ASCII art + usage text)
-├── workspace.env             # (optional) Marks as workspace agent; directories and env
+├── bootstrap.sh              # (optional) Launch setup; WORKSPACE_AGENT=1 marks workspace mode
 ├── bin/                      # → shared/bin/
 ├── models.json               # → shared/models.json
 ├── sessions/                 # Runtime (gitignored)
@@ -219,21 +219,24 @@ Skills live in `shared/skills/` and are symlinked per-skill into each agent conf
 
 ### Workspace Agents
 
-Any MAS or standalone agent can run as a **workspace agent** by adding a `workspace.env` file to its directory. When present, running the command (e.g. `deepresearch`) launches pi in a fresh dated directory (`workspaces/<name>/<timestamp>/`) inside a subshell, so the user's shell stays in its original directory after pi exits.
+Any MAS or standalone agent can run as a **workspace agent** by adding a `bootstrap.sh` file with `WORKSPACE_AGENT=1` to its directory. When present, running the command (e.g. `deepresearch`) launches pi in a fresh dated directory (`workspaces/<name>/<timestamp>/`) inside a subshell, so the user's shell stays in its original directory after pi exits.
 
-**`workspace.env` format**: simple `KEY=value` lines, plus blank lines and `#` comments. Values may be quoted and can reference `DOT_PI_DIR`, `AGENT_NAME`, `AGENT_DIR`, and `WORKSPACE_DIR`. No shell code, `export`, command substitution, arrays, or multiline values are supported.
+`bootstrap.sh` is sourced by `dispatch-agent` before pi starts on fresh launches, resumes, and in-situ launches. Because it is sourced, exported variables persist into pi. Use it to create directories, export env vars, initialize daemons, and run health checks. The launcher captures stdout/stderr in `BOOTSTRAP_LOG` (`$WORKSPACE_DIR/bootstrap.log` for workspace agents).
 
 ```bash
-# agents/deepresearch/workspace.env
-WORKSPACE_DIRS="sources drafts sessions"
-OUTPUT_DIR="$WORKSPACE_DIR/drafts"
+# agents/deepresearch/bootstrap.sh
+WORKSPACE_AGENT=1
+export WORKSPACE_AGENT
+
+mkdir -p "$WORKSPACE_DIR/sources" "$WORKSPACE_DIR/drafts" "$WORKSPACE_DIR/sessions"
+export OUTPUT_DIR="$WORKSPACE_DIR/drafts"
 ```
 
-`WORKSPACE_DIRS` is a space-separated list of subdirectories to pre-create before pi starts. Other keys are exported to the pi process on both fresh launches and `--resume`.
+The launcher provides `DOT_PI_DIR`, `AGENT_NAME`, `AGENT_DIR`, `WORKSPACE_AGENT`, `WORKSPACE_DIR` for workspace agents, `DOTPI_BOOTSTRAP_PHASE` (`fresh`, `resume`, or `in-situ`), and `BOOTSTRAP_LOG`.
 
-`workspace.conf` is deprecated and no longer used by current launchers.
+`workspace.env` is deprecated but still supported as a compatibility fallback. `workspace.conf` is deprecated and no longer used by current launchers.
 
-**To convert any existing agent config to workspace mode**: create `workspace.env` in its directory (can contain only comments for a bare workspace, or set `WORKSPACE_DIRS`).
+**To convert any existing agent config to workspace mode**: create `bootstrap.sh` in its directory and include a top-level `WORKSPACE_AGENT=1` line.
 
 **To scaffold a new workspace agent config**: use the `--workspace` flag with `dotpi`:
 ```bash
@@ -341,7 +344,8 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `agents/*/agents/*/USAGE.md` | Yes | Subagent invocation contracts |
 | `agents/*/prompts/*.md` | Yes | Prompt templates |
 | `*/banner.txt` | Yes | Startup branding (ASCII art + usage text) |
-| `*/workspace.env` | Yes | Workspace directories and env (presence marks workspace mode) |
+| `*/bootstrap.sh` | Yes | Launch setup; `WORKSPACE_AGENT=1` marks workspace mode |
+| `*/workspace.env` | Legacy | Deprecated workspace directories/env fallback |
 | `agents/*/AGENT.md` | Yes | Agent prompt config (frontmatter: tools, model; body: system prompt append) |
 | `agents/*/SYSTEM.md` | Yes | Replaces pi's default system prompt (pi-native) |
 | `agents/*/APPEND_SYSTEM.md` | Yes | Appends to pi's default system prompt (pi-native) |
@@ -365,5 +369,5 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `model-defaults` | Local | Per-machine global fallback model aliases. Written by `dotpi model-defaults`, loaded at agent launch time. Bootstrap manually with `cp bootstrap/model-defaults.example model-defaults`. |
 | `agents/*/.model`, `subagents/*/.model`, `agents/*/agents/*/.model` | Local | Per-agent raw `provider/model` overrides written by `/model-default`; gitignored. |
 | `shared/settings.json` | Local | Bootstrapped from `bootstrap/settings.json.example` by `install` / `dotpi sync`; gitignored thereafter. Edit freely; not tracked. |
-| `bootstrap/*.example`, `bootstrap/plebchat-models.json` | Yes | Tracked seed/template files used to bootstrap local config. Edit to change defaults seen by new installs. |
+| `bootstrap/*.example`, `bootstrap/lmstudio-models.json` | Yes | Tracked seed/template files used to bootstrap local config. Edit to change defaults seen by new installs. |
 | `VERSION` | Yes | Bump on releases. Surfaced via `dotpi --version`. |

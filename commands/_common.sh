@@ -102,3 +102,30 @@ resolve_dir() {
     return 1
   fi
 }
+
+agent_declares_workspace() {
+  local dir="$1" file="$dir/bootstrap.sh" line value
+  [ -f "$dir/workspace.env" ] && return 0
+  [ -f "$file" ] || return 1
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    if [[ "$line" =~ ^export[[:space:]]+(.+)$ ]]; then
+      line="${BASH_REMATCH[1]}"
+      line="${line#"${line%%[![:space:]]*}"}"
+      line="${line%"${line##*[![:space:]]}"}"
+    fi
+    [[ "$line" =~ ^WORKSPACE_AGENT=(.*)$ ]] || continue
+    value="${BASH_REMATCH[1]}"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+      value="${value:1:${#value}-2}"
+    elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+      value="${value:1:${#value}-2}"
+    fi
+    [ "$value" = "1" ] && return 0
+  done < "$file"
+  return 1
+}

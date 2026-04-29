@@ -13,7 +13,7 @@ for dir in "$DOT_PI_DIR"/agents/*/; do
   agent_count=$(find "$dir/agents" -mindepth 1 -maxdepth 1 \( -type d -o -type l \) 2>/dev/null | wc -l | tr -d ' ')
   prompt_count=$(find "$dir/prompts" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
   mode="in-situ"
-  [ -f "$dir/workspace.env" ] && mode="workspace"
+  agent_declares_workspace "$dir" && mode="workspace"
   ext_ok="no"
   [ -e "$dir/extensions/agent-orchestrator/index.ts" ] && ext_ok="yes"
   echo "  $name  ($mode, $agent_count subagents, $prompt_count prompts, orchestrator linked: $ext_ok)"
@@ -32,7 +32,7 @@ for dir in "$DOT_PI_DIR"/agents/*/; do
   name=$(basename "$dir")
   standalone_found=1
   mode="in-situ"
-  [ -f "$dir/workspace.env" ] && mode="workspace"
+  agent_declares_workspace "$dir" && mode="workspace"
   ext_count=$(find "$dir/extensions" -maxdepth 2 -name 'index.ts' 2>/dev/null | wc -l | tr -d ' ')
   echo "  $name  ($mode, extensions: $ext_count)"
 done

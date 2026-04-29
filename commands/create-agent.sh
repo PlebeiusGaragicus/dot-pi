@@ -78,15 +78,22 @@ else
 fi
 
 if [ "$workspace" = true ]; then
-  cat > "$agent_dir/workspace.env" <<'WSENV'
-# Subdirectories to pre-create in each workspace run.
-# Space-separated directory names.
-WORKSPACE_DIRS="sessions"
+  cat > "$agent_dir/bootstrap.sh" <<'BOOTSTRAP'
+#!/usr/bin/env bash
 
-# Optional environment passed to pi. Known variables include:
-# DOT_PI_DIR, AGENT_NAME, AGENT_DIR, WORKSPACE_DIR
-WSENV
-  echo "Created workspace.env (edit to add workspace directories and environment)"
+WORKSPACE_AGENT=1
+export WORKSPACE_AGENT
+
+if [ -z "${WORKSPACE_DIR:-}" ]; then
+  echo "bootstrap: WORKSPACE_DIR is required" >&2
+  return 1
+fi
+
+mkdir -p "$WORKSPACE_DIR/sessions"
+
+echo "bootstrap: workspace ready at $WORKSPACE_DIR"
+BOOTSTRAP
+  echo "Created bootstrap.sh (edit to add directories, environment, and preflight checks)"
 fi
 
 mode_label="in-situ"
@@ -107,14 +114,14 @@ echo "    settings.json            (symlink → shared/settings.json)"
 echo "    pi-args                  (optional default CLI flags; see IMPORTANT line inside)"
 echo "    SYSTEM.md                (system prompt — edit to customize)"
 echo "    banner.txt               (startup branding -- edit to customize)"
-[ "$workspace" = true ] && echo "    workspace.env            (workspace directories and environment)"
+[ "$workspace" = true ] && echo "    bootstrap.sh             (workspace setup, environment, and preflight checks)"
 echo ""
 echo "Next steps:"
 echo "  1. Edit $agent_dir/SYSTEM.md (and optionally pi-args)"
 echo "  2. Edit $agent_dir/extensions/$agent_name/index.ts if you need custom tools"
 echo "  3. Link skills as needed: dotpi link-skill $agent_name <skill>"
 if [ "$workspace" = true ]; then
-  echo "  4. Edit workspace.env to configure workspace directories and environment"
+  echo "  4. Edit bootstrap.sh to configure workspace directories, environment, and preflight checks"
   echo "  5. Run: $agent_name \"your task\""
 else
   echo "  4. Run: $agent_name \"your task\""

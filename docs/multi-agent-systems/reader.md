@@ -81,7 +81,7 @@ Runtime configuration is file-based:
 
 | File | Purpose |
 |------|---------|
-| `workspace.env` | Sets `WORKSPACE_DIRS` for pre-created directories (`pages`, `sessions`) and optional launch env |
+| `bootstrap.sh` | Marks the agent as workspace-mode and creates `pages` and `sessions` before pi starts |
 | `SYSTEM.md` | Orchestrator workflow and resume policy |
 | `pi-args` | Orchestrator tool restrictions and `--no-context-files` |
 | `extensions/reasoning-off-shim` | Common top-level extension link for explicit OpenAI-compatible reasoning disable behavior |

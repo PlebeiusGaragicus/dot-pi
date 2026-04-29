@@ -14,7 +14,7 @@ pi resolves its config root via `getAgentDir()` in the coding-agent package. Thi
 - `models.json` -- custom model providers
 - `auth.json` -- API authentication
 - `SYSTEM.md` / `APPEND_SYSTEM.md` -- system prompts for standalone agents and MAS orchestrators
-- `workspace.env` -- workspace directories and launch environment (triggers workspace mode in dispatch-agent)
+- `bootstrap.sh` -- sourced launch setup; `WORKSPACE_AGENT=1` triggers workspace mode in dispatch-agent
 
 This is the mechanism dot-pi exploits for both MAS and standalone agent configurations.
 
@@ -78,13 +78,14 @@ graph TD
   WUser["User runs: deepresearch 'topic'"]
   WAlias["dispatch-agent calls<br/>workspace launch logic"]
   WDir["Creates dated workspace<br/>workspaces/deepresearch/timestamp/"]
+  WBootstrap["Sources bootstrap.sh<br/>and captures bootstrap.log"]
   WPi["pi starts"]
   WSystem["pi loads<br/>SYSTEM.md orchestrator prompt"]
   WSubagent["Orchestrator delegates via<br/>subagent tool (scout, collector, writer, editor)"]
   WChild["Child pi processes spawn<br/>with isolated config"]
   WReport["Final report.md in workspace"]
 
-  WUser --> WAlias --> WDir --> WPi
+  WUser --> WAlias --> WDir --> WBootstrap --> WPi
   WPi --> WSystem --> WSubagent --> WChild --> WReport
 ```
 

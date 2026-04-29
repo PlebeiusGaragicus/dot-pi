@@ -73,15 +73,22 @@ SYSTEMMD
 echo "Created SYSTEM.md (edit to customize)"
 
 if [ "$workspace" = true ]; then
-  cat > "$mas_dir/workspace.env" <<'WSENV'
-# Subdirectories to pre-create in each workspace run.
-# Space-separated directory names.
-WORKSPACE_DIRS="sessions"
+  cat > "$mas_dir/bootstrap.sh" <<'BOOTSTRAP'
+#!/usr/bin/env bash
 
-# Optional environment passed to pi. Known variables include:
-# DOT_PI_DIR, AGENT_NAME, AGENT_DIR, WORKSPACE_DIR
-WSENV
-  echo "Created workspace.env (edit to add workspace directories and environment)"
+WORKSPACE_AGENT=1
+export WORKSPACE_AGENT
+
+if [ -z "${WORKSPACE_DIR:-}" ]; then
+  echo "bootstrap: WORKSPACE_DIR is required" >&2
+  return 1
+fi
+
+mkdir -p "$WORKSPACE_DIR/sessions"
+
+echo "bootstrap: workspace ready at $WORKSPACE_DIR"
+BOOTSTRAP
+  echo "Created bootstrap.sh (edit to add directories, environment, and preflight checks)"
 fi
 
 mode_label="in-situ"
@@ -103,14 +110,14 @@ echo "    banner.txt           (startup branding -- edit to customize)"
 echo "    models.json          (symlinked to shared)"
 echo "    settings.json        (symlink → shared/settings.json)"
 echo "    pi-args              (optional default CLI flags; see IMPORTANT line inside)"
-[ "$workspace" = true ] && echo "    workspace.env        (workspace directories and environment)"
+[ "$workspace" = true ] && echo "    bootstrap.sh         (workspace setup, environment, and preflight checks)"
 echo ""
 echo "Next steps:"
 echo "  1. Add or link subagent config directories under $mas_dir/agents/"
 echo "  2. Edit $mas_dir/SYSTEM.md with the orchestrator workflow"
 if [ "$workspace" = true ]; then
   echo "  3. Link skills as needed: dotpi link-skill $mas_name <skill>"
-  echo "  4. Edit workspace.env to configure workspace directories and environment"
+  echo "  4. Edit bootstrap.sh to configure workspace directories, environment, and preflight checks"
   echo "  5. Run: $mas_name \"your task\""
 else
   echo "  3. Link skills as needed: dotpi link-skill $mas_name <skill>"

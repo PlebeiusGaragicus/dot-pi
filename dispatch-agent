@@ -156,9 +156,36 @@ _workspace_config_file() {
   [ -f "$config_dir/workspace.env" ] && printf '%s\n' "$config_dir/workspace.env"
 }
 
+_bootstrap_file() {
+  local config_dir="$1"
+  [ -f "$config_dir/bootstrap.sh" ] && printf '%s\n' "$config_dir/bootstrap.sh"
+}
+
+_bootstrap_declares_workspace() {
+  local config_dir="$1" file line value
+  file="$(_bootstrap_file "$config_dir")"
+  [ -n "$file" ] || return 1
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="$(_trim "$line")"
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    if [[ "$line" =~ ^export[[:space:]]+(.+)$ ]]; then
+      line="$(_trim "${BASH_REMATCH[1]}")"
+    fi
+    [[ "$line" =~ ^WORKSPACE_AGENT=(.*)$ ]] || continue
+    value="$(_trim "${BASH_REMATCH[1]}")"
+    if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+      value="${value:1:${#value}-2}"
+    elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+      value="${value:1:${#value}-2}"
+    fi
+    [ "$value" = "1" ] && return 0
+  done < "$file"
+  return 1
+}
+
 _is_workspace_agent() {
   local config_dir="$1"
-  [ -f "$config_dir/workspace.env" ]
+  _bootstrap_declares_workspace "$config_dir" || [ -f "$config_dir/workspace.env" ]
 }
 
 _trim() {
@@ -205,6 +232,55 @@ _load_workspace_env() {
   done < "$file"
 }
 
+_source_bootstrap() {
+  local config_dir="$1" phase="$2" ws_path="${3:-}" agent_name="${4:-$AGENT_NAME}"
+  local file log_dir status cwd shell_opts
+  file="$(_bootstrap_file "$config_dir")"
+  [ -n "$file" ] || return 0
+
+  export DOT_PI_DIR
+  export AGENT_NAME="$agent_name"
+  export AGENT_DIR="$config_dir"
+  export DOTPI_BOOTSTRAP_PHASE="$phase"
+  if _bootstrap_declares_workspace "$config_dir"; then
+    export WORKSPACE_AGENT=1
+  else
+    export WORKSPACE_AGENT=0
+  fi
+  if [ -n "$ws_path" ]; then
+    export WORKSPACE_DIR="$ws_path"
+    export BOOTSTRAP_LOG="${BOOTSTRAP_LOG:-$WORKSPACE_DIR/bootstrap.log}"
+  else
+    unset WORKSPACE_DIR
+    mkdir -p "$config_dir/sessions"
+    export BOOTSTRAP_LOG="${BOOTSTRAP_LOG:-$config_dir/sessions/bootstrap.log}"
+  fi
+
+  log_dir="$(dirname "$BOOTSTRAP_LOG")"
+  mkdir -p "$log_dir"
+  {
+    printf '\n[%s] bootstrap start: %s phase=%s cwd=%s\n' "$(date -Iseconds)" "$file" "$phase" "$(pwd)"
+  } >> "$BOOTSTRAP_LOG"
+
+  echo "Bootstrap: $BOOTSTRAP_LOG" >&2
+  cwd="$(pwd)"
+  shell_opts="$(set +o)"
+  if . "$file" >> "$BOOTSTRAP_LOG" 2>&1; then
+    status=0
+  else
+    status=$?
+  fi
+  eval "$shell_opts"
+  cd "$cwd"
+  {
+    printf '[%s] bootstrap end: status=%s\n' "$(date -Iseconds)" "$status"
+  } >> "$BOOTSTRAP_LOG"
+  if [ "$status" -ne 0 ]; then
+    echo "Bootstrap failed for $agent_name (exit $status). See $BOOTSTRAP_LOG" >&2
+    return "$status"
+  fi
+}
+
 _workspace_label() {
   local agent="$1" path="$2" base files ts title
   base=$(basename "$path")
@@ -231,17 +307,25 @@ _resume_workspace_path() {
   agent=$(basename "$(dirname "$ws_path")")
   config_dir="$DOT_PI_DIR/agents/$agent"
   [ -d "$config_dir" ] || { echo "No agent config for workspace: $agent" >&2; return 1; }
-  _load_workspace_env "$config_dir" "$ws_path" "$agent"
+  if [ -n "$(_bootstrap_file "$config_dir")" ]; then
+    :
+  else
+    _load_workspace_env "$config_dir" "$ws_path" "$agent"
+  fi
   _load_pi_args "$config_dir"
   _filter_model_flags "$config_dir" "$@"
   echo "Resuming: $ws_path" >&2
-  local _resume_args=()
-  [ -d "$ws_path/sessions" ] && _resume_args+=(--session-dir "$ws_path/sessions")
   local cmd_args=()
   [ ${#_pi_args[@]} -gt 0 ] && cmd_args+=("${_pi_args[@]}")
-  [ ${#_resume_args[@]} -gt 0 ] && cmd_args+=("${_resume_args[@]}")
-  cmd_args+=(--resume "$@")
-  (cd "$ws_path" && PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}")
+  (
+    cd "$ws_path"
+    _source_bootstrap "$config_dir" "resume" "$ws_path" "$agent"
+    local _resume_args=()
+    [ -d "$ws_path/sessions" ] && _resume_args+=(--session-dir "$ws_path/sessions")
+    [ ${#_resume_args[@]} -gt 0 ] && cmd_args+=("${_resume_args[@]}")
+    cmd_args+=(--resume "$@")
+    PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}"
+  )
 }
 
 _pick_workspace() {
@@ -422,14 +506,16 @@ _workspace_launch() {
     ws="$ws--$slug"
   fi
   mkdir -p "$ws"
-  _load_workspace_env "$config_dir" "$ws" "$name"
-  local subdir
-  for subdir in $WORKSPACE_DIRS; do
-    [ -n "$subdir" ] && mkdir -p "$ws/$subdir"
-  done
+  if [ -n "$(_bootstrap_file "$config_dir")" ]; then
+    :
+  else
+    _load_workspace_env "$config_dir" "$ws" "$name"
+    local subdir
+    for subdir in $WORKSPACE_DIRS; do
+      [ -n "$subdir" ] && mkdir -p "$ws/$subdir"
+    done
+  fi
   echo "Workspace: $ws" >&2
-  local _launch_args=()
-  [ -d "$ws/sessions" ] && _launch_args+=(--session-dir "$ws/sessions")
   if [ ${#pi_args[@]} -gt 0 ]; then
     _filter_model_flags "$config_dir" "${pi_args[@]}"
   else
@@ -437,9 +523,15 @@ _workspace_launch() {
   fi
   local cmd_args=()
   [ ${#_pi_args[@]} -gt 0 ] && cmd_args+=("${_pi_args[@]}")
-  [ ${#_launch_args[@]} -gt 0 ] && cmd_args+=("${_launch_args[@]}")
-  [ ${#pi_args[@]} -gt 0 ] && cmd_args+=("${pi_args[@]}")
-  (cd "$ws" && PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}")
+  (
+    cd "$ws"
+    _source_bootstrap "$config_dir" "fresh" "$ws" "$name"
+    local _launch_args=()
+    [ -d "$ws/sessions" ] && _launch_args+=(--session-dir "$ws/sessions")
+    [ ${#_launch_args[@]} -gt 0 ] && cmd_args+=("${_launch_args[@]}")
+    [ ${#pi_args[@]} -gt 0 ] && cmd_args+=("${pi_args[@]}")
+    PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}"
+  )
   return $?
 }
 
@@ -656,9 +748,11 @@ if _is_workspace_agent "$config_dir"; then
   fi
 else
   if [ "$_batch" = true ]; then
+    _source_bootstrap "$config_dir" "in-situ" "" "$AGENT_NAME"
     PI_CODING_AGENT_DIR="$config_dir" _pi "$@" | _json_filter
     exit ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}
   else
+    _source_bootstrap "$config_dir" "in-situ" "" "$AGENT_NAME"
     PI_CODING_AGENT_DIR="$config_dir" _pi "$@"
     exit $?
   fi

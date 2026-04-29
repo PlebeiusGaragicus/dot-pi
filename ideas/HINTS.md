@@ -52,13 +52,13 @@ run-retro deepresearch > retro.md                 # save report to file
 
 ---
 
-# list available PlebChat models
+# list available LM Studio models
 
 ```sh
-curl -s -H "Authorization: Bearer $PLEBCHAT_API_KEY" "https://api.plebchat.me/v1/models" | jq
+curl -s -H "Authorization: Bearer $LM_STUDIO_API_KEY" "${LM_STUDIO_BASE_URL%/}/v1/models" | jq
 ```
 
 ## see all details
 ```sh
-curl -s -H "Authorization: Bearer $PLEBCHAT_API_KEY" "https://api.plebchat.me/api/v1/models" | jq
+curl -s -H "Authorization: Bearer $LM_STUDIO_API_KEY" "${LM_STUDIO_BASE_URL%/}/api/v1/models" | jq
 ```

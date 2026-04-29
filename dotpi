@@ -26,10 +26,10 @@ Commands:
   version | --version | -v                 Print dotpi version (from VERSION file) and exit
 
 Options:
-  --workspace   Mark as a workspace agent. Creates a workspace.env file so the
+  --workspace   Mark as a workspace agent. Creates a bootstrap.sh file so the
                 auto-generated alias launches pi in a fresh dated directory instead of
-                the user's current directory. Edit workspace.env to list subdirectories
-                and environment variables for each workspace run.
+                the user's current directory. Edit bootstrap.sh to create directories,
+                export environment variables, and run preflight checks.
 
 Examples:
   dotpi setup
