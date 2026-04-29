@@ -1,3 +1,225 @@
-#!/bin/env bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-TODO_FILE="$HOME/.todo/tasks.md"
+command -v jq >/dev/null 2>&1 || {
+	echo "todo: jq is required" >&2
+	exit 1
+}
+
+todo_script_dir() {
+	local src="${BASH_SOURCE[0]}"
+	local dir
+	while [[ -L "$src" ]]; do
+		dir="$(cd -P "$(dirname "$src")" && pwd)"
+		src="$(readlink "$src")"
+		[[ "$src" != /* ]] && src="$dir/$src"
+	done
+	cd -P "$(dirname "$src")" && pwd
+}
+
+TODO_SCRIPT_DIR="$(todo_script_dir)"
+VERSION_FILE="$TODO_SCRIPT_DIR/VERSION"
+
+TODO_FILE=""
+
+resolve_todo_file() {
+	local dir="$PWD"
+	while true; do
+		if [[ -f "$dir/todo.jsonl" ]]; then
+			TODO_FILE="$dir/todo.jsonl"
+			return 0
+		fi
+		if [[ "$dir" == "/" ]]; then
+			mkdir -p "$HOME/.todo"
+			TODO_FILE="$HOME/.todo/todo.jsonl"
+			[[ -f "$TODO_FILE" ]] || : >"$TODO_FILE"
+			return 0
+		fi
+		dir="$(dirname "$dir")"
+	done
+}
+
+usage() {
+	cat <<'EOF'
+usage:
+  todo              show this help
+  todo file         print path to active todo.jsonl
+  todo list         list tasks as markdown
+  todo new "text"   add a task
+  todo edit <id> "new text"
+  todo del <id>
+  todo done <id>
+  todo undone <id>
+  todo version      print version
+EOF
+}
+
+validate_id() {
+	local id="$1"
+	if [[ ! "$id" =~ ^[0-9]+$ ]]; then
+		echo "todo: invalid id (expected non-negative integer): $id" >&2
+		exit 1
+	fi
+}
+
+id_exists() {
+	local id="$1"
+	[[ -s "$TODO_FILE" ]] || return 1
+	jq -es --argjson id "$id" 'any(.[]; .id == $id)' "$TODO_FILE" >/dev/null
+}
+
+write_jsonl() {
+	local tmp
+	tmp="$(mktemp)"
+	if cat >"$tmp"; then
+		mv "$tmp" "$TODO_FILE"
+	else
+		rm -f "$tmp"
+		return 1
+	fi
+}
+
+cmd_file() {
+	resolve_todo_file
+	printf '%s\n' "$(cd "$(dirname "$TODO_FILE")" && pwd)/$(basename "$TODO_FILE")"
+}
+
+cmd_list() {
+	resolve_todo_file
+	[[ ! -s "$TODO_FILE" ]] && return 0
+	jq -r 'if .done then "- [x] (\(.id)) \(.text)" else "- [ ] (\(.id)) \(.text)" end' "$TODO_FILE"
+}
+
+cmd_new() {
+	local text="$*"
+	if [[ -z "$text" ]]; then
+		echo 'todo: new requires non-empty text' >&2
+		exit 1
+	fi
+	resolve_todo_file
+	local next_id
+	if [[ ! -s "$TODO_FILE" ]]; then
+		next_id=0
+	else
+		next_id="$(jq -s 'map(.id) | max // -1 | . + 1' "$TODO_FILE")"
+	fi
+	jq -nc --arg text "$text" --argjson id "$next_id" '{id: $id, text: $text, done: false}' >>"$TODO_FILE"
+}
+
+cmd_edit() {
+	local id="$1"
+	shift
+	local text="$*"
+	validate_id "$id"
+	if [[ -z "$text" ]]; then
+		echo 'todo: edit requires new text' >&2
+		exit 1
+	fi
+	resolve_todo_file
+	if ! id_exists "$id"; then
+		echo "todo: no task with id $id" >&2
+		exit 1
+	fi
+	jq -s --argjson id "$id" --arg text "$text" 'map(if .id == $id then .text = $text else . end) | .[] | .' -c "$TODO_FILE" | write_jsonl
+}
+
+cmd_del() {
+	local id="$1"
+	validate_id "$id"
+	resolve_todo_file
+	if ! id_exists "$id"; then
+		echo "todo: no task with id $id" >&2
+		exit 1
+	fi
+	jq -s --argjson id "$id" 'map(select(.id != $id)) | .[] | .' -c "$TODO_FILE" | write_jsonl
+}
+
+cmd_done() {
+	local id="$1"
+	validate_id "$id"
+	resolve_todo_file
+	if ! id_exists "$id"; then
+		echo "todo: no task with id $id" >&2
+		exit 1
+	fi
+	jq -s --argjson id "$id" 'map(if .id == $id then .done = true else . end) | .[] | .' -c "$TODO_FILE" | write_jsonl
+}
+
+cmd_undone() {
+	local id="$1"
+	validate_id "$id"
+	resolve_todo_file
+	if ! id_exists "$id"; then
+		echo "todo: no task with id $id" >&2
+		exit 1
+	fi
+	jq -s --argjson id "$id" 'map(if .id == $id then .done = false else . end) | .[] | .' -c "$TODO_FILE" | write_jsonl
+}
+
+cmd_version() {
+	if [[ -f "$VERSION_FILE" ]]; then
+		tr -d '\n' <"$VERSION_FILE"
+		printf '\n'
+	else
+		echo "todo: VERSION file missing in $TODO_SCRIPT_DIR" >&2
+		exit 1
+	fi
+}
+
+main() {
+	case "${1:-}" in
+	"" | -h | --help | help)
+		usage
+		;;
+	file)
+		cmd_file
+		;;
+	list)
+		cmd_list
+		;;
+	new)
+		shift
+		cmd_new "$@"
+		;;
+	edit)
+		[[ $# -ge 3 ]] || {
+			echo 'todo: usage: todo edit <id> "new text"' >&2
+			exit 1
+		}
+		id="$2"
+		shift 2
+		cmd_edit "$id" "$@"
+		;;
+	del)
+		[[ $# -eq 2 ]] || {
+			echo 'todo: usage: todo del <id>' >&2
+			exit 1
+		}
+		cmd_del "$2"
+		;;
+	done)
+		[[ $# -eq 2 ]] || {
+			echo 'todo: usage: todo done <id>' >&2
+			exit 1
+		}
+		cmd_done "$2"
+		;;
+	undone)
+		[[ $# -eq 2 ]] || {
+			echo 'todo: usage: todo undone <id>' >&2
+			exit 1
+		}
+		cmd_undone "$2"
+		;;
+	version)
+		cmd_version
+		;;
+	*)
+		echo "todo: unknown command: $1" >&2
+		usage >&2
+		exit 1
+		;;
+	esac
+}
+
+main "$@"

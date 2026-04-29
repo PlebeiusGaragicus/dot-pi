@@ -1,37 +1,57 @@
-The 'todo' utility is a simple shell script for managing todo.json task lists
+The `todo` utility is a simple shell script for managing todo.jsonl task lists.
 
 ## todo file
 
-when todo is invoked a todo.jsonl file is searched for in the present directory and every parent directory as we walk up the path until one is found.  These would be considered project or workspace specific todo files.  If none is found a system-wide todo file should be created at ~/.todo/todo.jsonl
+When `todo` runs, it looks for `todo.jsonl` in the current directory, then each parent directory up to the root. That file is the project or workspace todo list. If none exists, the active file is `~/.todo/todo.jsonl` (the directory is created if needed).
 
 ## data format
 
-Each todo item has a simple format:
+Each line is one JSON object:
 
 ```json
 {
-    "id": "td_2343",
+    "id": 0,
     "text": "do the dishes",
-    "finished": false
+    "done": false
 }
 ```
 
-id's are prepended with "td_" and have a 4 digit number starting at 0001.
+`id` is a non-negative integer. New tasks get the next free id: max existing id plus one, starting from `0` when the file is empty.
 
 ## usage
 
-Here are some commands it supports:
-
 ```sh
-
-todo list
-todo new "item that needs to be done"
-todo edit <id>
-todo delete <id>
-todo finish <id>
-todo unfinish <id>
+todo                 # prints usage
+todo file            # absolute path to active todo.jsonl
+todo list            # markdown lines: - [ ] (id) text  /  - [x] (id) text
+todo new "task text"
+todo edit <id> "replacement text"
+todo del <id>
+todo done <id>
+todo undone <id>
+todo version
 ```
 
-## installation
+## prerequisites
 
-This utility is meant to be symlink'd into PATH so that any user or bot can call it to manage todo items.
+- `bash`
+- `jq`
+
+## install
+
+Create `~/.local/bin` if needed, symlink this repo’s `todo` script there, and ensure that directory is on your `PATH` (many shells include it by default; otherwise add `export PATH="$HOME/.local/bin:$PATH"` to your shell rc).
+
+If this repository lives at `~/.dot-pi`, run:
+
+```sh
+mkdir -p ~/.local/bin
+ln -sf "$HOME/.dot-pi/utilities/todo/todo" "$HOME/.local/bin/todo"
+```
+
+If the repo is elsewhere, replace the first path with the absolute path to `utilities/todo/todo` inside your checkout.
+
+Check:
+
+```sh
+command -v todo && todo version
+```
