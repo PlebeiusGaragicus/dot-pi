@@ -42,15 +42,19 @@ resolve_todo_file() {
 usage() {
 	cat <<'EOF'
 usage:
-  todo              show this help
-  todo file         print path to active todo.jsonl
-  todo list         list tasks as markdown
-  todo new "text"   add a task
-  todo edit <id> "new text"
-  todo del <id>
-  todo done <id>
-  todo undone <id>
-  todo version      print version
+  todo list               list open (not done) tasks as markdown
+  todo done               list finished tasks as markdown
+  todo all                list all tasks as markdown (open and finished)
+  todo new "foo"          add a task
+  todo edit <id> "bar"    edit a task's text
+  todo del <id>           delete a task
+  todo finished <id>      mark task finished
+  todo unfinished <id>    mark task not finished
+  todo file               create todo.jsonl in the current directory
+  todo which              print path to active todo.jsonl
+  todo rm [-y|--yes]      delete active todo.jsonl (prompts unless -y/--yes)
+  todo help               show this help
+  todo version            print version
 EOF
 }
 
@@ -79,15 +83,79 @@ write_jsonl() {
 	fi
 }
 
+abs_path() {
+	local f="$1"
+	printf '%s\n' "$(cd "$(dirname "$f")" && pwd)/$(basename "$f")"
+}
+
 cmd_file() {
+	local target="$PWD/todo.jsonl"
+	if [[ -e "$target" ]]; then
+		echo "todo: todo.jsonl already exists here: $(abs_path "$target")" >&2
+		exit 1
+	fi
+	: >"$target"
+	printf 'created %s\n' "$(abs_path "$target")"
+}
+
+cmd_which() {
 	resolve_todo_file
-	printf '%s\n' "$(cd "$(dirname "$TODO_FILE")" && pwd)/$(basename "$TODO_FILE")"
+	abs_path "$TODO_FILE"
+}
+
+cmd_rm() {
+	local force=false
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		-y | --yes)
+			force=true
+			shift
+			;;
+		*)
+			echo 'todo: usage: todo rm [-y|--yes]' >&2
+			exit 1
+			;;
+		esac
+	done
+	resolve_todo_file
+	if [[ ! -f "$TODO_FILE" ]]; then
+		echo "todo: no todo file to remove at $(abs_path "$TODO_FILE")" >&2
+		exit 1
+	fi
+	local path
+	path="$(abs_path "$TODO_FILE")"
+	if ! $force; then
+		local ans
+		if ! read -r -p "Delete ${path}? [y/N] " ans </dev/tty; then
+			echo "todo: cannot prompt (not a tty); use todo rm --yes" >&2
+			exit 1
+		fi
+		ans=$(printf '%s' "$ans" | tr '[:upper:]' '[:lower:]')
+		if [[ "$ans" != "y" && "$ans" != "yes" ]]; then
+			echo "todo: cancelled" >&2
+			exit 1
+		fi
+	fi
+	rm -- "$TODO_FILE"
+	printf 'removed %s\n' "$path"
 }
 
 cmd_list() {
 	resolve_todo_file
 	[[ ! -s "$TODO_FILE" ]] && return 0
+	jq -r 'select(.done != true) | "- [ ] (\(.id)) \(.text)"' "$TODO_FILE"
+}
+
+cmd_all() {
+	resolve_todo_file
+	[[ ! -s "$TODO_FILE" ]] && return 0
 	jq -r 'if .done then "- [x] (\(.id)) \(.text)" else "- [ ] (\(.id)) \(.text)" end' "$TODO_FILE"
+}
+
+cmd_done_list() {
+	resolve_todo_file
+	[[ ! -s "$TODO_FILE" ]] && return 0
+	jq -r 'select(.done == true) | "- [x] (\(.id)) \(.text)"' "$TODO_FILE"
 }
 
 cmd_new() {
@@ -134,7 +202,7 @@ cmd_del() {
 	jq -s --argjson id "$id" 'map(select(.id != $id)) | .[] | .' -c "$TODO_FILE" | write_jsonl
 }
 
-cmd_done() {
+cmd_finished() {
 	local id="$1"
 	validate_id "$id"
 	resolve_todo_file
@@ -145,7 +213,7 @@ cmd_done() {
 	jq -s --argjson id "$id" 'map(if .id == $id then .done = true else . end) | .[] | .' -c "$TODO_FILE" | write_jsonl
 }
 
-cmd_undone() {
+cmd_unfinished() {
 	local id="$1"
 	validate_id "$id"
 	resolve_todo_file
@@ -174,8 +242,25 @@ main() {
 	file)
 		cmd_file
 		;;
+	which)
+		cmd_which
+		;;
+	rm)
+		shift
+		cmd_rm "$@"
+		;;
 	list)
 		cmd_list
+		;;
+	all)
+		cmd_all
+		;;
+	done)
+		if [[ $# -ne 1 ]]; then
+			echo 'todo: usage: todo done' >&2
+			exit 1
+		fi
+		cmd_done_list
 		;;
 	new)
 		shift
@@ -197,21 +282,21 @@ main() {
 		}
 		cmd_del "$2"
 		;;
-	done)
+	finished)
 		[[ $# -eq 2 ]] || {
-			echo 'todo: usage: todo done <id>' >&2
+			echo 'todo: usage: todo finished <id>' >&2
 			exit 1
 		}
-		cmd_done "$2"
+		cmd_finished "$2"
 		;;
-	undone)
+	unfinished)
 		[[ $# -eq 2 ]] || {
-			echo 'todo: usage: todo undone <id>' >&2
+			echo 'todo: usage: todo unfinished <id>' >&2
 			exit 1
 		}
-		cmd_undone "$2"
+		cmd_unfinished "$2"
 		;;
-	version)
+	version | --version | -v)
 		cmd_version
 		;;
 	*)

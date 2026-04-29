@@ -4,6 +4,8 @@ The `todo` utility is a simple shell script for managing todo.jsonl task lists.
 
 When `todo` runs, it looks for `todo.jsonl` in the current directory, then each parent directory up to the root. That file is the project or workspace todo list. If none exists, the active file is `~/.todo/todo.jsonl` (the directory is created if needed).
 
+Run **`todo file`** in a project directory to create an empty `todo.jsonl` there (it refuses if one already exists). Use **`todo which`** to print the absolute path of the active list after resolution.
+
 ## data format
 
 Each line is one JSON object:
@@ -22,13 +24,18 @@ Each line is one JSON object:
 
 ```sh
 todo                 # prints usage
-todo file            # absolute path to active todo.jsonl
-todo list            # markdown lines: - [ ] (id) text  /  - [x] (id) text
-todo new "task text"
-todo edit <id> "replacement text"
+todo list            # open tasks only: - [ ] (id) text
+todo done            # finished tasks only: - [x] (id) text
+todo all             # all tasks: - [ ] / - [x] markdown lines
+todo file            # create ./todo.jsonl in the current directory
+todo which           # absolute path to active todo.jsonl
+todo rm              # delete active todo.jsonl — same path as todo which (prompts; -y / --yes skips)
+todo new "foo"
+todo edit <id> "bar"
 todo del <id>
-todo done <id>
-todo undone <id>
+todo finished <id>
+todo unfinished <id>
+todo help            # usage (-h and --help also work)
 todo version
 ```
 
