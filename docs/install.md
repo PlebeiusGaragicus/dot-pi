@@ -70,7 +70,7 @@ After configuring providers, the wizard lets you assign local fallback models:
 - `DEFAULT_FAST_MODEL` — quick/cheap model fallback
 - `DEFAULT_VLM_MODEL` — vision model fallback
 
-These are exported from local `model-defaults` and can be overridden per-agent by `agents/<name>/.model` via `/model-default`. Each agent chooses which fallback to use in `pi-args`, for example `--model $DEFAULT_FAST_MODEL`. Empty defaults are valid; `dispatch-agent` skips empty `--model` values so pi uses its `settings.json` default.
+These are exported from local `model-defaults` and can be overridden per-agent by a raw `agents/<name>/.model` value via `/model-default`. Each agent chooses which fallback to use in `pi-args`, for example `--model $DEFAULT_FAST_MODEL`. Empty defaults are valid; `dispatch-agent` skips empty `--model` values so pi uses its `settings.json` default.
 
 ### First-party auth
 
@@ -153,7 +153,7 @@ Interactive picker for repo-local fallback model aliases in `model-defaults`. Re
 
 ### `/model-default`
 
-Interactive in-agent command for local overrides. With no args, it opens a menu and preselects the default alias used by the current agent's `pi-args` when possible. Current-agent choices write the agent config root's `.model`; global choices update repo-root `model-defaults`. Inline env overrides such as `DEFAULT_AGENTIC_MODEL=provider/model deepresearch` still win over both files.
+Interactive in-agent command for local overrides. With no args, it opens a menu and offers to set the current agent's raw `.model` override when possible. Current-agent choices write one `provider/model` value to the agent config root's `.model`; global choices update repo-root `model-defaults`. Inline env overrides such as `DEFAULT_AGENTIC_MODEL=provider/model deepresearch` still win over both files.
 
 ### `dotpi create <mas-name>`
 

@@ -267,7 +267,7 @@ export DEFAULT_FAST_MODEL="${DEFAULT_FAST_MODEL:-}"
 export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
 ```
 
-Configure it with `dotpi model-defaults`. Empty values are allowed. The `/model-default` command can write agent-local `.model` overrides with the same aliases.
+Configure it with `dotpi model-defaults`. Empty values are allowed. The `/model-default` command can write an agent-local `.model` file containing a single raw `provider/model` id for that specific agent.
 
 ## Subagent Roots
 

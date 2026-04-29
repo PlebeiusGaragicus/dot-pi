@@ -32,12 +32,16 @@ Optional agent-local override file, written by the in-agent command:
 /model-default
 ```
 
-Agent `.model` files live in config roots such as `agents/lm/.model`, `agents/deepresearch/.model`, or `subagents/scout/.model`. They use the same `DEFAULT_*` aliases as `model-defaults`, but only affect that specific agent config root. They are gitignored.
-
-With no arguments, the command opens an interactive menu. If the current agent's `pi-args` contains a model alias such as `$DEFAULT_FAST_MODEL`, the first option targets that alias:
+Agent `.model` files live in config roots such as `agents/lm/.model`, `agents/deepresearch/.model`, or `subagents/scout/.model`. They contain one raw model id and only affect that specific agent config root. They are gitignored:
 
 ```text
-Set current agent model (DEFAULT_FAST_MODEL)
+plebchat/nvidia/nemotron-3-super
+```
+
+With no arguments, the command opens an interactive menu. If the current agent's `pi-args` contains a model alias such as `$DEFAULT_FAST_MODEL`, the first option writes a direct current-agent model override:
+
+```text
+Set current agent model
 Set global agentic default
 Set global fast default
 Set global vision default
@@ -95,7 +99,7 @@ Model selection resolves in this order:
 
 - Agent policy lives in `pi-args`, not a separate model policy file.
 - `model-defaults` supplies machine-local global fallback aliases.
-- Agent `.model` files supply persistent per-agent overrides without editing `pi-args`.
+- Agent `.model` files supply persistent per-agent raw model overrides without editing `pi-args`.
 - Inline env overrides are temporary and highest priority among defaults.
 - Explicit CLI flags beat all defaults.
 - Empty default aliases are valid and result in no `--model` flag being passed.

@@ -350,7 +350,7 @@ Key patterns:
 
 ### Example: Model Default
 
-A shared extension that registers `/model-default` for top-level agents. It displays resolved `DEFAULT_*` aliases, writes agent-local `.model` overrides, and can update repo-local `model-defaults` through global menu options.
+A shared extension that registers `/model-default` for top-level agents. It displays resolved `DEFAULT_*` aliases, writes agent-local `.model` files as raw `provider/model` overrides, and can update repo-local `model-defaults` through global menu options.
 
 Source: `shared/extensions/model-default/index.ts`
 
@@ -358,7 +358,7 @@ Key patterns:
 
 - Reads available models from `models.json`
 - Infers the current agent's default alias from `pi-args`
-- Resolves agent-local `.model` plus repo-local `model-defaults`
+- Resolves raw agent-local `.model` plus repo-local `model-defaults`
 - Persists local overrides in a gitignored dotfile
 - Leaves agent-specific model policy in `pi-args`
 

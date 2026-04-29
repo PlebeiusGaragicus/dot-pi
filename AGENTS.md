@@ -116,7 +116,7 @@ No orchestrator subagent pool is required. The main pi process IS the agent. Cus
 **Prompt and tool customization** (combine as needed):
 
 1. **`SYSTEM.md` / `APPEND_SYSTEM.md`** (pi-native): `SYSTEM.md` replaces pi's default system prompt entirely; `APPEND_SYSTEM.md` appends to it. No extension needed — pi discovers these from `PI_CODING_AGENT_DIR` at startup.
-2. **`pi-args`** (via `dispatch-agent`): plain text file with default CLI flags (e.g. `--model $DEFAULT_FAST_MODEL`, `--tools websearch`, `--no-tools`, `--no-skills`, `--no-context-files`), one per line. Model defaults come from repo-local `model-defaults` and optional agent-local `.model` overrides; empty `--model $DEFAULT_*` values are skipped so pi falls back to `settings.json`. A missing final newline is tolerated. Non-coding agents and reusable subagents should usually include `--no-context-files` so workspace runs inside this repo do not inherit `AGENTS.md` or other coding context files. Coding agents such as `coder` may intentionally omit it.
+2. **`pi-args`** (via `dispatch-agent`): plain text file with default CLI flags (e.g. `--model $DEFAULT_FAST_MODEL`, `--tools websearch`, `--no-tools`, `--no-skills`, `--no-context-files`), one per line. Model defaults come from repo-local `model-defaults` and optional agent-local `.model` files containing a raw `provider/model` id; empty `--model $DEFAULT_*` values are skipped so pi falls back to `settings.json`. A missing final newline is tolerated. Non-coding agents and reusable subagents should usually include `--no-context-files` so workspace runs inside this repo do not inherit `AGENTS.md` or other coding context files. Coding agents such as `coder` may intentionally omit it.
 3. **`AGENT.md`** (optional, legacy): YAML frontmatter sets `tools` and/or `model`; body appended to the system prompt. Requires symlink: `ln -sf ../../../shared/extensions/agent-prompt extensions/agent-prompt` — the `agent-prompt` shared extension reads `AGENT.md`. New `dotpi create-agent` scaffolds do not link this file by default.
 
 ## Key Concepts
@@ -360,7 +360,7 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `*/auth.json` | **No** | Credentials — gitignored |
 | `REFERENCES/**` | **No** | Local-only sibling checkouts; gitignored. Cloned manually for agent context (see `REFERENCE-REPOS.md`). |
 | `model-defaults` | Local | Per-machine global fallback model aliases. Written by `dotpi model-defaults`, loaded at agent launch time. Bootstrap manually with `cp bootstrap/model-defaults.example model-defaults`. |
-| `agents/*/.model`, `subagents/*/.model`, `agents/*/agents/*/.model` | Local | Per-agent model default overrides written by `/model-default`; gitignored. |
+| `agents/*/.model`, `subagents/*/.model`, `agents/*/agents/*/.model` | Local | Per-agent raw `provider/model` overrides written by `/model-default`; gitignored. |
 | `shared/settings.json` | Local | Bootstrapped from `bootstrap/settings.json.example` by `install` / `dotpi sync`; gitignored thereafter. Edit freely; not tracked. |
 | `bootstrap/*.example`, `bootstrap/plebchat-models.json` | Yes | Tracked seed/template files used to bootstrap local config. Edit to change defaults seen by new installs. |
 | `VERSION` | Yes | Bump on releases. Surfaced via `dotpi --version`. |

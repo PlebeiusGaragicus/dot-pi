@@ -64,12 +64,29 @@ function parseExports(filePath: string): Record<string, string> {
 	return env;
 }
 
+function readAgentModel(): string {
+	const filePath = path.join(getAgentDir(), MODEL_FILE);
+	if (!fs.existsSync(filePath)) return "";
+	for (const rawLine of fs.readFileSync(filePath, "utf-8").split(/\r?\n/)) {
+		const line = rawLine.trim();
+		if (!line || line.startsWith("#")) continue;
+		return line;
+	}
+	return "";
+}
+
 function readResolvedDefaults(): Record<string, string> {
 	const root = findDotPiRoot();
-	return {
+	const defaults = parseExports(path.join(root, DEFAULTS_FILE));
+	const agentModel = readAgentModel();
+	const currentRole = detectCurrentAgentRole();
+	const resolved = {
 		...(process.env as Record<string, string>),
-		...parseExports(path.join(root, DEFAULTS_FILE)),
-		...parseExports(path.join(getAgentDir(), MODEL_FILE)),
+		...defaults,
+	};
+	if (agentModel && currentRole) resolved[currentRole.env] = agentModel;
+	return {
+		...resolved,
 	};
 }
 
@@ -89,11 +106,14 @@ function writeExports(filePath: string, values: Record<string, string>, header: 
 	return filePath;
 }
 
-function writeAgentModel(values: Record<string, string>): string {
-	return writeExports(path.join(getAgentDir(), MODEL_FILE), values, [
-		"# Agent-local model overrides written by /model-default.",
-		"# Delete this file or run /model-default reset to use model-defaults.",
-	]);
+function writeAgentModel(value: string): string {
+	const filePath = path.join(getAgentDir(), MODEL_FILE);
+	if (!value) {
+		if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+		return filePath;
+	}
+	fs.writeFileSync(filePath, `${value}\n`, "utf-8");
+	return filePath;
 }
 
 function writeGlobalDefaults(values: Record<string, string>): string {
@@ -129,15 +149,17 @@ function detectCurrentAgentRole(): Role | undefined {
 function formatReport(): string {
 	const root = findDotPiRoot();
 	const defaults = parseExports(path.join(root, DEFAULTS_FILE));
-	const overrides = parseExports(path.join(getAgentDir(), MODEL_FILE));
+	const agentModel = readAgentModel();
+	const currentRole = detectCurrentAgentRole();
 	const resolved = readResolvedDefaults();
 	const lines = [
 		`model-defaults: ${path.join(root, DEFAULTS_FILE)}`,
 		`agent .model: ${path.join(getAgentDir(), MODEL_FILE)}`,
+		`current agent model: ${agentModel || "(unset)"}`,
 		"",
 	];
 	for (const role of ROLES) {
-		const source = overrides[role.env] ? "agent .model" : defaults[role.env] ? "model-defaults" : process.env[role.env] ? "env" : "pi settings";
+		const source = agentModel && currentRole?.env === role.env ? "agent .model" : defaults[role.env] ? "model-defaults" : process.env[role.env] ? "env" : "pi settings";
 		lines.push(`${role.env}: ${resolved[role.env] || "(unset)"} [${source}]`);
 	}
 	lines.push("", "Commands:", "/model-default agentic", "/model-default fast", "/model-default vlm", "/model-default reset");
@@ -155,23 +177,27 @@ async function selectModelForRole(role: Role, ctx: CommandContext, scope: "agent
 		return;
 	}
 
-	const current = readResolvedDefaults()[role.env] ?? "";
-	const choices = ["(unset: use pi settings default)", ...models.map((model) => (model === current ? `${model} (current)` : model))];
-	const selected = await ctx.ui.select(`Select ${role.label} model`, choices);
+	const current = scope === "agent" ? readAgentModel() : readResolvedDefaults()[role.env] ?? "";
+	const unsetLabel = scope === "agent" ? "(unset: use model-defaults)" : "(unset: use pi settings default)";
+	const choices = [unsetLabel, ...models.map((model) => (model === current ? `${model} (current)` : model))];
+	const selected = await ctx.ui.select(scope === "agent" ? "Select current agent model" : `Select ${role.label} model`, choices);
 	if (!selected) return;
 
 	const targetPath = scope === "agent" ? path.join(getAgentDir(), MODEL_FILE) : path.join(findDotPiRoot(), DEFAULTS_FILE);
-	const overrides = parseExports(targetPath);
-	if (selected.startsWith("(unset")) delete overrides[role.env];
-	else overrides[role.env] = selected.replace(/ \(current\)$/, "");
-	const filePath = scope === "agent" ? writeAgentModel(overrides) : writeGlobalDefaults(overrides);
+	const selectedModel = selected.startsWith("(unset") ? "" : selected.replace(/ \(current\)$/, "");
+	const overrides = scope === "agent" ? {} : parseExports(targetPath);
+	if (scope === "global") {
+		if (selectedModel) overrides[role.env] = selectedModel;
+		else delete overrides[role.env];
+	}
+	const filePath = scope === "agent" ? writeAgentModel(selectedModel) : writeGlobalDefaults(overrides);
 	ctx.ui.notify(`Updated ${scope === "agent" ? "agent model override" : "global model defaults"}\n\n${filePath}\n\n${formatReport()}`, "info");
 }
 
 async function showDefaultMenu(ctx: CommandContext): Promise<void> {
 	const currentRole = detectCurrentAgentRole();
 	const choices: string[] = [];
-	if (currentRole) choices.push(`Set current agent model (${currentRole.env})`);
+	if (currentRole) choices.push("Set current agent model");
 	choices.push("Set global agentic default", "Set global fast default", "Set global vision default", "Show current defaults", "Reset current agent override");
 
 	const selected = await ctx.ui.select("Model defaults", choices);
@@ -198,7 +224,7 @@ async function showDefaultMenu(ctx: CommandContext): Promise<void> {
 		return;
 	}
 	if (selected === "Reset current agent override") {
-		const filePath = writeAgentModel({});
+		const filePath = writeAgentModel("");
 		ctx.ui.notify(`Removed current agent model override\n\n${filePath}`, "info");
 	}
 }
@@ -221,7 +247,7 @@ function registerModelDefaultCommand(pi: ExtensionAPI): void {
 			}
 
 			if (action === "reset") {
-				const filePath = writeAgentModel({});
+				const filePath = writeAgentModel("");
 				ctx.ui.notify(`Removed current agent model override\n\n${filePath}`, "info");
 				return;
 			}

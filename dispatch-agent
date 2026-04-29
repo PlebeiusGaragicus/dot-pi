@@ -6,6 +6,7 @@ set -euo pipefail
 
 AGENT_NAME="$(basename "$0")"
 _pi_args=()
+_inline_model_defaults=":"
 
 # ── env bootstrap ─────────────────────────────────────────────────────────────
 # When invoked outside a shell that sourced env.sh (e.g. cron, scripts),
@@ -42,7 +43,8 @@ _expand_env_vars() {
 _load_model_env() {
   local config_dir="$1"
   local file line name value fallback
-  for file in "$config_dir/.model" "$DOT_PI_DIR/model-defaults"; do
+  _inline_model_defaults=":"
+  for file in "$DOT_PI_DIR/model-defaults"; do
     [ -f "$file" ] || continue
     while IFS= read -r line || [ -n "$line" ]; do
       [[ "$line" =~ ^[[:space:]]*export[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue
@@ -56,15 +58,34 @@ _load_model_env() {
         value="${value%\"}"
         value="${value#\"}"
       fi
-      [ -n "${!name:-}" ] || export "$name=$value"
+      if [ -n "${!name:-}" ]; then
+        _inline_model_defaults="${_inline_model_defaults}${name}:"
+      else
+        export "$name=$value"
+      fi
     done < "$file"
   done
 }
 
+_read_agent_model() {
+  local config_dir="$1" model_file="$config_dir/.model" line
+  [ -f "$model_file" ] || return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    printf '%s\n' "$line"
+    return 0
+  done < "$model_file"
+}
+
 _filter_model_flags() {
-  local explicit_model=false explicit_thinking=false out=() arg next
+  local config_dir="$1"
+  shift
+  local explicit_model=false explicit_thinking=false out=() arg next agent_model alias_name alias_value
   _has_flag "--model" "$@" && explicit_model=true
   _has_flag "--thinking" "$@" && explicit_thinking=true
+  agent_model="$(_read_agent_model "$config_dir")"
   while [ ${#_pi_args[@]} -gt 0 ]; do
     arg="${_pi_args[0]}"
     _pi_args=("${_pi_args[@]:1}")
@@ -75,6 +96,19 @@ _filter_model_flags() {
         [ -z "$next" ] && continue
         [[ "$next" == --* ]] && { _pi_args=("$next" "${_pi_args[@]}"); continue; }
         [ "$arg" = "--model" ] && [ "$explicit_model" = true ] && continue
+        if [[ "$arg" = "--model" && "$next" == __DOTPI_MODEL_ALIAS__:* ]]; then
+          alias_name="${next#__DOTPI_MODEL_ALIAS__:}"
+          alias_name="${alias_name%%:*}"
+          alias_value="${next#__DOTPI_MODEL_ALIAS__:${alias_name}:}"
+          if [[ "$_inline_model_defaults" == *":${alias_name}:"* ]]; then
+            next="$alias_value"
+          elif [ -n "$agent_model" ]; then
+            next="$agent_model"
+          else
+            next="$alias_value"
+          fi
+        fi
+        [ "$arg" = "--model" ] && [ -z "$next" ] && continue
         [ "$arg" = "--thinking" ] && [ "$explicit_thinking" = true ] && continue
         out+=("$arg" "$next")
         ;;
@@ -91,13 +125,18 @@ _filter_model_flags() {
 }
 
 _load_pi_args() {
-  local config_dir="$1" _line
+  local config_dir="$1" _line _raw_line _alias_name
   _pi_args=()
   _load_model_env "$config_dir"
   if [ -f "$config_dir/pi-args" ]; then
     while IFS= read -r _line || [ -n "$_line" ]; do
       [[ -z "$_line" || "$_line" == \#* ]] && continue
+      _raw_line="$_line"
       _line="$(_expand_env_vars "$_line")"
+      if [[ "$_raw_line" =~ ^[[:space:]]*\$?\{?(DEFAULT_[A-Z0-9_]+)\}?[[:space:]]*$ ]]; then
+        _alias_name="${BASH_REMATCH[1]}"
+        _line="__DOTPI_MODEL_ALIAS__:${_alias_name}:${_line}"
+      fi
       # shellcheck disable=SC2206  # intentional word-splitting so multi-word flags expand
       _pi_args+=($_line)
     done < "$config_dir/pi-args"
@@ -138,7 +177,7 @@ _resume_workspace_path() {
   config_dir="$DOT_PI_DIR/agents/$agent"
   [ -d "$config_dir" ] || { echo "No agent config for workspace: $agent" >&2; return 1; }
   _load_pi_args "$config_dir"
-  _filter_model_flags "$@"
+  _filter_model_flags "$config_dir" "$@"
   echo "Resuming: $ws_path" >&2
   local _resume_args=()
   [ -d "$ws_path/sessions" ] && _resume_args+=(--session-dir "$ws_path/sessions")
@@ -333,7 +372,7 @@ _workspace_launch() {
   echo "Workspace: $ws" >&2
   local _launch_args=()
   [ -d "$ws/sessions" ] && _launch_args+=(--session-dir "$ws/sessions")
-  _filter_model_flags "${pi_args[@]}"
+  _filter_model_flags "$config_dir" "${pi_args[@]}"
   local cmd_args=()
   [ ${#_pi_args[@]} -gt 0 ] && cmd_args+=("${_pi_args[@]}")
   [ ${#_launch_args[@]} -gt 0 ] && cmd_args+=("${_launch_args[@]}")
@@ -538,7 +577,7 @@ fi
 # Load default CLI flags from pi-args
 _load_pi_args "$config_dir"
 if [ ! -f "$config_dir/workspace.conf" ]; then
-  _filter_model_flags "$@"
+  _filter_model_flags "$config_dir" "$@"
   if [ ${#_pi_args[@]} -gt 0 ]; then
     set -- "${_pi_args[@]}" "$@"
   fi
