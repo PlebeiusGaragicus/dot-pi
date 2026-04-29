@@ -1,9 +1,9 @@
 {
   "providers": {
-    "plebchat": {
-      "baseUrl": "https://api.plebchat.me/",
+    "lmstudio": {
+      "baseUrl": "https://your-lm-studio-host.example/",
       "api": "anthropic-messages",
-      "apiKey": "PLEBCHAT_API_KEY",
+      "apiKey": "LM_STUDIO_API_KEY",
       "models": [
         {
           "id": "qwen/qwen3-coder-next",

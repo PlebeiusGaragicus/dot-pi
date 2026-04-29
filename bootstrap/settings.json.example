@@ -4,7 +4,7 @@
   "quietStartup": true,
   "collapseChangelog": true,
   "showHardwareCursor": true,
-  "defaultProvider": "plebchat",
+  "defaultProvider": "lmstudio",
   "defaultModel": "google/gemma-4-31b",
   "defaultThinkingLevel": "minimal",
   "hideThinkingBlock": false,

@@ -6,3 +6,6 @@
 {"id":5,"text":"test reader pdf agent","done":false}
 {"id":6,"text":"make todo utility","done":true}
 {"id":7,"text":"make a definitive list of repos to use a reference... locate them as a markdown, likely their own repo with hints and tips for how to agenticly 'extract knowledge and learnings from their design'","done":false}
+{"id":8,"text":"create nostr session upload/restore feature. It needs to include system prompt like the /export feature does - so we should review the pi-mono codebase","done":false}
+{"id":9,"text":"rename LM Studio references consistently","done":false}
+{"id":10,"text":"consider having todo commands return text, like what a REST API does... have it be more unix-like","done":false}

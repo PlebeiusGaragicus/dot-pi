@@ -29,10 +29,10 @@ local-providers.conf
 
 ```text
 # Providers backed by limited local or self-hosted compute.
-plebchat
+lmstudio
 ```
 
-Any provider not listed is treated as API-backed and unbounded. If `local-providers.conf` is missing, `plebchat` is treated as local by default.
+Any provider not listed is treated as API-backed and unbounded. If `local-providers.conf` is missing, `lmstudio` is treated as local by default.
 
 Subagents do not declare pools directly. They declare model intent through `pi-args`:
 

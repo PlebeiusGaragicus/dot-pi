@@ -29,7 +29,7 @@ const MODEL_DEFAULT_ALIASES = ["DEFAULT_AGENTIC_MODEL", "DEFAULT_FAST_MODEL", "D
 const MAX_PARALLEL_TASKS = 8;
 const COLLAPSED_ITEM_COUNT = 10;
 const DEFAULT_RESOURCE_POOL = "local";
-const DEFAULT_LOCAL_PROVIDERS = ["plebchat"];
+const DEFAULT_LOCAL_PROVIDERS = ["lmstudio"];
 
 function formatTokens(count: number): string {
 	if (count < 1000) return count.toString();

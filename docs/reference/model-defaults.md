@@ -35,7 +35,7 @@ Optional agent-local override file, written by the in-agent command:
 Agent `.model` files live in config roots such as `agents/lm/.model`, `agents/deepresearch/.model`, or `subagents/scout/.model`. They contain one raw model id and only affect that specific agent config root. They are gitignored:
 
 ```text
-plebchat/nvidia/nemotron-3-super
+lmstudio/nvidia/nemotron-3-super
 ```
 
 With no arguments, the command opens an interactive menu. If the current agent's `pi-args` contains a model alias such as `$DEFAULT_FAST_MODEL`, the first option writes a direct current-agent model override:
