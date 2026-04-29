@@ -1,7 +1,7 @@
 ---
 name: tavily-search
 description: Search the web with for primary sources, news, events and information.
-allowed-tools: tavily_search
+disable-model-invocation: false
 ---
 
 # Tavily Web Search
