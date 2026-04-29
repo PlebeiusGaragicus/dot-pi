@@ -78,12 +78,15 @@ else
 fi
 
 if [ "$workspace" = true ]; then
-  cat > "$agent_dir/workspace.conf" <<'WSCONF'
+  cat > "$agent_dir/workspace.env" <<'WSENV'
 # Subdirectories to pre-create in each workspace run.
-# One directory name per line. The alias reads this file
-# and runs mkdir -p for each entry before launching pi.
-WSCONF
-  echo "Created workspace.conf (edit to add workspace subdirectories)"
+# Space-separated directory names.
+WORKSPACE_DIRS="sessions"
+
+# Optional environment passed to pi. Known variables include:
+# DOT_PI_DIR, AGENT_NAME, AGENT_DIR, WORKSPACE_DIR
+WSENV
+  echo "Created workspace.env (edit to add workspace directories and environment)"
 fi
 
 mode_label="in-situ"
@@ -104,14 +107,14 @@ echo "    settings.json            (symlink → shared/settings.json)"
 echo "    pi-args                  (optional default CLI flags; see IMPORTANT line inside)"
 echo "    SYSTEM.md                (system prompt — edit to customize)"
 echo "    banner.txt               (startup branding -- edit to customize)"
-[ "$workspace" = true ] && echo "    workspace.conf           (workspace subdirectory list)"
+[ "$workspace" = true ] && echo "    workspace.env            (workspace directories and environment)"
 echo ""
 echo "Next steps:"
 echo "  1. Edit $agent_dir/SYSTEM.md (and optionally pi-args)"
 echo "  2. Edit $agent_dir/extensions/$agent_name/index.ts if you need custom tools"
 echo "  3. Link skills as needed: dotpi link-skill $agent_name <skill>"
 if [ "$workspace" = true ]; then
-  echo "  4. Edit workspace.conf to list subdirectories for each run"
+  echo "  4. Edit workspace.env to configure workspace directories and environment"
   echo "  5. Run: $agent_name \"your task\""
 else
   echo "  4. Run: $agent_name \"your task\""

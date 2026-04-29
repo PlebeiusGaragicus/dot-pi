@@ -14,7 +14,7 @@ A MAS is a normal agent config root with one important extension:
 agents/deepresearch/
 ├── SYSTEM.md
 ├── pi-args
-├── workspace.conf
+├── workspace.env
 ├── extensions/
 │   ├── agent-orchestrator -> ../../../shared/extensions/agent-orchestrator
 │   └── reasoning-off-shim -> ../../../shared/extensions-common/reasoning-off-shim
@@ -61,7 +61,7 @@ Key files:
 - `SYSTEM.md`: parent prompt. Put workflow policy, delegation rules, artifact expectations, resume behavior, and final response style here.
 - `pi-args`: parent tool restrictions and model defaults. MAS roots usually need the `subagent` tool plus enough read/list/search capability to inspect workspace artifacts.
 - `extensions/agent-orchestrator`: registers the `subagent` tool and handles discovery, prompt augmentation, scheduling, and child process launches.
-- `workspace.conf`: optional, but common for MAS configs that create durable artifacts.
+- `workspace.env`: optional, but common for MAS configs that create durable artifacts. Its presence enables workspace mode; `WORKSPACE_DIRS` lists subdirectories to create, and other simple `KEY=value` entries are exported to pi.
 
 The optional repo-level `agent-orchestrator.conf` file configures local-provider limits for physical subagent concurrency.
 

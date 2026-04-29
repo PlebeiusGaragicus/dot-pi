@@ -21,7 +21,7 @@ agents/example-mas/
 ├── AGENT.md
 ├── pi-args
 ├── banner.txt
-├── workspace.conf
+├── workspace.env
 ├── auth.json
 ├── models.json -> ../../shared/models.json
 ├── settings.json -> ../../shared/settings.json
@@ -112,7 +112,7 @@ Startup branding displayed by the `startup-branding` extension. The scaffold wri
 
 Edit this as ordinary text if you want the agent command to show different startup copy.
 
-### `workspace.conf`
+### `workspace.env`
 
 Presence of this file switches the command into workspace mode. Instead of running in the current directory, `dispatch-agent` creates a dated workspace under:
 
@@ -120,15 +120,18 @@ Presence of this file switches the command into workspace mode. Instead of runni
 workspaces/<agent>/<YYYY-mm-dd-HHMMSS>/
 ```
 
-Each non-comment line in `workspace.conf` is a subdirectory to create in the workspace before pi starts:
+The file uses simple `KEY=value` lines. Blank lines and `#` comments are ignored. Values may be quoted and may reference `DOT_PI_DIR`, `AGENT_NAME`, `AGENT_DIR`, and `WORKSPACE_DIR`; shell code, `export`, command substitution, arrays, and multiline values are not supported.
 
-```text
-sources
-drafts
-sessions
+```bash
+WORKSPACE_DIRS="sources drafts sessions"
+OUTPUT_DIR="$WORKSPACE_DIR/drafts"
 ```
 
+`WORKSPACE_DIRS` is a space-separated list of subdirectories to create in the workspace before pi starts. Other keys are exported to the pi process on both fresh launches and `--resume`.
+
 If the workspace contains a `sessions/` directory, `dispatch-agent` passes `--session-dir <workspace>/sessions` so the orchestrator and subagents can keep their session logs with the workspace artifacts.
+
+`workspace.conf` is deprecated and no longer used by current launchers.
 
 ### `models.json`
 
@@ -303,7 +306,7 @@ agents/example-standalone/
 ├── AGENT.md
 ├── pi-args
 ├── banner.txt
-├── workspace.conf
+├── workspace.env
 ├── auth.json
 ├── models.json -> ../../shared/models.json
 ├── settings.json -> ../../shared/settings.json
@@ -358,7 +361,7 @@ Usually edited by humans:
 - `APPEND_SYSTEM.md`
 - `pi-args`
 - `banner.txt`
-- `workspace.conf`
+- `workspace.env`
 - `prompts/*.md`
 - `agents/*/README.md`
 - `agents/*/SYSTEM.md`

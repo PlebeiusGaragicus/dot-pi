@@ -259,7 +259,7 @@ Say you want a MAS for writing documentation:
 # Scaffold the MAS directory (in-situ mode)
 dotpi create docs-mas
 
-# Or as a workspace MAS (creates workspace.conf)
+# Or as a workspace MAS (creates workspace.env)
 dotpi create --workspace docs-mas
 ```
 

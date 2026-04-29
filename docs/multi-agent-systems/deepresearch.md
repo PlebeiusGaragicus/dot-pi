@@ -75,11 +75,11 @@ Runtime configuration is file-based:
 - `SYSTEM.md` -- deepresearch orchestration prompt
 - `pi-args` -- tool restrictions and `--no-context-files`
 - `agents/` -- symlink imports of reusable subagents
-- `workspace.conf` -- workspace directories
+- `workspace.env` -- workspace directories and launch environment
 
 | File | Purpose |
 |------|---------|
-| `workspace.conf` | Lists subdirectories to pre-create (`sources`, `screenshots`, `drafts`, `sessions`) |
+| `workspace.env` | Sets `WORKSPACE_DIRS` for pre-created directories (`sources`, `screenshots`, `sessions`) and optional launch env |
 | `SYSTEM.md` | Orchestrator system prompt |
 
 ## Usage

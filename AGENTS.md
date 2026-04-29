@@ -12,7 +12,7 @@ Two kinds of agent configurations live here:
 - **Multi-agent systems (MAS)** (`agents/`): An orchestrator agent using the `agent-orchestrator` extension to delegate to subagent config directories.
 - **Standalone agents** (`agents/`): Single-agent setups with custom extensions and no subagent orchestration.
 
-Either kind can run **in-situ** (in the user's current directory) or as a **workspace** agent (in a fresh dated directory). A `workspace.conf` file marks which mode to use — see "Workspace Agents" under Key Concepts.
+Either kind can run **in-situ** (in the user's current directory) or as a **workspace** agent (in a fresh dated directory). A `workspace.env` file marks which mode to use — see "Workspace Agents" under Key Concepts.
 
 ## Directory Structure
 
@@ -77,7 +77,7 @@ agents/<name>/
 ├── SYSTEM.md                 # Orchestrator system prompt
 ├── pi-args                   # (optional) Default CLI flags for the orchestrator (read by dispatch-agent)
 ├── banner.txt                # Startup branding (ASCII art + usage text)
-├── workspace.conf            # (optional) Marks as workspace agent; lists subdirs to pre-create
+├── workspace.env             # (optional) Marks as workspace agent; directories and env
 ├── bin/                      # → shared/bin/
 ├── models.json               # → shared/models.json
 ├── sessions/                 # Runtime (gitignored)
@@ -103,7 +103,7 @@ agents/<name>/
 ├── skills/                   # Per-skill symlinks from shared/skills/ (use dotpi link-skill to add)
 ├── themes/                   # Per-theme symlinks from shared/themes/
 ├── banner.txt                # Startup branding (ASCII art + usage text)
-├── workspace.conf            # (optional) Marks as workspace agent; lists subdirs to pre-create
+├── workspace.env             # (optional) Marks as workspace agent; directories and env
 ├── bin/                      # → shared/bin/
 ├── models.json               # → shared/models.json
 ├── sessions/                 # Runtime (gitignored)
@@ -219,18 +219,21 @@ Skills live in `shared/skills/` and are symlinked per-skill into each agent conf
 
 ### Workspace Agents
 
-Any MAS or standalone agent can run as a **workspace agent** by adding a `workspace.conf` file to its directory. When present, running the command (e.g. `deepresearch`) launches pi in a fresh dated directory (`workspaces/<name>/<timestamp>/`) inside a subshell, so the user's shell stays in its original directory after pi exits.
+Any MAS or standalone agent can run as a **workspace agent** by adding a `workspace.env` file to its directory. When present, running the command (e.g. `deepresearch`) launches pi in a fresh dated directory (`workspaces/<name>/<timestamp>/`) inside a subshell, so the user's shell stays in its original directory after pi exits.
 
-**`workspace.conf` format**: one subdirectory name per line. Lines starting with `#` are comments. Each listed directory is pre-created in the workspace before pi starts. A missing final newline is tolerated.
+**`workspace.env` format**: simple `KEY=value` lines, plus blank lines and `#` comments. Values may be quoted and can reference `DOT_PI_DIR`, `AGENT_NAME`, `AGENT_DIR`, and `WORKSPACE_DIR`. No shell code, `export`, command substitution, arrays, or multiline values are supported.
 
+```bash
+# agents/deepresearch/workspace.env
+WORKSPACE_DIRS="sources drafts sessions"
+OUTPUT_DIR="$WORKSPACE_DIR/drafts"
 ```
-# agents/deepresearch/workspace.conf
-sources
-drafts
-sessions
-```
 
-**To convert any existing agent config to workspace mode**: create `workspace.conf` in its directory (can be empty for a bare workspace, or list subdirectories).
+`WORKSPACE_DIRS` is a space-separated list of subdirectories to pre-create before pi starts. Other keys are exported to the pi process on both fresh launches and `--resume`.
+
+`workspace.conf` is deprecated and no longer used by current launchers.
+
+**To convert any existing agent config to workspace mode**: create `workspace.env` in its directory (can contain only comments for a bare workspace, or set `WORKSPACE_DIRS`).
 
 **To scaffold a new workspace agent config**: use the `--workspace` flag with `dotpi`:
 ```bash
@@ -338,7 +341,7 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `agents/*/agents/*/USAGE.md` | Yes | Subagent invocation contracts |
 | `agents/*/prompts/*.md` | Yes | Prompt templates |
 | `*/banner.txt` | Yes | Startup branding (ASCII art + usage text) |
-| `*/workspace.conf` | Yes | Workspace subdirectory list (presence marks workspace mode) |
+| `*/workspace.env` | Yes | Workspace directories and env (presence marks workspace mode) |
 | `agents/*/AGENT.md` | Yes | Agent prompt config (frontmatter: tools, model; body: system prompt append) |
 | `agents/*/SYSTEM.md` | Yes | Replaces pi's default system prompt (pi-native) |
 | `agents/*/APPEND_SYSTEM.md` | Yes | Appends to pi's default system prompt (pi-native) |

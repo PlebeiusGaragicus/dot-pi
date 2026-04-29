@@ -151,6 +151,60 @@ _slugify_workspace_name() {
   [ -n "$name" ] && printf '%s' "$name" || printf 'workspace'
 }
 
+_workspace_config_file() {
+  local config_dir="$1"
+  [ -f "$config_dir/workspace.env" ] && printf '%s\n' "$config_dir/workspace.env"
+}
+
+_is_workspace_agent() {
+  local config_dir="$1"
+  [ -f "$config_dir/workspace.env" ]
+}
+
+_trim() {
+  local s="$1"
+  s="${s#"${s%%[![:space:]]*}"}"
+  s="${s%"${s##*[![:space:]]}"}"
+  printf '%s' "$s"
+}
+
+_load_workspace_env() {
+  local config_dir="$1" ws_path="$2" agent_name="$3"
+  local file line name value
+  WORKSPACE_DIRS=""
+  export DOT_PI_DIR
+  export AGENT_NAME="$agent_name"
+  export AGENT_DIR="$config_dir"
+  export WORKSPACE_DIR="$ws_path"
+  file="$(_workspace_config_file "$config_dir")"
+  [ -n "$file" ] || return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="$(_trim "$line")"
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    if [[ ! "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      echo "Invalid workspace.env line in $file: $line" >&2
+      return 1
+    fi
+    name="${BASH_REMATCH[1]}"
+    value="$(_trim "${BASH_REMATCH[2]}")"
+    if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+      value="${value:1:${#value}-2}"
+    elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+      value="${value:1:${#value}-2}"
+    fi
+    if [[ "$value" == *'$('* || "$value" == *'`'* ]]; then
+      echo "Unsupported shell expression in $file: $line" >&2
+      return 1
+    fi
+    value="$(_expand_env_vars "$value")"
+    if [ "$name" = "WORKSPACE_DIRS" ]; then
+      WORKSPACE_DIRS="$value"
+    else
+      export "$name=$value"
+    fi
+  done < "$file"
+}
+
 _workspace_label() {
   local agent="$1" path="$2" base files ts title
   base=$(basename "$path")
@@ -177,6 +231,7 @@ _resume_workspace_path() {
   agent=$(basename "$(dirname "$ws_path")")
   config_dir="$DOT_PI_DIR/agents/$agent"
   [ -d "$config_dir" ] || { echo "No agent config for workspace: $agent" >&2; return 1; }
+  _load_workspace_env "$config_dir" "$ws_path" "$agent"
   _load_pi_args "$config_dir"
   _filter_model_flags "$config_dir" "$@"
   echo "Resuming: $ws_path" >&2
@@ -229,7 +284,7 @@ _collect_workspaces() {
   for d in "$DOT_PI_DIR"/workspaces/*/*/; do
     [ -d "$d" ] || continue
     agent=$(basename "$(dirname "${d%/}")")
-    [ -f "$DOT_PI_DIR/agents/$agent/workspace.conf" ] || continue
+    _is_workspace_agent "$DOT_PI_DIR/agents/$agent" || continue
     base=$(basename "${d%/}")
     haystack=$(printf '%s %s %s' "$agent" "$base" "${base//-/ }" | tr '[:upper:]' '[:lower:]')
     if [ -n "$query" ] && [[ "$haystack" != *"$(printf '%s' "$query" | tr '[:upper:]' '[:lower:]')"* ]]; then
@@ -367,13 +422,19 @@ _workspace_launch() {
     ws="$ws--$slug"
   fi
   mkdir -p "$ws"
-  while IFS= read -r subdir || [ -n "$subdir" ]; do
-    [[ -n "$subdir" && "$subdir" != \#* ]] && mkdir -p "$ws/$subdir"
-  done < "$config_dir/workspace.conf"
+  _load_workspace_env "$config_dir" "$ws" "$name"
+  local subdir
+  for subdir in $WORKSPACE_DIRS; do
+    [ -n "$subdir" ] && mkdir -p "$ws/$subdir"
+  done
   echo "Workspace: $ws" >&2
   local _launch_args=()
   [ -d "$ws/sessions" ] && _launch_args+=(--session-dir "$ws/sessions")
-  _filter_model_flags "$config_dir" "${pi_args[@]}"
+  if [ ${#pi_args[@]} -gt 0 ]; then
+    _filter_model_flags "$config_dir" "${pi_args[@]}"
+  else
+    _filter_model_flags "$config_dir"
+  fi
   local cmd_args=()
   [ ${#_pi_args[@]} -gt 0 ] && cmd_args+=("${_pi_args[@]}")
   [ ${#_launch_args[@]} -gt 0 ] && cmd_args+=("${_launch_args[@]}")
@@ -504,7 +565,7 @@ _list_available() {
       [ -d "$d" ] || continue
       local name mode kind
       name=$(basename "$d")
-      mode=$([ -f "$d/workspace.conf" ] && echo workspace || echo in-situ)
+      mode=$(_is_workspace_agent "$d" && echo workspace || echo in-situ)
       kind=$([ -e "$d/extensions/agent-orchestrator/index.ts" ] && echo mas || echo agent)
       printf '%s\t%s\t%s\n' "$name" "$kind" "$mode"
     done
@@ -557,7 +618,7 @@ fi
 # which _json_filter reduces to human-friendly stderr + final text on stdout.
 _batch=false
 _workspace_meta=false
-if [ -f "$config_dir/workspace.conf" ]; then
+if _is_workspace_agent "$config_dir"; then
   case "${1:-}" in
     --list|--resume) _workspace_meta=true ;;
   esac
@@ -577,7 +638,7 @@ fi
 
 # Load default CLI flags from pi-args
 _load_pi_args "$config_dir"
-if [ ! -f "$config_dir/workspace.conf" ]; then
+if ! _is_workspace_agent "$config_dir"; then
   _filter_model_flags "$config_dir" "$@"
   if [ ${#_pi_args[@]} -gt 0 ]; then
     set -- "${_pi_args[@]}" "$@"
@@ -585,7 +646,7 @@ if [ ! -f "$config_dir/workspace.conf" ]; then
 fi
 
 # Dispatch: workspace or in-situ
-if [ -f "$config_dir/workspace.conf" ]; then
+if _is_workspace_agent "$config_dir"; then
   if [ "$_batch" = true ]; then
     _workspace_launch "$AGENT_NAME" "$config_dir" "$@" | _json_filter
     exit ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}

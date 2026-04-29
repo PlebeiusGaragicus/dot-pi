@@ -6,7 +6,9 @@ allowed-tools: Bash
 
 # Browser Control
 
-Use `browser-control` to drive a persistent Playwright Chromium daemon. The first command starts the daemon; later commands reuse the same browser state through the project-local `.browser-control/browse.json` file.
+`browser-control` names the browser automation tool, but the binary may not be on PATH. Always define `B` in Setup and run browser commands as `$B <subcommand> ...`.
+
+Use `$B` to drive a persistent Playwright Chromium daemon. The first command starts the daemon; later commands reuse the same browser state through `.browser-control/browse.json`. By default this is project-local; workspace agents may set `BROWSER_CONTROL_STATE_DIR` so state, screenshots, and logs stay inside the current workspace.
 
 ## Setup
 
@@ -16,6 +18,8 @@ Set `$B` once before browser work. Prefer the compiled binary and fall back to s
 B="$HOME/.dot-pi/utilities/browser-runtime/dist/browser-control"
 [ -x "$B" ] || B="bun run $HOME/.dot-pi/utilities/browser-runtime/src/cli.ts"
 ```
+
+Re-use the same `B` in subsequent bash calls in one turn, or redefine it each time; the setup is idempotent.
 
 ## Core Workflow
 
@@ -30,6 +34,10 @@ $B screenshot
 ```
 
 Run `snapshot -i` before clicking or filling. Re-run it after navigation, popovers, form submissions, or any UI change because refs can go stale.
+
+## Choosing Reading Commands
+
+Use `snapshot -i` when you need clickable/fillable `@e` refs or need to inspect page structure. For extraction tasks such as headlines, page summaries, or lists, prefer `links`, `text`, or `html <selector>` when reasonable. Use `skill run <name>` when a packaged browser skill clearly matches the task.
 
 ## Commands
 

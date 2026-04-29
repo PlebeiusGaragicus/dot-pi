@@ -73,12 +73,15 @@ SYSTEMMD
 echo "Created SYSTEM.md (edit to customize)"
 
 if [ "$workspace" = true ]; then
-  cat > "$mas_dir/workspace.conf" <<'WSCONF'
+  cat > "$mas_dir/workspace.env" <<'WSENV'
 # Subdirectories to pre-create in each workspace run.
-# One directory name per line. The alias reads this file
-# and runs mkdir -p for each entry before launching pi.
-WSCONF
-  echo "Created workspace.conf (edit to add workspace subdirectories)"
+# Space-separated directory names.
+WORKSPACE_DIRS="sessions"
+
+# Optional environment passed to pi. Known variables include:
+# DOT_PI_DIR, AGENT_NAME, AGENT_DIR, WORKSPACE_DIR
+WSENV
+  echo "Created workspace.env (edit to add workspace directories and environment)"
 fi
 
 mode_label="in-situ"
@@ -100,14 +103,14 @@ echo "    banner.txt           (startup branding -- edit to customize)"
 echo "    models.json          (symlinked to shared)"
 echo "    settings.json        (symlink → shared/settings.json)"
 echo "    pi-args              (optional default CLI flags; see IMPORTANT line inside)"
-[ "$workspace" = true ] && echo "    workspace.conf       (workspace subdirectory list)"
+[ "$workspace" = true ] && echo "    workspace.env        (workspace directories and environment)"
 echo ""
 echo "Next steps:"
 echo "  1. Add or link subagent config directories under $mas_dir/agents/"
 echo "  2. Edit $mas_dir/SYSTEM.md with the orchestrator workflow"
 if [ "$workspace" = true ]; then
   echo "  3. Link skills as needed: dotpi link-skill $mas_name <skill>"
-  echo "  4. Edit workspace.conf to list subdirectories for each run"
+  echo "  4. Edit workspace.env to configure workspace directories and environment"
   echo "  5. Run: $mas_name \"your task\""
 else
   echo "  3. Link skills as needed: dotpi link-skill $mas_name <skill>"

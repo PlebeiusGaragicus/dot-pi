@@ -14,7 +14,7 @@ pi resolves its config root via `getAgentDir()` in the coding-agent package. Thi
 - `models.json` -- custom model providers
 - `auth.json` -- API authentication
 - `SYSTEM.md` / `APPEND_SYSTEM.md` -- system prompts for standalone agents and MAS orchestrators
-- `workspace.conf` -- workspace subdirectory list (triggers workspace mode in dispatch-agent)
+- `workspace.env` -- workspace directories and launch environment (triggers workspace mode in dispatch-agent)
 
 This is the mechanism dot-pi exploits for both MAS and standalone agent configurations.
 
