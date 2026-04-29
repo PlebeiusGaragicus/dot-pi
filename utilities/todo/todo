@@ -42,14 +42,15 @@ resolve_todo_file() {
 usage() {
 	cat <<'EOF'
 usage:
+  todo                    show usage
   todo list               list open (not done) tasks as markdown
   todo done               list finished tasks as markdown
   todo all                list all tasks as markdown (open and finished)
   todo new "foo"          add a task
   todo edit <id> "bar"    edit a task's text
   todo del <id>           delete a task
-  todo finished <id>      mark task finished
-  todo unfinished <id>    mark task not finished
+  todo finish <id>        mark task finished
+  todo unfinish <id>      mark task not finished
   todo file               create todo.jsonl in the current directory
   todo which              print path to active todo.jsonl
   todo rm [-y|--yes]      delete active todo.jsonl (prompts unless -y/--yes)
@@ -202,7 +203,7 @@ cmd_del() {
 	jq -s --argjson id "$id" 'map(select(.id != $id)) | .[] | .' -c "$TODO_FILE" | write_jsonl
 }
 
-cmd_finished() {
+cmd_finish() {
 	local id="$1"
 	validate_id "$id"
 	resolve_todo_file
@@ -213,7 +214,7 @@ cmd_finished() {
 	jq -s --argjson id "$id" 'map(if .id == $id then .done = true else . end) | .[] | .' -c "$TODO_FILE" | write_jsonl
 }
 
-cmd_unfinished() {
+cmd_unfinish() {
 	local id="$1"
 	validate_id "$id"
 	resolve_todo_file
@@ -282,19 +283,19 @@ main() {
 		}
 		cmd_del "$2"
 		;;
-	finished)
+	finish)
 		[[ $# -eq 2 ]] || {
-			echo 'todo: usage: todo finished <id>' >&2
+			echo 'todo: usage: todo finish <id>' >&2
 			exit 1
 		}
-		cmd_finished "$2"
+		cmd_finish "$2"
 		;;
-	unfinished)
+	unfinish)
 		[[ $# -eq 2 ]] || {
-			echo 'todo: usage: todo unfinished <id>' >&2
+			echo 'todo: usage: todo unfinish <id>' >&2
 			exit 1
 		}
-		cmd_unfinished "$2"
+		cmd_unfinish "$2"
 		;;
 	version | --version | -v)
 		cmd_version
