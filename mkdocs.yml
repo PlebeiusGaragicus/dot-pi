@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
 site_name: dot-pi
 site_description: Custom pi agent configs as dotfiles
 site_url: https://PlebeiusGaragicus.github.io/dot-pi/
