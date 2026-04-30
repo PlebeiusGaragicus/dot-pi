@@ -7,15 +7,17 @@ SYNOPSIS
        browser help | usage | -h | --help
 
        browser
-       browser [--batch] [-n name | --name name] - prompt words...
+       browser [-n name | --name name] - prompt words...
+       browser -p [-n name | --name name] prompt words...
+       browser -p -v [-n name | --name name] prompt words...
 
        browser ls
 
        browser resume [workspace-prefix]
-       browser resume [workspace-prefix] [--batch] - prompt words...
+       browser resume [workspace-prefix] - prompt words...
+       browser resume [workspace-prefix] -p prompt words...
 
-       Leading --batch is accepted before any subcommand (e.g. for a
-       one-shot JSON run with a prompt).
+       --batch remains accepted as a compatibility alias for -p.
 
 DESCRIPTION
        browser launches pi with this agent’s config inside a dated
@@ -35,10 +37,15 @@ DESCRIPTION
        resume re-runs bootstrap so daemons can recover after a reboot.
 
 OPTIONS
+       -p, --print
+              Non-interactive run.  Print the final assistant reply and exit.
+              Accepts prompt words or piped stdin.
+
+       -v, --verbose
+              With -p/--print, also show turn/tool progress on stderr.
+
        --batch
-              Non-interactive run: pi JSON mode and closed stdin for the
-              launcher path that expects a prompt.  Requires a prompt
-              after - (or piped stdin where supported).
+              Compatibility alias for -p.  Prefer -p in new scripts.
 
        -n name, --name name
               Suffix the new workspace directory with a slug from name
@@ -54,8 +61,8 @@ COMMANDS
        resume [workspace-prefix]
               Continue the latest workspace, or the newest workspace
               whose directory name matches the given prefix (timestamp
-              or slug).  Optional [--batch] - prompt continues that
-              workspace with a new instruction.
+              or slug).  Add - prompt to continue interactively with an
+              initial instruction, or -p prompt to print a final reply.
 
 FILES
        workspaces/browser/<timestamp>[--<slug>]/
@@ -82,13 +89,15 @@ EXAMPLES
 
        browser -n docs-audit - open https://example.org and summarize
 
-       browser --batch - open https://example.org and return JSON
+       browser -p open https://example.org and return text
+       browser -p -v open https://example.org and show progress
 
        browser ls
 
        browser resume
        browser resume docs-audit
-       browser resume 2026-04-29 --batch - list open tabs
+       browser resume 2026-04-29 - list open tabs
+       browser resume 2026-04-29 -p list open tabs
 
 SEE ALSO
        agents/browser/SYSTEM.md, agents/browser/bootstrap.sh,

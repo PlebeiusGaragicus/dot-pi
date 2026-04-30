@@ -154,11 +154,13 @@ _slugify_workspace_name() {
 _workspace_config_file() {
   local config_dir="$1"
   [ -f "$config_dir/workspace.env" ] && printf '%s\n' "$config_dir/workspace.env"
+  return 0
 }
 
 _bootstrap_file() {
   local config_dir="$1"
   [ -f "$config_dir/bootstrap.sh" ] && printf '%s\n' "$config_dir/bootstrap.sh"
+  return 0
 }
 
 _bootstrap_declares_workspace() {
@@ -234,7 +236,7 @@ _load_workspace_env() {
 
 _source_bootstrap() {
   local config_dir="$1" phase="$2" ws_path="${3:-}" agent_name="${4:-$AGENT_NAME}"
-  local file log_dir status cwd shell_opts
+  local file log_dir status cwd shell_opts show_bootstrap_output bootstrap_output_file
   file="$(_bootstrap_file "$config_dir")"
   [ -n "$file" ] || return 0
 
@@ -258,20 +260,31 @@ _source_bootstrap() {
 
   log_dir="$(dirname "$BOOTSTRAP_LOG")"
   mkdir -p "$log_dir"
+  : > "$BOOTSTRAP_LOG"
   {
-    printf '\n[%s] bootstrap start: %s phase=%s cwd=%s\n' "$(date -Iseconds)" "$file" "$phase" "$(pwd)"
+    printf '[%s] bootstrap start: %s phase=%s cwd=%s\n' "$(date -Iseconds)" "$file" "$phase" "$(pwd)"
   } >> "$BOOTSTRAP_LOG"
 
-  echo "Bootstrap: $BOOTSTRAP_LOG" >&2
+  show_bootstrap_output=false
+  if [ "${_cli_print:-false}" != true ] && [ "${_cli_has_prompt:-false}" != true ] && [ -t 1 ]; then
+    show_bootstrap_output=true
+    echo "Bootstrap: $BOOTSTRAP_LOG"
+  fi
   cwd="$(pwd)"
   shell_opts="$(set +o)"
-  if . "$file" >> "$BOOTSTRAP_LOG" 2>&1; then
+  bootstrap_output_file="$(mktemp "${TMPDIR:-/tmp}/dotpi-bootstrap.XXXXXX")"
+  if . "$file" > "$bootstrap_output_file" 2>&1; then
     status=0
   else
     status=$?
   fi
   eval "$shell_opts"
   cd "$cwd"
+  cat "$bootstrap_output_file" >> "$BOOTSTRAP_LOG"
+  if [ "$show_bootstrap_output" = true ]; then
+    cat "$bootstrap_output_file"
+  fi
+  rm -f "$bootstrap_output_file"
   {
     printf '[%s] bootstrap end: status=%s\n' "$(date -Iseconds)" "$status"
   } >> "$BOOTSTRAP_LOG"
@@ -321,11 +334,12 @@ _resume_workspace_path() {
     _source_bootstrap "$config_dir" "resume" "$ws_path" "$agent"
     local _resume_args=()
     [ -d "$ws_path/sessions" ] && _resume_args+=(--session-dir "$ws_path/sessions")
-    [ "$_cli_batch" = true ] && cmd_args+=(--mode json)
+    [ "$_cli_print" = true ] && cmd_args+=(--mode json)
     [ ${#_resume_args[@]} -gt 0 ] && cmd_args+=("${_resume_args[@]}")
     cmd_args+=(--continue)
-    [ "$_cli_has_prompt" = true ] && cmd_args+=(-p "$_cli_prompt")
-    if [ "$_cli_batch" = true ]; then
+    _build_prompt_args
+    [ ${#_prompt_args[@]} -gt 0 ] && cmd_args+=("${_prompt_args[@]}")
+    if [ "$_cli_print" = true ]; then
       PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}" < /dev/null
     else
       PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}"
@@ -388,8 +402,8 @@ _collect_workspaces() {
   done
 }
 
-# JSON event stream filter for batch mode.
-# Progress lines -> stderr, final assistant text -> stdout.
+# JSON event stream filter for print mode.
+# Verbose progress lines -> stderr, final assistant text -> stdout.
 _json_filter() {
   local turn=0 final_text=""
   while IFS= read -r line; do
@@ -402,13 +416,13 @@ _json_filter() {
       tool_execution_start)
         local tool_name
         tool_name=$(printf '%s' "$line" | jq -r '.toolName // "?"')
-        printf '[turn %d] tool: %s\n' "$turn" "$tool_name" >&2
+        [ "${_cli_verbose:-false}" = true ] && printf '[turn %d] tool: %s\n' "$turn" "$tool_name" >&2
         ;;
       tool_execution_end)
         local tool_name is_err
         tool_name=$(printf '%s' "$line" | jq -r '.toolName // "?"')
         is_err=$(printf '%s' "$line" | jq -r '.isError // false')
-        if [ "$is_err" = "true" ]; then
+        if [ "$_cli_verbose" = true ] && [ "$is_err" = "true" ]; then
           printf '[turn %d] tool: %s ERROR\n' "$turn" "$tool_name" >&2
         fi
         ;;
@@ -423,7 +437,7 @@ _json_filter() {
         fi
         ;;
       agent_end)
-        printf '[agent done]\n' >&2
+        [ "${_cli_verbose:-false}" = true ] && printf '[agent done]\n' >&2
         ;;
     esac
   done
@@ -465,16 +479,17 @@ _show_agent_usage() {
   echo "Usage:"
   echo "  $AGENT_NAME [help|usage|-h|--help]"
   echo "  $AGENT_NAME"
-  echo "  $AGENT_NAME - <prompt>"
-  echo "  $AGENT_NAME --batch - <prompt>"
+  echo "  $AGENT_NAME - <prompt>         # initial prompt, then interactive"
+  echo "  $AGENT_NAME -p <prompt>        # print final reply and exit"
+  echo "  $AGENT_NAME -p -v <prompt>     # print final reply plus progress"
   if [ "$is_workspace" = true ]; then
     echo "  $AGENT_NAME -n <name> - <prompt>"
     echo "  $AGENT_NAME --name <name> - <prompt>"
-    echo "  $AGENT_NAME --batch -n <name> - <prompt>"
+    echo "  $AGENT_NAME -p -n <name> <prompt>"
     echo "  $AGENT_NAME ls"
     echo "  $AGENT_NAME resume [workspace-prefix]"
     echo "  $AGENT_NAME resume [workspace-prefix] - <prompt>"
-    echo "  $AGENT_NAME resume [workspace-prefix] --batch - <prompt>"
+    echo "  $AGENT_NAME resume [workspace-prefix] -p <prompt>"
   fi
 }
 
@@ -484,7 +499,20 @@ _cli_resume_prefix=""
 _cli_prompt=""
 _cli_has_prompt=false
 _cli_batch=false
+_cli_print=false
+_cli_verbose=false
 _cli_error=""
+_prompt_args=()
+
+_build_prompt_args() {
+  _prompt_args=()
+  [ "$_cli_has_prompt" = true ] || return 0
+  if [ "$_cli_print" = true ]; then
+    _prompt_args+=(-p "$_cli_prompt")
+  else
+    _prompt_args+=("$_cli_prompt")
+  fi
+}
 
 _parse_agent_cli() {
   local config_dir="$1"
@@ -497,12 +525,26 @@ _parse_agent_cli() {
   _cli_prompt=""
   _cli_has_prompt=false
   _cli_batch=false
+  _cli_print=false
+  _cli_verbose=false
   _cli_error=""
 
-  if [ $# -gt 0 ] && [ "$1" = "--batch" ]; then
-    _cli_batch=true
-    shift
-  fi
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --batch)
+        _cli_batch=true
+        _cli_print=true
+        shift
+        ;;
+      -v|--verbose)
+        _cli_verbose=true
+        shift
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
 
   [ $# -eq 0 ] && return 0
 
@@ -538,6 +580,15 @@ _parse_agent_cli() {
         case "$1" in
           --batch)
             _cli_batch=true
+            _cli_print=true
+            shift
+            ;;
+          -v|--verbose)
+            _cli_verbose=true
+            shift
+            ;;
+          -p|--print)
+            _cli_print=true
             shift
             ;;
           -)
@@ -555,6 +606,11 @@ _parse_agent_cli() {
             return 1
             ;;
           *)
+            if [ "$_cli_print" = true ]; then
+              _cli_prompt="$*"
+              _cli_has_prompt=true
+              break
+            fi
             if [ -n "$_cli_resume_prefix" ]; then
               _cli_error="resume accepts at most one workspace prefix"
               return 1
@@ -564,10 +620,6 @@ _parse_agent_cli() {
             ;;
         esac
       done
-      if [ "$_cli_batch" = true ] && [ "$_cli_has_prompt" = false ]; then
-        _cli_error="--batch requires a prompt"
-        return 1
-      fi
       return 0
       ;;
   esac
@@ -578,6 +630,13 @@ _parse_agent_cli() {
     case "$arg" in
       --batch)
         _cli_batch=true
+        _cli_print=true
+        ;;
+      -v|--verbose)
+        _cli_verbose=true
+        ;;
+      -p|--print)
+        _cli_print=true
         ;;
       -n|--name)
         if [ "$is_workspace" != true ]; then
@@ -605,15 +664,17 @@ _parse_agent_cli() {
         return 1
         ;;
       *)
+        if [ "$_cli_print" = true ]; then
+          _cli_prompt="$arg"
+          [ $# -gt 0 ] && _cli_prompt="$_cli_prompt $*"
+          _cli_has_prompt=true
+          return 0
+        fi
         _cli_error="prompt text must follow '-'"
         return 1
         ;;
     esac
   done
-  if [ "$_cli_batch" = true ] && [ "$_cli_has_prompt" = false ]; then
-    _cli_error="--batch requires a prompt"
-    return 1
-  fi
 }
 
 _read_stdin_prompt_if_needed() {
@@ -662,10 +723,11 @@ _workspace_launch() {
     _source_bootstrap "$config_dir" "fresh" "$ws" "$name"
     local _launch_args=()
     [ -d "$ws/sessions" ] && _launch_args+=(--session-dir "$ws/sessions")
-    [ "$_cli_batch" = true ] && cmd_args+=(--mode json)
+    [ "$_cli_print" = true ] && cmd_args+=(--mode json)
     [ ${#_launch_args[@]} -gt 0 ] && cmd_args+=("${_launch_args[@]}")
-    [ "$_cli_has_prompt" = true ] && cmd_args+=(-p "$_cli_prompt")
-    if [ "$_cli_batch" = true ]; then
+    _build_prompt_args
+    [ ${#_prompt_args[@]} -gt 0 ] && cmd_args+=("${_prompt_args[@]}")
+    if [ "$_cli_print" = true ]; then
       PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}" < /dev/null
     else
       PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}"
@@ -891,9 +953,17 @@ fi
 
 if [ "$_cli_action" = "help" ]; then
   _show_help "$config_dir"
+  exit 0
 fi
 
 _read_stdin_prompt_if_needed
+
+if [ "$_cli_print" = true ] && [ "$_cli_has_prompt" = false ]; then
+  echo "Error: -p/--print requires a prompt" >&2
+  echo "" >&2
+  _show_agent_usage "$config_dir" >&2
+  exit 1
+fi
 
 # Load default CLI flags from pi-args. User argv is dotpi syntax, not raw pi
 # passthrough, so model filtering only considers configured defaults.
@@ -907,7 +977,7 @@ if _is_workspace_agent "$config_dir"; then
       exit $?
       ;;
     resume)
-      if [ "$_cli_batch" = true ]; then
+      if [ "$_cli_print" = true ]; then
         _workspace_resume "$AGENT_NAME" "$_cli_resume_prefix" | _json_filter
         exit ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}
       else
@@ -916,7 +986,7 @@ if _is_workspace_agent "$config_dir"; then
       fi
       ;;
     launch)
-      if [ "$_cli_batch" = true ]; then
+      if [ "$_cli_print" = true ]; then
         _workspace_launch "$AGENT_NAME" "$config_dir" | _json_filter
         exit ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}
       else
@@ -929,9 +999,10 @@ else
   _filter_model_flags "$config_dir"
   _in_situ_args=()
   [ ${#_pi_args[@]} -gt 0 ] && _in_situ_args+=("${_pi_args[@]}")
-  [ "$_cli_batch" = true ] && _in_situ_args+=(--mode json)
-  [ "$_cli_has_prompt" = true ] && _in_situ_args+=(-p "$_cli_prompt")
-  if [ "$_cli_batch" = true ]; then
+  [ "$_cli_print" = true ] && _in_situ_args+=(--mode json)
+  _build_prompt_args
+  [ ${#_prompt_args[@]} -gt 0 ] && _in_situ_args+=("${_prompt_args[@]}")
+  if [ "$_cli_print" = true ]; then
     _source_bootstrap "$config_dir" "in-situ" "" "$AGENT_NAME"
     PI_CODING_AGENT_DIR="$config_dir" _pi "${_in_situ_args[@]}" < /dev/null | _json_filter
     exit ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}

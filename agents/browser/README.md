@@ -15,7 +15,7 @@ The agent process inherits **`$B`** and **`BROWSER_CONTROL_STATE_DIR`**. In bash
 
 ## Usage
 
-Run `browser help` (or `browser usage`, `-h`, `--help`) for the full launcher synopsis. Typical flows: `browser` for an interactive workspace, `browser - …` to send an initial prompt, `browser ls` / `browser resume` to reuse workspaces, and `browser --batch - …` for one-shot JSON-style runs.
+Run `browser help` (or `browser usage`, `-h`, `--help`) for the full launcher synopsis. Typical flows: `browser` for an interactive workspace, `browser - …` to send an initial prompt and stay interactive, `browser ls` / `browser resume` to reuse workspaces, and `browser -p …` for non-interactive final-text output.
 
 Each workspace includes:
 

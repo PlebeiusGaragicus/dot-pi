@@ -46,7 +46,8 @@ $mas_name multi-agent system. Edit this file for a human-readable overview of th
 
 \`\`\`
 $mas_name - "your task"       # send prompt and stay interactive
-$mas_name --batch - "task"    # one-shot prompt, final text on stdout
+$mas_name -p "task"           # print final reply and exit
+$mas_name -p -v "task"        # print final reply plus progress
 $mas_name ls                  # list past workspaces (if workspace MAS)
 $mas_name resume              # resume latest workspace
 $mas_name -h                  # show USAGE.md
@@ -65,12 +66,15 @@ SYNOPSIS
        $mas_name help | usage | -h | --help
 
        $mas_name
-       $mas_name [--batch] [-n name | --name name] - prompt words...
+       $mas_name [-n name | --name name] - prompt words...
+       $mas_name -p [-n name | --name name] prompt words...
+       $mas_name -p -v [-n name | --name name] prompt words...
 
        $mas_name ls
 
        $mas_name resume [workspace-prefix]
-       $mas_name resume [workspace-prefix] [--batch] - prompt words...
+       $mas_name resume [workspace-prefix] - prompt words...
+       $mas_name resume [workspace-prefix] -p prompt words...
 
 DESCRIPTION
        Coordinates subagents under agents/$mas_name/agents/.  Each fresh
@@ -79,8 +83,15 @@ DESCRIPTION
        (orchestrator reads contracts via agent-orchestrator).
 
 OPTIONS
+       -p, --print
+              Non-interactive run.  Print the final assistant reply and exit.
+              Accepts prompt words or piped stdin.
+
+       -v, --verbose
+              With -p/--print, also show turn/tool progress on stderr.
+
        --batch
-              Non-interactive run; requires a prompt after -.
+              Compatibility alias for -p.  Prefer -p in new scripts.
 
        -n name, --name name
               Slug suffix for the new workspace directory.
@@ -112,15 +123,24 @@ SYNOPSIS
        $mas_name help | usage | -h | --help
 
        $mas_name
-       $mas_name [--batch] - prompt words...
+       $mas_name - prompt words...
+       $mas_name -p prompt words...
+       $mas_name -p -v prompt words...
 
 DESCRIPTION
        Coordinates subagents under agents/$mas_name/agents/.  Runs in the
        current working directory unless you add workspace bootstrap later.
 
 OPTIONS
+       -p, --print
+              Non-interactive run.  Print the final assistant reply and exit.
+              Accepts prompt words or piped stdin.
+
+       -v, --verbose
+              With -p/--print, also show turn/tool progress on stderr.
+
        --batch
-              Non-interactive run; requires a prompt after -.
+              Compatibility alias for -p.  Prefer -p in new scripts.
 
 COMMANDS
        help, usage, -h, --help

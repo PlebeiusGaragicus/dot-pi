@@ -99,7 +99,7 @@ Workspace MAS configs launch in a fresh dated directory so artifacts stay isolat
 deepresearch - "What are the latest developments in WebTransport protocol?"
 ```
 
-This sends the prompt and keeps the pi session open. Use `--batch - "prompt"` when you want one-shot output and process exit.
+This sends the prompt and keeps the pi session open. Use `-p "prompt"` when you want final-text output and process exit; add `-v` to see turn/tool progress on stderr.
 
 **What happens:** `deepresearch` creates `workspaces/deepresearch/<timestamp>/` with `sources/`, `screenshots/`, and `sessions/` subdirectories, then launches pi inside it. The orchestrator's `SYSTEM.md` requires research, collection, writing, and editing to go through subagents. Both the orchestrator and all subagent sessions are stored in `sessions/` for unified trajectory analysis. The orchestrator runs a four-step pipeline:
 

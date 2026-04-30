@@ -7,7 +7,9 @@ SYNOPSIS
        web help | usage | -h | --help
 
        web
-       web [--batch] - prompt words...
+       web - prompt words...
+       web -p prompt words...
+       web -p -v prompt words...
 
 DESCRIPTION
        web searches the open web and academic sources (e.g. Tavily, arXiv
@@ -15,8 +17,15 @@ DESCRIPTION
        directory.
 
 OPTIONS
+       -p, --print
+              Non-interactive run.  Print the final assistant reply and exit.
+              Accepts prompt words or piped stdin.
+
+       -v, --verbose
+              With -p/--print, also show turn/tool progress on stderr.
+
        --batch
-              Non-interactive run.  Requires a prompt after - or piped stdin.
+              Compatibility alias for -p.  Prefer -p in new scripts.
 
 COMMANDS
        help, usage, -h, --help
@@ -25,7 +34,9 @@ COMMANDS
 EXAMPLES
        web
        web - latest advances in RISC-V
-       echo compare two papers | web
+       web -p latest advances in RISC-V > answer.md
+       web -p -v compare two papers
+       echo compare two papers | web -p
 
 SEE ALSO
        agents/web/README.md, agents/web/SYSTEM.md, agents/web/skills/

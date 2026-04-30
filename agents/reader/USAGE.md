@@ -7,12 +7,15 @@ SYNOPSIS
        reader help | usage | -h | --help
 
        reader
-       reader [--batch] [-n name | --name name] - prompt words...
+       reader [-n name | --name name] - prompt words...
+       reader -p [-n name | --name name] prompt words...
+       reader -p -v [-n name | --name name] prompt words...
 
        reader ls
 
        reader resume [workspace-prefix]
-       reader resume [workspace-prefix] [--batch] - prompt words...
+       reader resume [workspace-prefix] - prompt words...
+       reader resume [workspace-prefix] -p prompt words...
 
 DESCRIPTION
        Renders PDFs to page images, OCRs with vision subagents, and writes
@@ -20,8 +23,15 @@ DESCRIPTION
        Subagent contracts live under agents/reader/agents/*/USAGE.md.
 
 OPTIONS
+       -p, --print
+              Non-interactive run.  Print the final assistant reply and exit.
+              Accepts prompt words or piped stdin.
+
+       -v, --verbose
+              With -p/--print, also show turn/tool progress on stderr.
+
        --batch
-              Non-interactive run with a required prompt after -.
+              Compatibility alias for -p.  Prefer -p in new scripts.
 
        -n name, --name name
               Slug suffix for the new workspace directory.

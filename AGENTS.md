@@ -262,7 +262,8 @@ deepresearch ls                             # show existing workspaces
 deepresearch resume                         # resume most recent workspace
 deepresearch resume 2026-04-10              # resume workspace matching prefix
 deepresearch resume 2026-04-10 - continue   # resume matching workspace with a prompt
-deepresearch --batch - quick report          # one-shot prompt, final text on stdout
+deepresearch -p quick report                 # print final reply and exit
+deepresearch -p -v quick report              # print final reply plus progress
 resume                                      # choose from the 10 most recent workspaces
 resume creatine                             # filter recent workspaces, then choose by number
 ```

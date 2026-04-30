@@ -7,15 +7,17 @@ SYNOPSIS
        deepresearch help | usage | -h | --help
 
        deepresearch
-       deepresearch [--batch] [-n name | --name name] - prompt words...
+       deepresearch [-n name | --name name] - prompt words...
+       deepresearch -p [-n name | --name name] prompt words...
+       deepresearch -p -v [-n name | --name name] prompt words...
 
        deepresearch ls
 
        deepresearch resume [workspace-prefix]
-       deepresearch resume [workspace-prefix] [--batch] - prompt words...
+       deepresearch resume [workspace-prefix] - prompt words...
+       deepresearch resume [workspace-prefix] -p prompt words...
 
-       Leading --batch is accepted before other arguments when paired with
-       a prompt as documented by dispatch-agent.
+       --batch remains accepted as a compatibility alias for -p.
 
 DESCRIPTION
        Orchestrates subagents to search, collect evidence, and produce a
@@ -24,9 +26,15 @@ DESCRIPTION
        workspace when sessions/ is present.
 
 OPTIONS
+       -p, --print
+              Non-interactive run.  Print the final assistant reply and exit.
+              Accepts prompt words or piped stdin.
+
+       -v, --verbose
+              With -p/--print, also show turn/tool progress on stderr.
+
        --batch
-              One-shot style launch with a required prompt (after -) or
-              equivalent stdin handling.
+              Compatibility alias for -p.  Prefer -p in new scripts.
 
        -n name, --name name
               Append a slug to the new workspace directory name.

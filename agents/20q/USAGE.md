@@ -7,7 +7,9 @@ SYNOPSIS
        20q help | usage | -h | --help
 
        20q
-       20q [--batch] - prompt words...
+       20q - prompt words...
+       20q -p prompt words...
+       20q -p -v prompt words...
 
 DESCRIPTION
        20q runs the twenty-questions game using the agent’s own knowledge
@@ -15,9 +17,15 @@ DESCRIPTION
        cwd unless you change pi defaults.
 
 OPTIONS
+       -p, --print
+              Non-interactive run.  Print the final assistant reply and exit.
+              Accepts prompt words or piped stdin.
+
+       -v, --verbose
+              With -p/--print, also show turn progress on stderr.
+
        --batch
-              Non-interactive run when a prompt is supplied.  See dispatch-
-              agent for exact behavior.
+              Compatibility alias for -p.  Prefer -p in new scripts.
 
 COMMANDS
        help, usage, -h, --help
@@ -26,6 +34,7 @@ COMMANDS
 EXAMPLES
        20q
        20q - start a new game
+       20q -p answer yes or no: is it alive?
 
 SEE ALSO
        agents/20q/README.md, agents/20q/SYSTEM.md

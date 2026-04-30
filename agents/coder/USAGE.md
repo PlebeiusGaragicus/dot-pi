@@ -7,7 +7,9 @@ SYNOPSIS
        coder help | usage | -h | --help
 
        coder
-       coder [--batch] - prompt words...
+       coder - prompt words...
+       coder -p prompt words...
+       coder -p -v prompt words...
 
 DESCRIPTION
        coder launches pi with this agent’s config in your current working
@@ -15,10 +17,15 @@ DESCRIPTION
        project context such as AGENTS.md depending on pi-args.
 
 OPTIONS
+       -p, --print
+              Non-interactive run.  Print the final assistant reply and exit.
+              Accepts prompt words or piped stdin.
+
+       -v, --verbose
+              With -p/--print, also show turn/tool progress on stderr.
+
        --batch
-              Non-interactive run (JSON mode where applicable).  Requires a
-              prompt after -, or non-empty stdin as the prompt when the
-              launcher reads piped input.
+              Compatibility alias for -p.  Prefer -p in new scripts.
 
 COMMANDS
        help, usage, -h, --help
@@ -31,7 +38,8 @@ FILES
 EXAMPLES
        coder
        coder - refactor src/auth.ts for clarity
-       coder --batch - list files in the current directory
+       coder -p list files in the current directory
+       coder -p -v list files in the current directory
 
 SEE ALSO
        agents/coder/README.md, agents/coder/SYSTEM.md, agents/coder/pi-args

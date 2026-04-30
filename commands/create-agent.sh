@@ -55,8 +55,9 @@ $agent_name standalone agent. Edit this file for a human-readable overview, desi
 \`\`\`
 $agent_name                     # interactive session
 $agent_name - "your prompt"     # send prompt and stay interactive
-$agent_name --batch - "prompt"  # one-shot prompt, final text on stdout
-echo "input" | $agent_name      # pipe input as prompt
+$agent_name -p "prompt"         # print final reply and exit
+$agent_name -p -v "prompt"      # print final reply plus progress
+echo "input" | $agent_name -p   # pipe input as prompt
 $agent_name -h                  # show USAGE.md
 \`\`\`
 README
@@ -73,12 +74,15 @@ SYNOPSIS
        $agent_name help | usage | -h | --help
 
        $agent_name
-       $agent_name [--batch] [-n name | --name name] - prompt words...
+       $agent_name [-n name | --name name] - prompt words...
+       $agent_name -p [-n name | --name name] prompt words...
+       $agent_name -p -v [-n name | --name name] prompt words...
 
        $agent_name ls
 
        $agent_name resume [workspace-prefix]
-       $agent_name resume [workspace-prefix] [--batch] - prompt words...
+       $agent_name resume [workspace-prefix] - prompt words...
+       $agent_name resume [workspace-prefix] -p prompt words...
 
 DESCRIPTION
        Fresh launches create workspaces/$agent_name/<timestamp>/ (with an
@@ -86,9 +90,15 @@ DESCRIPTION
        prepare directories.
 
 OPTIONS
+       -p, --print
+              Non-interactive run.  Print the final assistant reply and exit.
+              Accepts prompt words or piped stdin.
+
+       -v, --verbose
+              With -p/--print, also show turn/tool progress on stderr.
+
        --batch
-              Non-interactive run; requires a prompt after - (or piped
-              stdin where supported).
+              Compatibility alias for -p.  Prefer -p in new scripts.
 
        -n name, --name name
               Slug suffix for the new workspace directory.
@@ -120,15 +130,23 @@ SYNOPSIS
        $agent_name help | usage | -h | --help
 
        $agent_name
-       $agent_name [--batch] - prompt words...
+       $agent_name - prompt words...
+       $agent_name -p prompt words...
+       $agent_name -p -v prompt words...
 
 DESCRIPTION
        Runs pi with this config in the current working directory.
 
 OPTIONS
+       -p, --print
+              Non-interactive run.  Print the final assistant reply and exit.
+              Accepts prompt words or piped stdin.
+
+       -v, --verbose
+              With -p/--print, also show turn/tool progress on stderr.
+
        --batch
-              Non-interactive run; requires a prompt after - (or piped
-              stdin where supported).
+              Compatibility alias for -p.  Prefer -p in new scripts.
 
 COMMANDS
        help, usage, -h, --help
