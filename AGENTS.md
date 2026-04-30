@@ -74,6 +74,8 @@ agents/<name>/
 ├── prompts/                  # Prompt templates (slash-command workflows)
 ├── skills/                   # Per-skill symlinks (add with dotpi link-skill)
 ├── themes/                   # Per-theme symlinks from shared/themes/
+├── README.md                 # Human-facing overview (orchestrator listings, prose)
+├── USAGE.md                  # Man-style launcher help (agent help / -h / --help)
 ├── SYSTEM.md                 # Orchestrator system prompt
 ├── pi-args                   # (optional) Default CLI flags for the orchestrator (read by dispatch-agent)
 ├── banner.txt                # Startup branding (ASCII art + usage text)
@@ -97,6 +99,8 @@ agents/<name>/
 │   ├── run-finish-notify, run-timer, startup-branding, model-default  # Common bundle
 │   └── ...                   # Optional: e.g. agent-prompt.ts — symlink manually if you use AGENT.md
 ├── AGENT.md                  # (optional, not scaffolded) YAML + body — symlink agent-prompt.ts to load
+├── README.md                 # Human-facing overview and design notes
+├── USAGE.md                  # Man-style launcher help (agent help / -h / --help)
 ├── SYSTEM.md                 # Starter system prompt (scaffolded by dotpi; replaces pi default)
 ├── APPEND_SYSTEM.md          # (optional) Appends to pi's default system prompt (pi-native)
 ├── pi-args                   # (optional) Default CLI flags, one per line (read by dispatch-agent; end file per IMPORTANT line)
@@ -193,6 +197,8 @@ Recommended subagent files:
 - `USAGE.md` -- invocation contract appended to the orchestrator prompt.
 - `pi-args` -- subagent-specific tools, context-file behavior, and model alias.
 
+At the **root** of any `agents/<name>/` directory (MAS or standalone), **`USAGE.md`** is also the file **`dispatch-agent`** prints for `<name> help`, `usage`, `-h`, and `--help` (plain text; use a man-style layout). **`README.md`** is for human- and agent-facing prose; it is not printed for help when **`USAGE.md`** is present (if **`USAGE.md`** is missing, help shows generated usage plus **`README.md`** with `glow`/`bat` when available).
+
 ### Skills
 
 Markdown files (`SKILL.md`) that teach the agent how to use specific tools or workflows. NOT code — they are instructions injected into the agent's context.
@@ -244,21 +250,23 @@ dotpi create --workspace my-research-mas
 dotpi create-agent --workspace my-scraper
 ```
 
-**Naming a workspace session**: Add a lone `-` and a name after the agent command:
+**Naming a workspace session**: Use `-n`/`--name` for the workspace name and a lone `-` before the prompt:
 ```bash
-deepresearch - creatine loading protocol
+deepresearch -n creatine-loading-protocol - research creatine loading protocol
 ```
 This creates a timestamped directory with a slug suffix, e.g. `workspaces/deepresearch/2026-04-28-091454--creatine-loading-protocol/`. Omitting the name keeps the timestamp-only directory.
 
-**Resuming a workspace session**: Workspace agents support `--resume` and `--list`, and dot-pi also provides a global picker:
+**Resuming a workspace session**: Workspace agents support `resume` and `ls`, and dot-pi also provides a global picker:
 ```bash
-deepresearch --list                         # show existing workspaces
-deepresearch --resume                       # resume most recent workspace
-deepresearch --resume 2026-04-10            # resume workspace matching prefix
+deepresearch ls                             # show existing workspaces
+deepresearch resume                         # resume most recent workspace
+deepresearch resume 2026-04-10              # resume workspace matching prefix
+deepresearch resume 2026-04-10 - continue   # resume matching workspace with a prompt
+deepresearch --batch - quick report          # one-shot prompt, final text on stdout
 resume                                      # choose from the 10 most recent workspaces
 resume creatine                             # filter recent workspaces, then choose by number
 ```
-`--resume` cd's into the existing workspace directory and passes `--resume` to pi, so the session selector opens with the original session available. `--list` shows each workspace with a file count. The global `resume` command lists workspace agents together and prompts for a numbered selection.
+`resume` cd's into the existing workspace directory and continues the latest pi session in that workspace. `ls` shows each workspace with a file count. The global `resume` command lists workspace agents together and prompts for a numbered selection.
 
 **Rebuilding symlinks**: Run `dotpi sync` to rebuild the `bin/` symlinks after adding or removing agent configs.
 
@@ -315,7 +323,7 @@ dotpi create-agent <agent-name>
 dotpi create-agent --workspace <agent-name>   # workspace mode
 ```
 
-**`dotpi create-agent`** writes **`SYSTEM.md`** and **`pi-args`**; it does **not** create **`AGENT.md`**. Customize **`SYSTEM.md`**, **`pi-args`**, and/or your stub extension. Add **`AGENT.md`** + symlink **`agent-prompt.ts`** only if you want YAML-driven tools/model.
+**`dotpi create-agent`** writes **`SYSTEM.md`**, **`pi-args`**, **`README.md`**, and **`USAGE.md`**; it does **not** create **`AGENT.md`**. Customize **`SYSTEM.md`**, **`USAGE.md`** (launcher synopsis), **`pi-args`**, and/or your stub extension. Add **`AGENT.md`** + symlink **`agent-prompt.ts`** only if you want YAML-driven tools/model.
 
 Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or lifecycle hooks.
 
@@ -341,7 +349,8 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `shared/skills/*/SKILL.md` | Yes | Shared skill definitions |
 | `shared/themes/*.json` | Yes | Shared themes |
 | `agents/*/agents/*/SYSTEM.md` | Yes | Subagent system prompts |
-| `agents/*/agents/*/USAGE.md` | Yes | Subagent invocation contracts |
+| `agents/*/USAGE.md` | Yes | Man-style launcher help for `agent help` / `-h` / `--help` |
+| `agents/*/agents/*/USAGE.md` | Yes | Subagent invocation contracts (orchestrator prompt) |
 | `agents/*/prompts/*.md` | Yes | Prompt templates |
 | `*/banner.txt` | Yes | Startup branding (ASCII art + usage text) |
 | `*/bootstrap.sh` | Yes | Launch setup; `WORKSPACE_AGENT=1` marks workspace mode |

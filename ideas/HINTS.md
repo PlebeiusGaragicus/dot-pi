@@ -7,22 +7,22 @@ Each MAS and standalone agent is available as a direct command on PATH (via syml
 recon
 deepresearch
 
-# non-interactive with -p flag (batch mode)
-recon -p "map the auth flow"
-deepresearch -p "creatine cognitive effects"
+# send a prompt and stay interactive
+recon - map the auth flow
+deepresearch - creatine cognitive effects
 
 # pipe stdin as prompt (batch mode)
 echo "explain the caching layer" | recon
 
 # batch mode output: progress on stderr, final text on stdout
-deepresearch -p "WebTransport protocol" > report.md      # progress visible, report saved
-deepresearch -p "WebTransport protocol" 2>/dev/null       # silent, stdout only
-recon -p "map the auth flow" > /dev/null                  # progress only, discard result
+deepresearch --batch - "WebTransport protocol" > report.md      # progress visible, report saved
+deepresearch --batch - "WebTransport protocol" 2>/dev/null       # silent, stdout only
+recon --batch - "map the auth flow" > /dev/null                  # progress only, discard result
 
 # workspace management (workspace MAS only)
-deepresearch --list
-deepresearch --resume
-deepresearch --resume 2026-04-10
+deepresearch ls
+deepresearch resume
+deepresearch resume 2026-04-10
 ```
 
 ---

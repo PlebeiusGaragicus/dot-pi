@@ -1,7 +1,7 @@
 #!/bin/bash
 # Serial evaluation runner for workspace multi-agent systems.
 # Reads one prompt per line from a prompts file, runs each through
-# <mas> -p "..." (non-interactive mode), and logs results to a
+# <mas> --batch - "..." (non-interactive mode), and logs results to a
 # JSONL manifest for later trajectory analysis.
 #
 # Usage:
@@ -71,7 +71,7 @@ while IFS= read -r prompt || [ -n "$prompt" ]; do
 
   start=$(date +%s)
   exit_code=0
-  "$MAS" -p "$prompt" < /dev/null \
+  "$MAS" --batch - "$prompt" < /dev/null \
     > "$RESULTS_DIR/prompt-${prompt_num}-output.txt" 2>&1 \
     || exit_code=$?
   duration=$(( $(date +%s) - start ))

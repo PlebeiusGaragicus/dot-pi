@@ -301,7 +301,6 @@ _workspace_label() {
 
 _resume_workspace_path() {
   local ws_path="$1"
-  shift
   ws_path="${ws_path%/}"
   local agent config_dir
   agent=$(basename "$(dirname "$ws_path")")
@@ -313,7 +312,7 @@ _resume_workspace_path() {
     _load_workspace_env "$config_dir" "$ws_path" "$agent"
   fi
   _load_pi_args "$config_dir"
-  _filter_model_flags "$config_dir" "$@"
+  _filter_model_flags "$config_dir"
   echo "Resuming: $ws_path" >&2
   local cmd_args=()
   [ ${#_pi_args[@]} -gt 0 ] && cmd_args+=("${_pi_args[@]}")
@@ -322,9 +321,15 @@ _resume_workspace_path() {
     _source_bootstrap "$config_dir" "resume" "$ws_path" "$agent"
     local _resume_args=()
     [ -d "$ws_path/sessions" ] && _resume_args+=(--session-dir "$ws_path/sessions")
+    [ "$_cli_batch" = true ] && cmd_args+=(--mode json)
     [ ${#_resume_args[@]} -gt 0 ] && cmd_args+=("${_resume_args[@]}")
-    cmd_args+=(--resume "$@")
-    PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}"
+    cmd_args+=(--continue)
+    [ "$_cli_has_prompt" = true ] && cmd_args+=(-p "$_cli_prompt")
+    if [ "$_cli_batch" = true ]; then
+      PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}" < /dev/null
+    else
+      PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}"
+    fi
   )
 }
 
@@ -429,7 +434,15 @@ _json_filter() {
 
 _show_help() {
   local config_dir="$1"
+  local usage="$config_dir/USAGE.md"
   local readme="$config_dir/README.md"
+  # USAGE.md is the canonical CLI reference (man-page style plain text).
+  if [ -f "$usage" ]; then
+    cat "$usage"
+    exit 0
+  fi
+  _show_agent_usage "$config_dir"
+  echo ""
   if [ -f "$readme" ]; then
     if command -v glow &>/dev/null; then
       glow -p "$readme"
@@ -439,70 +452,195 @@ _show_help() {
       cat "$readme"
     fi
   else
-    echo "No README.md for $AGENT_NAME"
+    echo "No USAGE.md or README.md for $AGENT_NAME"
     echo "  config: $config_dir"
+    echo "  Add USAGE.md (man-style CLI help) or README.md (human overview)."
   fi
   exit 0
+}
+
+_show_agent_usage() {
+  local config_dir="$1" is_workspace=false
+  _is_workspace_agent "$config_dir" && is_workspace=true
+  echo "Usage:"
+  echo "  $AGENT_NAME [help|usage|-h|--help]"
+  echo "  $AGENT_NAME"
+  echo "  $AGENT_NAME - <prompt>"
+  echo "  $AGENT_NAME --batch - <prompt>"
+  if [ "$is_workspace" = true ]; then
+    echo "  $AGENT_NAME -n <name> - <prompt>"
+    echo "  $AGENT_NAME --name <name> - <prompt>"
+    echo "  $AGENT_NAME --batch -n <name> - <prompt>"
+    echo "  $AGENT_NAME ls"
+    echo "  $AGENT_NAME resume [workspace-prefix]"
+    echo "  $AGENT_NAME resume [workspace-prefix] - <prompt>"
+    echo "  $AGENT_NAME resume [workspace-prefix] --batch - <prompt>"
+  fi
+}
+
+_cli_action="launch"
+_cli_workspace_name=""
+_cli_resume_prefix=""
+_cli_prompt=""
+_cli_has_prompt=false
+_cli_batch=false
+_cli_error=""
+
+_parse_agent_cli() {
+  local config_dir="$1"
+  shift
+  local is_workspace=false arg
+  _is_workspace_agent "$config_dir" && is_workspace=true
+  _cli_action="launch"
+  _cli_workspace_name=""
+  _cli_resume_prefix=""
+  _cli_prompt=""
+  _cli_has_prompt=false
+  _cli_batch=false
+  _cli_error=""
+
+  if [ $# -gt 0 ] && [ "$1" = "--batch" ]; then
+    _cli_batch=true
+    shift
+  fi
+
+  [ $# -eq 0 ] && return 0
+
+  case "$1" in
+    help|usage|-h|--help)
+      if [ $# -ne 1 ]; then
+        _cli_error="'$1' does not accept additional arguments"
+        return 1
+      fi
+      _cli_action="help"
+      return 0
+      ;;
+    ls)
+      if [ "$is_workspace" != true ]; then
+        _cli_error="'ls' is only available for workspace agents"
+        return 1
+      fi
+      if [ $# -ne 1 ]; then
+        _cli_error="'ls' does not accept additional arguments"
+        return 1
+      fi
+      _cli_action="ls"
+      return 0
+      ;;
+    resume)
+      if [ "$is_workspace" != true ]; then
+        _cli_error="'resume' is only available for workspace agents"
+        return 1
+      fi
+      _cli_action="resume"
+      shift
+      while [ $# -gt 0 ]; do
+        case "$1" in
+          --batch)
+            _cli_batch=true
+            shift
+            ;;
+          -)
+            shift
+            if [ $# -eq 0 ]; then
+              _cli_error="missing prompt after '-'"
+              return 1
+            fi
+            _cli_prompt="$*"
+            _cli_has_prompt=true
+            break
+            ;;
+          -*)
+            _cli_error="unknown resume option: $1"
+            return 1
+            ;;
+          *)
+            if [ -n "$_cli_resume_prefix" ]; then
+              _cli_error="resume accepts at most one workspace prefix"
+              return 1
+            fi
+            _cli_resume_prefix="$1"
+            shift
+            ;;
+        esac
+      done
+      if [ "$_cli_batch" = true ] && [ "$_cli_has_prompt" = false ]; then
+        _cli_error="--batch requires a prompt"
+        return 1
+      fi
+      return 0
+      ;;
+  esac
+
+  while [ $# -gt 0 ]; do
+    arg="$1"
+    shift
+    case "$arg" in
+      --batch)
+        _cli_batch=true
+        ;;
+      -n|--name)
+        if [ "$is_workspace" != true ]; then
+          _cli_error="'$arg' is only available for workspace agents"
+          return 1
+        fi
+        if [ $# -eq 0 ]; then
+          _cli_error="$arg requires a workspace name"
+          return 1
+        fi
+        _cli_workspace_name="$1"
+        shift
+        ;;
+      -)
+        if [ $# -eq 0 ]; then
+          _cli_error="missing prompt after '-'"
+          return 1
+        fi
+        _cli_prompt="$*"
+        _cli_has_prompt=true
+        return 0
+        ;;
+      -*)
+        _cli_error="unknown option: $arg"
+        return 1
+        ;;
+      *)
+        _cli_error="prompt text must follow '-'"
+        return 1
+        ;;
+    esac
+  done
+  if [ "$_cli_batch" = true ] && [ "$_cli_has_prompt" = false ]; then
+    _cli_error="--batch requires a prompt"
+    return 1
+  fi
+}
+
+_read_stdin_prompt_if_needed() {
+  local stdin_prompt
+  case "$_cli_action" in
+    launch|resume) ;;
+    *) return 0 ;;
+  esac
+  if [ "$_cli_has_prompt" = false ] && [ ! -t 0 ]; then
+    stdin_prompt=$(cat)
+    if [ -n "$stdin_prompt" ]; then
+      _cli_prompt="$stdin_prompt"
+      _cli_has_prompt=true
+    fi
+  fi
 }
 
 # ── workspace launcher ────────────────────────────────────────────────────────
 
 _workspace_launch() {
   local name="$1" config_dir="$2"
-  shift 2
   local ws_root="$DOT_PI_DIR/workspaces/$name"
-
-  if [ "${1:-}" = "--list" ]; then
-    if [ ! -d "$ws_root" ] || [ -z "$(ls -A "$ws_root" 2>/dev/null)" ]; then
-      echo "No workspaces for $name"
-      return 0
-    fi
-    echo "Workspaces for $name:"
-    for d in "$ws_root"/*/; do
-      [ -d "$d" ] || continue
-      local ts files
-      ts=$(basename "$d")
-      files=$(find "$d" -maxdepth 2 -type f 2>/dev/null | wc -l | tr -d ' ')
-      echo "  $ts  ($files files)"
-    done
-    return 0
-  fi
-
-  if [ "${1:-}" = "--resume" ]; then
-    shift
-    local target
-    if [ -n "${1:-}" ]; then
-      target=$(ls -d "$ws_root"/"$1"* 2>/dev/null | tail -1)
-      if [ -z "$target" ]; then
-        echo "No workspace matching '$1' in $ws_root"
-        return 1
-      fi
-      shift
-    else
-      target=$(ls -dt "$ws_root"/*/ 2>/dev/null | head -1)
-      if [ -z "$target" ]; then
-        echo "No workspaces to resume for $name"
-        return 1
-      fi
-    fi
-    _resume_workspace_path "$target" "$@"
-    return $?
-  fi
-
-  local pi_args=() workspace_name="" arg slug ws
-  while [ $# -gt 0 ]; do
-    arg="$1"
-    shift
-    if [ "$arg" = "-" ]; then
-      workspace_name="$*"
-      break
-    fi
-    pi_args+=("$arg")
-  done
+  local slug ws
 
   ws="$ws_root/$(date +%Y-%m-%d-%H%M%S)"
-  if [ -n "$workspace_name" ]; then
-    slug="$(_slugify_workspace_name "$workspace_name")"
+  if [ -n "$_cli_workspace_name" ]; then
+    slug="$(_slugify_workspace_name "$_cli_workspace_name")"
     ws="$ws--$slug"
   fi
   mkdir -p "$ws"
@@ -516,11 +654,7 @@ _workspace_launch() {
     done
   fi
   echo "Workspace: $ws" >&2
-  if [ ${#pi_args[@]} -gt 0 ]; then
-    _filter_model_flags "$config_dir" "${pi_args[@]}"
-  else
-    _filter_model_flags "$config_dir"
-  fi
+  _filter_model_flags "$config_dir"
   local cmd_args=()
   [ ${#_pi_args[@]} -gt 0 ] && cmd_args+=("${_pi_args[@]}")
   (
@@ -528,11 +662,60 @@ _workspace_launch() {
     _source_bootstrap "$config_dir" "fresh" "$ws" "$name"
     local _launch_args=()
     [ -d "$ws/sessions" ] && _launch_args+=(--session-dir "$ws/sessions")
+    [ "$_cli_batch" = true ] && cmd_args+=(--mode json)
     [ ${#_launch_args[@]} -gt 0 ] && cmd_args+=("${_launch_args[@]}")
-    [ ${#pi_args[@]} -gt 0 ] && cmd_args+=("${pi_args[@]}")
-    PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}"
+    [ "$_cli_has_prompt" = true ] && cmd_args+=(-p "$_cli_prompt")
+    if [ "$_cli_batch" = true ]; then
+      PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}" < /dev/null
+    else
+      PI_CODING_AGENT_DIR="$config_dir" _pi "${cmd_args[@]}"
+    fi
   )
   return $?
+}
+
+_workspace_list() {
+  local name="$1"
+  local ws_root="$DOT_PI_DIR/workspaces/$name"
+  if [ ! -d "$ws_root" ] || [ -z "$(ls -A "$ws_root" 2>/dev/null)" ]; then
+    echo "No workspaces for $name"
+    return 0
+  fi
+  echo "Workspaces for $name:"
+  for d in "$ws_root"/*/; do
+    [ -d "$d" ] || continue
+    local ts files
+    ts=$(basename "$d")
+    files=$(find "$d" -maxdepth 2 -type f 2>/dev/null | wc -l | tr -d ' ')
+    echo "  $ts  ($files files)"
+  done
+}
+
+_workspace_resume() {
+  local name="$1" prefix="${2:-}" target slug d base
+  local ws_root="$DOT_PI_DIR/workspaces/$name"
+  if [ -n "$prefix" ]; then
+    slug="$(_slugify_workspace_name "$prefix")"
+    while IFS= read -r d; do
+      [ -n "$d" ] || continue
+      base=$(basename "${d%/}")
+      if [[ "$base" == "$prefix"* || "$base" == *"--$slug"* ]]; then
+        target="${d%/}"
+        break
+      fi
+    done < <(ls -dt "$ws_root"/*/ 2>/dev/null)
+    if [ -z "$target" ]; then
+      echo "No workspace matching '$prefix' in $ws_root"
+      return 1
+    fi
+  else
+    target=$(ls -dt "$ws_root"/*/ 2>/dev/null | head -1)
+    if [ -z "$target" ]; then
+      echo "No workspaces to resume for $name"
+      return 1
+    fi
+  fi
+  _resume_workspace_path "$target"
 }
 
 _resume_global() {
@@ -698,62 +881,63 @@ else
   exit 1
 fi
 
-# Help flag
-if _has_flag "-h" "$@" || _has_flag "--help" "$@"; then
+# Parse dotpi-owned agent command syntax before invoking pi.
+if ! _parse_agent_cli "$config_dir" "$@"; then
+  echo "Error: $_cli_error" >&2
+  echo "" >&2
+  _show_agent_usage "$config_dir" >&2
+  exit 1
+fi
+
+if [ "$_cli_action" = "help" ]; then
   _show_help "$config_dir"
 fi
 
-# ── batch mode ────────────────────────────────────────────────────────────────
-# Activated when stdin is a pipe OR -p is passed explicitly.
-# Precedence: explicit -p wins; piped stdin is only consumed when no -p flag
-# is present. In batch mode we add --mode json so pi emits a JSON event stream,
-# which _json_filter reduces to human-friendly stderr + final text on stdout.
-_batch=false
-_workspace_meta=false
-if _is_workspace_agent "$config_dir"; then
-  case "${1:-}" in
-    --list|--resume) _workspace_meta=true ;;
-  esac
-fi
-if [ "$_workspace_meta" = false ] && { [ ! -t 0 ] || _has_flag "-p" "$@"; }; then
-  _batch=true
-fi
+_read_stdin_prompt_if_needed
 
-if [ "$_workspace_meta" = false ] && [ ! -t 0 ] && ! _has_flag "-p" "$@"; then
-  _stdin_prompt=$(cat)
-  set -- -p "$_stdin_prompt" "$@"
-fi
-
-if [ "$_batch" = true ]; then
-  set -- --mode json "$@"
-fi
-
-# Load default CLI flags from pi-args
+# Load default CLI flags from pi-args. User argv is dotpi syntax, not raw pi
+# passthrough, so model filtering only considers configured defaults.
 _load_pi_args "$config_dir"
-if ! _is_workspace_agent "$config_dir"; then
-  _filter_model_flags "$config_dir" "$@"
-  if [ ${#_pi_args[@]} -gt 0 ]; then
-    set -- "${_pi_args[@]}" "$@"
-  fi
-fi
 
 # Dispatch: workspace or in-situ
 if _is_workspace_agent "$config_dir"; then
-  if [ "$_batch" = true ]; then
-    _workspace_launch "$AGENT_NAME" "$config_dir" "$@" | _json_filter
-    exit ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}
-  else
-    _workspace_launch "$AGENT_NAME" "$config_dir" "$@"
-    exit $?
-  fi
+  case "$_cli_action" in
+    ls)
+      _workspace_list "$AGENT_NAME"
+      exit $?
+      ;;
+    resume)
+      if [ "$_cli_batch" = true ]; then
+        _workspace_resume "$AGENT_NAME" "$_cli_resume_prefix" | _json_filter
+        exit ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}
+      else
+        _workspace_resume "$AGENT_NAME" "$_cli_resume_prefix"
+        exit $?
+      fi
+      ;;
+    launch)
+      if [ "$_cli_batch" = true ]; then
+        _workspace_launch "$AGENT_NAME" "$config_dir" | _json_filter
+        exit ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}
+      else
+        _workspace_launch "$AGENT_NAME" "$config_dir"
+        exit $?
+      fi
+      ;;
+  esac
 else
-  if [ "$_batch" = true ]; then
+  _filter_model_flags "$config_dir"
+  _in_situ_args=()
+  [ ${#_pi_args[@]} -gt 0 ] && _in_situ_args+=("${_pi_args[@]}")
+  [ "$_cli_batch" = true ] && _in_situ_args+=(--mode json)
+  [ "$_cli_has_prompt" = true ] && _in_situ_args+=(-p "$_cli_prompt")
+  if [ "$_cli_batch" = true ]; then
     _source_bootstrap "$config_dir" "in-situ" "" "$AGENT_NAME"
-    PI_CODING_AGENT_DIR="$config_dir" _pi "$@" | _json_filter
+    PI_CODING_AGENT_DIR="$config_dir" _pi "${_in_situ_args[@]}" < /dev/null | _json_filter
     exit ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}
   else
     _source_bootstrap "$config_dir" "in-situ" "" "$AGENT_NAME"
-    PI_CODING_AGENT_DIR="$config_dir" _pi "$@"
+    PI_CODING_AGENT_DIR="$config_dir" _pi "${_in_situ_args[@]}"
     exit $?
   fi
 fi

@@ -96,8 +96,10 @@ This skips research and goes straight to write-review-revise.
 Workspace MAS configs launch in a fresh dated directory so artifacts stay isolated.
 
 ```bash
-deepresearch "What are the latest developments in WebTransport protocol?"
+deepresearch - "What are the latest developments in WebTransport protocol?"
 ```
+
+This sends the prompt and keeps the pi session open. Use `--batch - "prompt"` when you want one-shot output and process exit.
 
 **What happens:** `deepresearch` creates `workspaces/deepresearch/<timestamp>/` with `sources/`, `screenshots/`, and `sessions/` subdirectories, then launches pi inside it. The orchestrator's `SYSTEM.md` requires research, collection, writing, and editing to go through subagents. Both the orchestrator and all subagent sessions are stored in `sessions/` for unified trajectory analysis. The orchestrator runs a four-step pipeline:
 
@@ -106,10 +108,10 @@ deepresearch "What are the latest developments in WebTransport protocol?"
 3. **writer** reads all sources and synthesizes a structured report to `drafts/report.md`
 4. **editor** reviews the draft against sources and produces `report.md`
 
-To give a workspace a memorable name, add a lone `-` and put the name after it:
+To give a workspace a memorable name, pass `-n`/`--name` before the prompt separator:
 
 ```bash
-deepresearch - creatine loading protocol
+deepresearch -n creatine-loading-protocol - research creatine loading protocol
 ```
 
 This creates a folder like `workspaces/deepresearch/2026-04-28-091454--creatine-loading-protocol/`. Without a name, dot-pi keeps the timestamp-only folder name.
@@ -119,7 +121,7 @@ This creates a folder like `workspaces/deepresearch/2026-04-28-091454--creatine-
 Each run creates a new workspace. To see past runs:
 
 ```bash
-deepresearch --list
+deepresearch ls
 ```
 
 ```
@@ -131,16 +133,16 @@ Workspaces for deepresearch:
 To resume the most recent workspace session:
 
 ```bash
-deepresearch --resume
+deepresearch resume
 ```
 
 Or resume a specific one by prefix:
 
 ```bash
-deepresearch --resume 2026-04-10-125602
+deepresearch resume 2026-04-10-125602
 ```
 
-This cd's into the original workspace directory (so all files are present) and opens pi's session selector.
+This cd's into the original workspace directory (so all files are present) and continues the latest pi session in that workspace.
 
 You can also use the global picker across workspace agents:
 
@@ -156,7 +158,7 @@ resume creatine
 Reader ingests a PDF once, renders each page to an image, OCRs each page with a vision model, and keeps page markdown beside the page images for resumable work.
 
 ```bash
-reader "/path/to/document.pdf"
+reader - "/path/to/document.pdf"
 ```
 
 **What happens:** `reader` creates `workspaces/reader/<timestamp>/` with `pages/` and `sessions/` subdirectories. The orchestrator first creates `reader-manifest.json`, then dispatches one `ocr-page` subagent per page image. Each page is stored as a pair:
@@ -171,7 +173,7 @@ The OCR workers should run on a vision-capable model. Configure `DEFAULT_VLM_MOD
 To resume without re-ingesting the PDF:
 
 ```bash
-reader --resume
+reader resume
 ```
 
 On resume, the orchestrator inspects `reader-manifest.json` and `pages/`, reuses existing page images, and only OCRs missing or failed page markdown.

@@ -16,7 +16,7 @@ For every request, follow this pipeline:
 
 ## Resume Policy
 
-This MAS operates in a dated workspace directory and is meant to be resumed. On `reader --resume`, never assume the source PDF is still available or needs to be re-rendered. First inspect:
+This MAS operates in a dated workspace directory and is meant to be resumed. On `reader resume`, never assume the source PDF is still available or needs to be re-rendered. First inspect:
 
 - `reader-manifest.json`
 - `pages/*.png`

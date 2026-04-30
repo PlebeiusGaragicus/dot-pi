@@ -86,16 +86,16 @@ Runtime configuration is file-based:
 
 ```bash
 # Start a new research run
-deepresearch "What are the latest developments in WebTransport protocol?"
+deepresearch - "What are the latest developments in WebTransport protocol?"
 
 # List past workspaces
-deepresearch --list
+deepresearch ls
 
 # Resume the most recent workspace
-deepresearch --resume
+deepresearch resume
 
 # Resume a specific workspace by prefix
-deepresearch --resume 2026-04-12
+deepresearch resume 2026-04-12
 ```
 
 ## Running Evals

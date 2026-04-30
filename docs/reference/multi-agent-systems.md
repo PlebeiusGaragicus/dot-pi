@@ -232,7 +232,7 @@ workspaces/deepresearch/2026-04-28-120000/
 
 Artifact handoffs are usually better than returning large text blobs through the orchestrator. A collector can save source extracts to `sources/`, a writer can read those files and create `drafts/report.md`, and an editor can review the draft against the saved sources.
 
-This pattern keeps the parent context smaller and makes failures inspectable. It also makes `--resume` and retrospective analysis practical.
+This pattern keeps the parent context smaller and makes failures inspectable. It also makes `resume` and retrospective analysis practical.
 
 ## Common Patterns
 

@@ -96,17 +96,17 @@ Reader gets `reasoning-off-shim` through the standard top-level extension bundle
 
 ```bash
 # Start a new PDF OCR run
-reader "/path/to/document.pdf"
+reader - "/path/to/document.pdf"
 
 # Start a named workspace
-reader - annual report 2025
+reader -n annual-report-2025 - "/path/to/document.pdf"
 
 # List past reader workspaces
-reader --list
+reader ls
 
 # Resume the latest reader workspace
-reader --resume
+reader resume
 
 # Resume a specific workspace by prefix
-reader --resume 2026-04-28
+reader resume 2026-04-28
 ```

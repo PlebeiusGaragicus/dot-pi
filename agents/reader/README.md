@@ -5,11 +5,12 @@ Reader is a workspace multi-agent system for PDF OCR. It renders a PDF into per-
 ## Usage
 
 ```
-reader "/path/to/file.pdf"           # new workspace session
-reader - annual report 2025          # named workspace session
-reader --list                        # list past reader workspaces
-reader --resume                      # resume latest workspace
-reader --resume 2026-04-28           # resume matching workspace prefix
+reader - "/path/to/file.pdf"                   # new prompt run
+reader --batch - "/path/to/file.pdf"           # one-shot prompt run
+reader -n annual-report-2025 - "/path/to.pdf"  # named workspace prompt run
+reader ls                                      # list past reader workspaces
+reader resume                                  # resume latest workspace
+reader resume 2026-04-28                       # resume matching workspace prefix
 reader -h                            # show this help
 ```
 

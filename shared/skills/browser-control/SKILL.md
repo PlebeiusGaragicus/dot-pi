@@ -6,20 +6,23 @@ allowed-tools: Bash
 
 # Browser Control
 
-`browser-control` names the browser automation tool, but the binary may not be on PATH. Always define `B` in Setup and run browser commands as `$B <subcommand> ...`.
+**`browser-control` is the product name for this CLI, not a command on `PATH`.** Invoke it only as **`$B <subcommand> …`**.
 
-Use `$B` to drive a persistent Playwright Chromium daemon. The first command starts the daemon; later commands reuse the same browser state through `.browser-control/browse.json`. By default this is project-local; workspace agents may set `BROWSER_CONTROL_STATE_DIR` so state, screenshots, and logs stay inside the current workspace.
+Use **`$B`** to drive a persistent Playwright Chromium daemon. The first command starts the daemon; later commands reuse the same browser state through `.browser-control/browse.json`. By default this is project-local; workspace agents set **`BROWSER_CONTROL_STATE_DIR`** so state, screenshots, and logs stay inside the current workspace.
 
 ## Setup
 
-Set `$B` once before browser work. Prefer the compiled binary and fall back to source:
+**dot-pi `browser` workspace:** `agents/browser/bootstrap.sh` runs before the agent. It exports **`B`** and **`BROWSER_CONTROL_STATE_DIR`** and runs **`$B status`**. Use **`$B …`** directly in bash; do not re-export the path on every command unless **`$B`** is unset or fails.
+
+**Any other context** (no bootstrap, or **`$B`** empty): set **`B`** once, then use **`$B …`**:
 
 ```bash
 B="$HOME/.dot-pi/utilities/browser-runtime/dist/browser-control"
 [ -x "$B" ] || B="bun run $HOME/.dot-pi/utilities/browser-runtime/src/cli.ts"
+export B
 ```
 
-Re-use the same `B` in subsequent bash calls in one turn, or redefine it each time; the setup is idempotent.
+If **`$B`** is already set (e.g. from bootstrap), keep it.
 
 ## Core Workflow
 
@@ -33,11 +36,11 @@ $B text
 $B screenshot
 ```
 
-Run `snapshot -i` before clicking or filling. Re-run it after navigation, popovers, form submissions, or any UI change because refs can go stale.
+Run **`snapshot -i`** before clicking or filling. Re-run it after navigation, popovers, form submissions, or any UI change because refs can go stale.
 
 ## Choosing Reading Commands
 
-Use `snapshot -i` when you need clickable/fillable `@e` refs or need to inspect page structure. For extraction tasks such as headlines, page summaries, or lists, prefer `links`, `text`, or `html <selector>` when reasonable. Use `skill run <name>` when a packaged browser skill clearly matches the task.
+Use **`snapshot -i`** when you need clickable/fillable **`@e`** refs or need to inspect page structure. For extraction tasks such as headlines, page summaries, or lists, prefer **`links`**, **`text`**, or **`html <selector>`** when reasonable. If **`snapshot -i`** already contains the headlines or list you need, answer from it before chaining more tools. Use **`skill run <name>`** when a packaged browser skill clearly matches the task.
 
 ## Commands
 

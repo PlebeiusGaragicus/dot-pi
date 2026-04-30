@@ -16,6 +16,7 @@ For the deeper MAS behavior, see [Multi-Agent Systems](reference/multi-agent-sys
 ```text
 agents/example-mas/
 ├── README.md
+├── USAGE.md
 ├── SYSTEM.md
 ├── APPEND_SYSTEM.md
 ├── AGENT.md
@@ -64,9 +65,17 @@ Most real agents do not contain every optional file shown above. The mock tree i
 
 ### `README.md`
 
-Human-facing help for the agent command. `dispatch-agent` displays this file for `agent-name -h` or `agent-name --help`, using `glow` or `bat` when available.
+Human-facing overview: purpose, design notes, links, and context for people (and for LLMs browsing the repo). Orchestrator listings and tooling may surface short descriptions from here.
 
-Created by `dotpi create` and `dotpi create-agent`. Edit it whenever the agent's purpose, usage, or workflow changes.
+Created by `dotpi create` and `dotpi create-agent`. Edit whenever the agent’s story or non-CLI documentation should change.
+
+### `USAGE.md`
+
+**Launcher help** for the agent command: `dispatch-agent` prints this file on standard output for `<agent> help`, `<agent> usage`, `-h`, and `--help` when the file exists (plain text, no `glow`/`bat`). Use a **man-page style** layout (title line, `NAME`, `SYNOPSIS`, sections, indented body text).
+
+At the **MAS or standalone root**, this is the CLI reference for the symlink command. Under **`agents/<mas>/agents/<sub>/`**, `USAGE.md` is instead the **subagent invocation contract** appended to the orchestrator prompt by `agent-orchestrator` (same filename, two roles by directory level).
+
+Scaffolds create a starter **`USAGE.md`** at the root; subagent **`USAGE.md`** files are added when you create subagents.
 
 ### `SYSTEM.md`
 
@@ -128,7 +137,7 @@ mkdir -p "$WORKSPACE_DIR/sources" "$WORKSPACE_DIR/drafts" "$WORKSPACE_DIR/sessio
 export OUTPUT_DIR="$WORKSPACE_DIR/drafts"
 ```
 
-Because the script is sourced, exported variables persist into pi. Use it to create workspace directories, set env vars, initialize daemons, and run health checks. It runs on fresh launches, `--resume`, and in-situ launches for agents that define it.
+Because the script is sourced, exported variables persist into pi. Use it to create workspace directories, set env vars, initialize daemons, and run health checks. It runs on fresh launches, `resume`, and in-situ launches for agents that define it.
 
 The launcher provides `DOT_PI_DIR`, `AGENT_NAME`, `AGENT_DIR`, `WORKSPACE_AGENT`, `WORKSPACE_DIR` for workspace agents, `DOTPI_BOOTSTRAP_PHASE` (`fresh`, `resume`, or `in-situ`), and `BOOTSTRAP_LOG`. Bootstrap stdout/stderr is captured in `BOOTSTRAP_LOG`; for workspace agents the default is `$WORKSPACE_DIR/bootstrap.log`.
 
@@ -304,6 +313,7 @@ A standalone agent is the same config-root concept without the MAS pieces:
 ```text
 agents/example-standalone/
 ├── README.md
+├── USAGE.md
 ├── SYSTEM.md
 ├── APPEND_SYSTEM.md
 ├── AGENT.md
@@ -360,6 +370,7 @@ Workspace contents are runtime artifacts. They are useful for resuming, debuggin
 Usually edited by humans:
 
 - `README.md`
+- `USAGE.md` (root: launcher help; subagent: orchestrator contract)
 - `SYSTEM.md`
 - `APPEND_SYSTEM.md`
 - `pi-args`
