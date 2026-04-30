@@ -4,6 +4,8 @@ This guide explains the files that make up a dot-pi agent configuration. It is t
 
 Every directory under `agents/<name>/` is a complete `PI_CODING_AGENT_DIR` root. When you run an agent command such as `reader`, `web`, or `lm`, `dispatch-agent` sets `PI_CODING_AGENT_DIR` to that directory and launches `pi` with the files in that root.
 
+For the terminal syntax shared by all top-level agent commands, see [Terminal Dispatch](terminal-dispatch.md).
+
 There are two common shapes:
 
 - A **standalone agent** is one pi config root with its own prompt, arguments, skills, and extensions.

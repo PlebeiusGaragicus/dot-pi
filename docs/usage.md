@@ -2,6 +2,8 @@
 
 This guide walks through concrete examples of how to use dot-pi day-to-day.
 
+For the shared terminal command contract (`agent`, `agent - prompt`, `agent -p`, `-v`, workspace `ls`/`resume`, and bootstrap output), see [Terminal Dispatch](terminal-dispatch.md).
+
 ## Prerequisites
 
 You have pi installed, the repo cloned to `~/.dot-pi`, and your shell configured:

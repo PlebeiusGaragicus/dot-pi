@@ -18,6 +18,8 @@ pi resolves its config root via `getAgentDir()` in the coding-agent package. Thi
 
 This is the mechanism dot-pi exploits for both MAS and standalone agent configurations.
 
+For the user-facing command syntax implemented by `dispatch-agent`, see [Terminal Dispatch](terminal-dispatch.md).
+
 ## Directory Layout
 
 ```
