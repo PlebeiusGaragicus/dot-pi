@@ -4,7 +4,7 @@ The `todo` utility is a simple shell script for managing todo.jsonl task lists.
 
 When `todo` runs, it looks for `todo.jsonl` in the current directory, then each parent directory up to the root. That file is the project or workspace todo list. If none exists, the active file is `~/.todo/todo.jsonl` (the directory is created if needed).
 
-Run **`todo file`** in a project directory to create an empty `todo.jsonl` there (it refuses if one already exists). Use **`todo which`** to print the absolute path of the active list after resolution.
+Run **`todo file`** in a project directory to create an empty `todo.jsonl` there; it prompts **`[y/N]`** before creating (default is no). Use **`todo file -y`** or **`todo file --yes`** to skip the prompt (required in non-interactive contexts). It refuses if `todo.jsonl` already exists in the current directory. Use **`todo which`** to print the absolute path of the active list after resolution.
 
 ## data format
 
@@ -27,7 +27,7 @@ todo                 # prints usage
 todo list            # open tasks only: - [ ] (id) text
 todo done            # finished tasks only: - [x] (id) text
 todo all             # all tasks: - [ ] / - [x] markdown lines
-todo file            # create ./todo.jsonl in the current directory
+todo file            # create ./todo.jsonl (prompts; -y / --yes skips)
 todo which           # absolute path to active todo.jsonl
 todo rm              # delete active todo.jsonl — same path as todo which (prompts; -y / --yes skips)
 todo tidy            # remove all finished tasks from the list (prompts; -y / --yes skips)
@@ -40,6 +40,8 @@ todo unfinish <id>
 todo help            # usage (-h and --help also work)
 todo version
 ```
+
+After a successful **`todo new`**, **`todo edit`**, **`todo finish`**, or **`todo unfinish`**, the script prints one line in the same markdown style as **`todo list`** / **`todo all`**: `- [ ] (id) text` or `- [x] (id) text`. **`todo del`** prints `Deleted: (id) text` instead.
 
 ## prerequisites
 
