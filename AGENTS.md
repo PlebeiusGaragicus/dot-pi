@@ -62,6 +62,7 @@ These files are **never tracked**. They're created locally by the installer or `
 | `shared/settings.json` | `cp bootstrap/settings.json.example shared/settings.json` (auto on `install` / `dotpi sync`) | Pi runtime settings (theme, defaults). Symlinked into every agent config. |
 | `shared/models.json` | Symlink → `~/.pi/agent/models.json` (created by installer or `dotpi sync`) | Multi-provider model config shared with system pi. `dotpi setup` edits the system file. |
 | `*/auth.json` | `dotpi link-auth` or set up by pi on first run | Per-agent credentials. |
+| `.exa.env`, `.tavily.env` | `/exa-api-key`, `/tavily-api-key`, or manual `SERVICE_API_KEY=value` | Repo-root keys for optional search extensions. Convention: **`.service-name.env`** (gitignored). |
 | `REFERENCES/*` | Optional manual `git clone`s; see REFERENCE-REPOS.md` | Sibling project source for agents to read. |
 
 ### MAS Directory Layout (`agents/<name>/`)
@@ -380,5 +381,6 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `model-defaults` | Local | Per-machine global fallback model aliases. Written by `dotpi model-defaults`, loaded at agent launch time. Bootstrap manually with `cp bootstrap/model-defaults.example model-defaults`. |
 | `agents/*/.model`, `subagents/*/.model`, `agents/*/agents/*/.model` | Local | Per-agent raw `provider/model` overrides written by `/model-default`; gitignored. |
 | `shared/settings.json` | Local | Bootstrapped from `bootstrap/settings.json.example` by `install` / `dotpi sync`; gitignored thereafter. Edit freely; not tracked. |
+| `.exa.env`, `.tavily.env` | Local | Repo-root API keys for Exa / Tavily; convention `.service-name.env`. Gitignored. |
 | `bootstrap/*.example`, `bootstrap/lmstudio-models.json` | Yes | Tracked seed/template files used to bootstrap local config. Edit to change defaults seen by new installs. |
 | `VERSION` | Yes | Bump on releases. Surfaced via `dotpi --version`. |

@@ -4,16 +4,16 @@ Provides `/exa-api-key` for configuring a repo-local Exa API key. The Exa search
 
 ## Files
 
-- `index.ts` -- Registers `/exa-api-key` and reads/writes the repo-root `.exa` file.
+- `index.ts` -- Registers `/exa-api-key` and reads/writes the repo-root `.exa.env` file.
 
 ## Configuration
 
 API key resolution follows the same order as the skill scripts:
 
 1. `EXA_API_KEY` environment variable
-2. Repo-root `.exa` file, written as `EXA_API_KEY=<key>`
+2. Repo-root `.exa.env`, written as `EXA_API_KEY=<key>` (same **`.service-name.env`** convention as `.tavily.env`)
 
-The `.exa` file is local credentials state and must stay gitignored.
+The `.exa.env` file is local credentials state and must stay gitignored.
 
 ## Command
 
@@ -23,7 +23,7 @@ Run this inside a pi agent that has the extension linked:
 /exa-api-key
 ```
 
-The command shows the currently configured key in masked form, prompts for a new key, and saves it to `.exa`.
+The command shows the currently configured key in masked form, prompts for a new key, and saves it to `.exa.env`.
 
 ## Related Skill
 

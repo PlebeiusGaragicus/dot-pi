@@ -8,7 +8,12 @@ Direct Tavily REST-API access via a structured `tavily_search` tool. Avoids havi
 
 ## Configuration
 
-- `TAVILY_API_KEY` -- required environment variable. Without it, the tool registers but every call errors.
+Store API keys at the **dot-pi repo root** (directory containing `env.sh`), using the **`.service-name.env`** convention:
+
+- `.tavily.env` — `TAVILY_API_KEY=...`, written by `/tavily-api-key`
+- Or set `TAVILY_API_KEY` in the environment (takes precedence over the file).
+
+Without a key, the tool registers but every call errors.
 
 ## Tool: `tavily_search`
 

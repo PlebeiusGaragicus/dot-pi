@@ -1,7 +1,8 @@
 .DS_Store
 .env
-.exa
-.tavily.env
+.*.env
+# .exa.env
+# .tavily.env
 .tts-wpm
 .browser-control/
 model-defaults

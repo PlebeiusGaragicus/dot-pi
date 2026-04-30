@@ -31,6 +31,10 @@ Subagents are not interactive, so they do not get the top-level common bundle. `
 
 Specialized extensions stay out of the default bundles. Examples include `agent-orchestrator`, `agent-prompt`, `tavily`, `moods`, `plan-mode`, `questionnaire`, `bash-guardrails`, `auto-theme`, and `theme-cycler`.
 
+### Repo-root service credentials
+
+Extensions that support repo-local API keys use files named **`.service-name.env`** next to `env.sh`, for example `.exa.env` and `.tavily.env`. Environment variables for the same keys always win when set. These files are gitignored.
+
 ## Extension Structure
 
 An extension is either:

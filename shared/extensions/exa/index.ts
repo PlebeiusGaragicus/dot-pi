@@ -6,7 +6,7 @@
  *
  * API key resolution (in priority order):
  *   1. EXA_API_KEY environment variable
- *   2. repo-root .exa file (written by /exa-api-key)
+ *   2. repo-root `.exa.env` file (written by /exa-api-key)
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -14,7 +14,7 @@ import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const EXA_KEY_FILE = ".exa";
+const EXA_KEY_FILE = ".exa.env";
 
 function findDotPiRoot(): string {
 	let dir = getAgentDir();

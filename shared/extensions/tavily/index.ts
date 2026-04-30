@@ -12,7 +12,7 @@
  *
  * API key resolution (in priority order):
  *   1. TAVILY_API_KEY environment variable
- *   2. ~/.dot-pi/.tavily.env file (written by /tavily-api-key command)
+ *   2. repo-root `.tavily.env` file (written by /tavily-api-key command)
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";

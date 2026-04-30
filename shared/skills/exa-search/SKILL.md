@@ -6,7 +6,7 @@ disable-model-invocation: false
 
 # Exa Search
 
-Use the scripts in `scripts/` for Exa web search. They read the API key from `EXA_API_KEY` first, then repo-root `.exa`. If no key is configured, ask the user to run `/exa-api-key` or export `EXA_API_KEY`.
+Use the scripts in `scripts/` for Exa web search. They read the API key from `EXA_API_KEY` first, then repo-root `.exa.env`. If no key is configured, ask the user to run `/exa-api-key` or export `EXA_API_KEY`.
 
 ## Commands
 
