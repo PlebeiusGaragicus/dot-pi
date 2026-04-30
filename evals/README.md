@@ -5,17 +5,12 @@ Serial evaluation runner for testing MAS configs against scripted prompts.
 ## Usage
 
 ```bash
-./evals/run-eval.sh [--with-retro] <agent> <prompts-file>
+./evals/run-eval.sh <agent> <prompts-file>
 ```
 
 Both positional arguments are required. Reads one prompt per line from the prompts file, runs each through the agent command in non-interactive mode, and logs results to a JSONL manifest.
 
 Each prompt gets its own workspace (for workspace agents) and output file. Results are organized by agent and eval name (derived from the prompts filename).
-
-## Options
-
-- `--with-retro` -- Run retrospective analysis on each workspace after the prompt completes.
-  Retro output is saved to `prompt-N-retro.txt` alongside prompt output.
 
 ## Examples
 
@@ -25,9 +20,6 @@ Each prompt gets its own workspace (for workspace agents) and output file. Resul
 
 # Comprehensive suite
 ./evals/run-eval.sh deepresearch evals/deepresearch-long.txt
-
-# With retro analysis after each prompt
-./evals/run-eval.sh --with-retro deepresearch evals/deepresearch-short.txt
 ```
 
 ## Prompts File Format
@@ -47,9 +39,7 @@ The eval name is derived from the prompts filename (without `.txt` extension):
 ```
 evals/results/<agent>/<eval-name>/<timestamp>/
 ├── prompt-1-output.txt     # Stdout/stderr from pi for prompt 1
-├── prompt-1-retro.txt      # Retro output for prompt 1 (when --with-retro)
 ├── prompt-2-output.txt     # Stdout/stderr from pi for prompt 2
-├── prompt-2-retro.txt      # Retro output for prompt 2 (when --with-retro)
 └── manifest.jsonl          # One JSON object per prompt with metadata
 ```
 

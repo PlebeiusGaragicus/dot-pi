@@ -54,4 +54,4 @@ FILES
 
 SEE ALSO
        agents/deepresearch/README.md, agents/deepresearch/SYSTEM.md,
-       docs/multi-agent-systems/deepresearch.md, run-retro deepresearch
+       docs/multi-agent-systems/deepresearch.md

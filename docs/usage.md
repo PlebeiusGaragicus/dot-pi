@@ -190,55 +190,11 @@ The eval runner (`evals/run-eval.sh`) tests MAS configs against scripted prompts
 
 # Comprehensive suite
 ./evals/run-eval.sh deepresearch evals/deepresearch-long.txt
-
-# With automatic retro analysis after each prompt
-./evals/run-eval.sh --with-retro deepresearch evals/deepresearch-short.txt
 ```
 
-Each prompt runs in its own workspace. Results are organized by eval name (derived from the prompts filename) at `evals/results/<mas>/<eval-name>/<timestamp>/` with per-prompt output files and a JSONL manifest for trajectory analysis. When `--with-retro` is used, retro output is saved to `prompt-N-retro.txt` alongside each prompt's output.
+Each prompt runs in its own workspace. Results are organized by eval name (derived from the prompts filename) at `evals/results/<mas>/<eval-name>/<timestamp>/` with per-prompt output files and a JSONL manifest for trajectory analysis.
 
-## 6. Trajectory Analysis (Retro)
-
-After running a workspace MAS, use the retro MAS to analyze session traces and output files for procedural issues. Retro can run on a free open-source model and produce a structured report that can be fed to a frontier model for deeper analysis.
-
-### Interactive use
-
-```bash
-cd workspaces/deepresearch/2026-04-12-150258
-retro
-```
-
-### Non-interactive use (`run-retro`)
-
-Target a workspace directly without manual `cd`:
-
-```bash
-run-retro deepresearch                           # latest workspace
-run-retro deepresearch 2026-04-12               # by date prefix
-run-retro deepresearch --list                    # list workspaces
-run-retro deepresearch --pick                   # interactive menu (newest first)
-run-retro deepresearch -- "focus on citations"  # with steering hint
-```
-
-**What happens:** The orchestrator surveys the workspace, finds all JSONL session files, and extracts the original user task. It then dispatches two types of subagents in parallel:
-
-1. **scanner** (one per session file) -- parses JSONL traces with jq/grep, checking for infinite loops, tool errors, failed dispatches, and protocol violations
-2. **reviewer** -- inspects output files (report.md, sources/, etc.) for completeness and instruction adherence
-
-The orchestrator synthesizes all findings into `retrospective-report.md` in the workspace directory.
-
-### Frontier model handoff
-
-The retro report is designed to be concise and structured -- ideal input for a paid frontier model:
-
-```bash
-# After retro writes retrospective-report.md, feed it to a stronger model
-recon "Read retrospective-report.md and suggest specific prompt or code fixes for each issue"
-```
-
-This two-step pattern keeps costs low: the bulk parsing runs for free on an open-source model, and only the compact report goes to a frontier model.
-
-## 7. Ad-hoc Single Agent Use
+## 6. Ad-hoc Single Agent Use
 
 You don't always need prompt templates. Just describe what you want:
 

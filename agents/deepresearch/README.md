@@ -14,10 +14,3 @@ deepresearch resume                          # resume latest workspace
 deepresearch resume project-name             # resume matching workspace
 resume                             # choose from recent workspaces
 ```
-
-## Retrospective
-
-```
-run-retro deepresearch             # analyze latest workspace
-run-retro deepresearch --pick      # choose a workspace interactively
-```

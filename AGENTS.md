@@ -24,6 +24,7 @@ dot-pi/
 ├── commands/                 # Subcommand scripts (sourced by dotpi)
 ├── env.sh                    # Shell environment (source in .zshrc/.bashrc)
 ├── dispatch-agent            # Symlink target in bin/ (dispatches commands to agents)
+├── lib/dispatch/             # Sourced modules used by dispatch-agent
 ├── mkdocs.yml                # MkDocs config for docs site
 │
 ├── shared/                   # Reusable resources (never used as PI_CODING_AGENT_DIR directly)
@@ -240,7 +241,7 @@ export OUTPUT_DIR="$WORKSPACE_DIR/drafts"
 
 The launcher provides `DOT_PI_DIR`, `AGENT_NAME`, `AGENT_DIR`, `WORKSPACE_AGENT`, `WORKSPACE_DIR` for workspace agents, `DOTPI_BOOTSTRAP_PHASE` (`fresh`, `resume`, or `in-situ`), and `BOOTSTRAP_LOG`.
 
-`workspace.env` is deprecated but still supported as a compatibility fallback. `workspace.conf` is deprecated and no longer used by current launchers.
+Legacy `workspace.env` and `workspace.conf` files are no longer used by current launchers. Put workspace setup in `bootstrap.sh`.
 
 **To convert any existing agent config to workspace mode**: create `bootstrap.sh` in its directory and include a top-level `WORKSPACE_AGENT=1` line.
 
@@ -271,7 +272,7 @@ resume creatine                             # filter recent workspaces, then cho
 
 **Rebuilding symlinks**: Run `dotpi sync` to rebuild the `bin/` symlinks after adding or removing agent configs.
 
-**Unified session logging**: When a workspace has a `sessions/` directory, both the orchestrator and all subagent sessions are stored there. The workspace launcher passes `--session-dir` to pi, and `agent-orchestrator` uses the same directory for subagent sessions. This puts the complete run trajectory in one place for retrospective analysis.
+**Unified session logging**: When a workspace has a `sessions/` directory, both the orchestrator and all subagent sessions are stored there. The workspace launcher passes `--session-dir` to pi, and `agent-orchestrator` uses the same directory for subagent sessions. This puts the complete run trajectory in one place for debugging.
 
 Workspace contents are gitignored (`workspaces/*/`).
 
@@ -355,7 +356,6 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `agents/*/prompts/*.md` | Yes | Prompt templates |
 | `*/banner.txt` | Yes | Startup branding (ASCII art + usage text) |
 | `*/bootstrap.sh` | Yes | Launch setup; `WORKSPACE_AGENT=1` marks workspace mode |
-| `*/workspace.env` | Legacy | Deprecated workspace directories/env fallback |
 | `agents/*/AGENT.md` | Yes | Agent prompt config (frontmatter: tools, model; body: system prompt append) |
 | `agents/*/SYSTEM.md` | Yes | Replaces pi's default system prompt (pi-native) |
 | `agents/*/APPEND_SYSTEM.md` | Yes | Appends to pi's default system prompt (pi-native) |
@@ -365,6 +365,7 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `commands/*.sh` | Yes | Subcommand scripts (sourced by dotpi) |
 | `env.sh` | Yes | Shell environment (sourced from .zshrc/.bashrc) |
 | `dispatch-agent` | Yes | Symlink target in bin/ (dispatches commands to agents) |
+| `lib/dispatch/*.sh` | Yes | Focused launcher internals sourced by `dispatch-agent` |
 | `docs/**/*.md` | Yes | MkDocs documentation |
 | `agents/*/extensions/*` | **No** | Symlinks — edit `shared/extensions/` instead |
 | `agents/*/skills/*` | **No** | Symlinks — edit `shared/skills/` instead |

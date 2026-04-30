@@ -5,15 +5,10 @@
 # JSONL manifest for later trajectory analysis.
 #
 # Usage:
-#   ./evals/run-eval.sh [--with-retro] <agent> <prompts-file>
-#
-# Options:
-#   --with-retro   Run retrospective analysis on each workspace after the
-#                  prompt completes. Output saved to prompt-N-retro.txt.
+#   ./evals/run-eval.sh <agent> <prompts-file>
 #
 # Examples:
 #   ./evals/run-eval.sh deepresearch evals/deepresearch-short.txt
-#   ./evals/run-eval.sh --with-retro deepresearch evals/deepresearch-short.txt
 
 set -euo pipefail
 
@@ -23,14 +18,8 @@ DOT_PI_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 export PATH="$DOT_PI_DIR/bin:$PATH"
 source "$DOT_PI_DIR/env.sh"
 
-WITH_RETRO=false
-if [ "${1:-}" = "--with-retro" ]; then
-  WITH_RETRO=true
-  shift
-fi
-
-MAS="${1:?Usage: $0 [--with-retro] <mas> <prompts-file>}"
-PROMPTS_FILE="${2:?Usage: $0 [--with-retro] <mas> <prompts-file>}"
+MAS="${1:?Usage: $0 <mas> <prompts-file>}"
+PROMPTS_FILE="${2:?Usage: $0 <mas> <prompts-file>}"
 
 if [ ! -f "$PROMPTS_FILE" ]; then
   echo "Error: prompts file not found: $PROMPTS_FILE" >&2
@@ -97,15 +86,6 @@ while IFS= read -r prompt || [ -n "$prompt" ]; do
   fi
 
   echo "[$prompt_num] exit=$exit_code  ${duration}s  ${ws_path:-unknown}"
-
-  if [ "$WITH_RETRO" = true ] && [ -n "$ws_path" ]; then
-    echo "Running retro on $ws_path..."
-    retro_exit=0
-    run-retro --workspace-path "$ws_path" \
-      > "$RESULTS_DIR/prompt-${prompt_num}-retro.txt" 2>&1 \
-      || retro_exit=$?
-    echo "[$prompt_num] retro exit=$retro_exit"
-  fi
 
   echo ""
 done < "$PROMPTS_FILE"

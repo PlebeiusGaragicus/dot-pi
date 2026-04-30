@@ -49,7 +49,7 @@ This isolation is the main reason to use a MAS. Subagents can explore, write, re
 | Agent capability card | `README.md` and `USAGE.md` in a subagent config |
 | Blackboard or shared workspace | Workspace directory and artifact files such as `sources/` or `report.md` |
 | Tool restriction | Subagent-specific `pi-args`, skills, and extensions |
-| Evaluation agent | A reviewer, editor, scanner, auditor, or retro subagent |
+| Evaluation agent | A reviewer, editor, scanner, or auditor subagent |
 | Resource scheduler | subagent `pi-args`, `local-providers.conf`, and `agent-orchestrator.conf` |
 
 ## Orchestrator Root
@@ -232,7 +232,7 @@ workspaces/deepresearch/2026-04-28-120000/
 
 Artifact handoffs are usually better than returning large text blobs through the orchestrator. A collector can save source extracts to `sources/`, a writer can read those files and create `drafts/report.md`, and an editor can review the draft against the saved sources.
 
-This pattern keeps the parent context smaller and makes failures inspectable. It also makes `resume` and retrospective analysis practical.
+This pattern keeps the parent context smaller and makes failures inspectable. It also makes `resume` and post-run analysis practical.
 
 ## Common Patterns
 

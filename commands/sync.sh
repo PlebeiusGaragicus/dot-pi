@@ -72,10 +72,6 @@ for d in "$DOT_PI_DIR"/agents/*/; do
 done
 
 # Always ensure these special entries exist
-if [ ! -L "$BIN_DIR/run-retro" ]; then
-  ln -sf ../dispatch-agent "$BIN_DIR/run-retro"
-  added=$((added + 1))
-fi
 if [ ! -L "$BIN_DIR/resume" ]; then
   ln -sf ../dispatch-agent "$BIN_DIR/resume"
   added=$((added + 1))
@@ -91,7 +87,6 @@ for link in "$BIN_DIR"/*; do
   name=$(basename "$link")
   # Skip special entries
   [ "$name" = "dotpi" ] && continue
-  [ "$name" = "run-retro" ] && continue
   [ "$name" = "resume" ] && continue
 
   target=$(readlink "$link" 2>/dev/null || true)

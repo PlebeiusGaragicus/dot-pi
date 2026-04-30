@@ -145,7 +145,7 @@ The launcher provides `DOT_PI_DIR`, `AGENT_NAME`, `AGENT_DIR`, `WORKSPACE_AGENT`
 
 If the workspace contains a `sessions/` directory, `dispatch-agent` passes `--session-dir <workspace>/sessions` so the orchestrator and subagents can keep their session logs with the workspace artifacts.
 
-`workspace.env` is deprecated but still supported as a compatibility fallback. `workspace.conf` is deprecated and no longer used by current launchers.
+Legacy `workspace.env` and `workspace.conf` files are no longer used by current launchers. Put workspace setup in `bootstrap.sh`.
 
 ### `models.json`
 
@@ -365,7 +365,7 @@ workspaces/example-mas/2026-04-28-120000--named-run/
 
 The exact artifact files are workflow-specific. For example, a research agent might write `sources/` and `report.md`, while a reader/OCR agent writes `pages/`, `reader-manifest.json`, `document.md`, and `summary.md`.
 
-Workspace contents are runtime artifacts. They are useful for resuming, debugging, and retrospective analysis, but they are not agent source.
+Workspace contents are runtime artifacts. They are useful for resuming and debugging, but they are not agent source.
 
 ## What To Edit
 

@@ -18,7 +18,7 @@ pi resolves its config root via `getAgentDir()` in the coding-agent package. Thi
 
 This is the mechanism dot-pi exploits for both MAS and standalone agent configurations.
 
-For the user-facing command syntax implemented by `dispatch-agent`, see [Terminal Dispatch](terminal-dispatch.md).
+For the user-facing command syntax implemented by `dispatch-agent`, see [Terminal Dispatch](terminal-dispatch.md). The launcher itself is intentionally thin: it resolves `DOT_PI_DIR`, sources focused modules from `lib/dispatch/` in a fixed order, then calls the main dispatch function.
 
 ## Directory Layout
 
@@ -28,6 +28,7 @@ dot-pi/
 ├── commands/                 # Subcommand scripts (sourced by dotpi)
 ├── env.sh                    # Shell environment (source in .zshrc/.bashrc)
 ├── dispatch-agent            # Symlink target in bin/ (dispatches commands to agents)
+├── lib/dispatch/             # Sourced launcher modules
 ├── AGENTS.md                 # LLM-readable project guide
 ├── shared/                   # Reusable resources (never loaded directly)
 │   ├── extensions/           # Shared extension source code

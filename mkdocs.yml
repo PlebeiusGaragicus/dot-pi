@@ -52,7 +52,6 @@ nav:
     - Blog: multi-agent-systems/blog.md
     - Deep Research: multi-agent-systems/deepresearch.md
     - Reader: multi-agent-systems/reader.md
-    - Retro: multi-agent-systems/retro.md
   - Reference:
     - Writing Extensions: reference/extensions.md
     - Model Defaults: reference/model-defaults.md
