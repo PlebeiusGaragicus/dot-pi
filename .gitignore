@@ -9,6 +9,8 @@ shared/models.json
 shared/settings.json
 bin/
 .ssh
+google.json
+todo.jsonl
 
 # Agent runtime data
 agents/*/sessions/*
