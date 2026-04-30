@@ -47,13 +47,15 @@ usage:
   todo done               list finished tasks as markdown
   todo all                list all tasks as markdown (open and finished)
   todo new "foo"          add a task
-  todo edit <id> "bar"    edit a task's text
+  todo edit <id>          edit a task in your editor (VISUAL, EDITOR, default nano)
+  todo edit <id> "bar"    edit a task's text (inline)
   todo del <id>           delete a task
   todo finish <id>        mark task finished
   todo unfinish <id>      mark task not finished
   todo file               create todo.jsonl in the current directory
   todo which              print path to active todo.jsonl
   todo rm [-y|--yes]      delete active todo.jsonl (prompts unless -y/--yes)
+  todo tidy [-y|--yes]    remove all finished tasks (prompts unless -y/--yes)
   todo help               show this help
   todo version            print version
 EOF
@@ -141,6 +143,48 @@ cmd_rm() {
 	printf 'removed %s\n' "$path"
 }
 
+cmd_tidy() {
+	local force=false
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		-y | --yes)
+			force=true
+			shift
+			;;
+		*)
+			echo 'todo: usage: todo tidy [-y|--yes]' >&2
+			exit 1
+			;;
+		esac
+	done
+	resolve_todo_file
+	if [[ ! -f "$TODO_FILE" ]] || [[ ! -s "$TODO_FILE" ]]; then
+		return 0
+	fi
+	local n_done
+	n_done="$(jq -s 'map(select(.done == true)) | length' "$TODO_FILE")"
+	if [[ "$n_done" -eq 0 ]]; then
+		echo "todo: no finished tasks to remove" >&2
+		return 0
+	fi
+	local path
+	path="$(abs_path "$TODO_FILE")"
+	if ! $force; then
+		local ans
+		if ! read -r -p "Remove ${n_done} finished task(s) from ${path}? [y/N] " ans </dev/tty; then
+			echo "todo: cannot prompt (not a tty); use todo tidy --yes" >&2
+			exit 1
+		fi
+		ans=$(printf '%s' "$ans" | tr '[:upper:]' '[:lower:]')
+		if [[ "$ans" != "y" && "$ans" != "yes" ]]; then
+			echo "todo: cancelled" >&2
+			exit 1
+		fi
+	fi
+	jq -s 'map(select(.done != true)) | .[] | .' -c "$TODO_FILE" | write_jsonl
+	printf 'removed %s finished task(s) from %s\n' "$n_done" "$path"
+}
+
 cmd_list() {
 	resolve_todo_file
 	[[ ! -s "$TODO_FILE" ]] && return 0
@@ -175,6 +219,12 @@ cmd_new() {
 	jq -nc --arg text "$text" --argjson id "$next_id" '{id: $id, text: $text, done: false}' >>"$TODO_FILE"
 }
 
+apply_task_text() {
+	local id="$1"
+	local text="$2"
+	jq -s --argjson id "$id" --arg text "$text" 'map(if .id == $id then .text = $text else . end) | .[] | .' -c "$TODO_FILE" | write_jsonl
+}
+
 cmd_edit() {
 	local id="$1"
 	shift
@@ -189,7 +239,41 @@ cmd_edit() {
 		echo "todo: no task with id $id" >&2
 		exit 1
 	fi
-	jq -s --argjson id "$id" --arg text "$text" 'map(if .id == $id then .text = $text else . end) | .[] | .' -c "$TODO_FILE" | write_jsonl
+	apply_task_text "$id" "$text"
+}
+
+cmd_edit_interactive() {
+	local id="$1"
+	validate_id "$id"
+	resolve_todo_file
+	if ! id_exists "$id"; then
+		echo "todo: no task with id $id" >&2
+		exit 1
+	fi
+	local current
+	current="$(jq -s --argjson id "$id" 'map(select(.id == $id)) | .[0].text // empty' -r "$TODO_FILE")"
+	local ed="${VISUAL:-${EDITOR:-nano}}"
+	local ed_bin="${ed%% *}"
+	if ! command -v "$ed_bin" >/dev/null 2>&1; then
+		echo "todo: editor not found: $ed_bin (set VISUAL or EDITOR, or install nano)" >&2
+		exit 1
+	fi
+	local tmp
+	tmp="$(mktemp)" || exit 1
+	printf '%s' "$current" >"$tmp"
+	if [[ "$ed" == "$ed_bin" ]]; then
+		"$ed" "$tmp" || true
+	else
+		# shellcheck disable=SC2086 # intentional word-split for e.g. EDITOR="code --wait"
+		$ed "$tmp" || true
+	fi
+	local new_text
+	new_text="$(cat -- "$tmp")"
+	rm -f -- "$tmp"
+	if [[ -z "${new_text//[[:space:]]/}" ]]; then
+		return 0
+	fi
+	apply_task_text "$id" "$new_text"
 }
 
 cmd_del() {
@@ -250,6 +334,10 @@ main() {
 		shift
 		cmd_rm "$@"
 		;;
+	tidy)
+		shift
+		cmd_tidy "$@"
+		;;
 	list)
 		cmd_list
 		;;
@@ -268,13 +356,17 @@ main() {
 		cmd_new "$@"
 		;;
 	edit)
-		[[ $# -ge 3 ]] || {
-			echo 'todo: usage: todo edit <id> "new text"' >&2
+		[[ $# -ge 2 ]] || {
+			echo 'todo: usage: todo edit <id> [<new text>]' >&2
 			exit 1
 		}
-		id="$2"
-		shift 2
-		cmd_edit "$id" "$@"
+		if [[ $# -eq 2 ]]; then
+			cmd_edit_interactive "$2"
+		else
+			id="$2"
+			shift 2
+			cmd_edit "$id" "$@"
+		fi
 		;;
 	del)
 		[[ $# -eq 2 ]] || {

@@ -30,11 +30,13 @@ todo all             # all tasks: - [ ] / - [x] markdown lines
 todo file            # create ./todo.jsonl in the current directory
 todo which           # absolute path to active todo.jsonl
 todo rm              # delete active todo.jsonl — same path as todo which (prompts; -y / --yes skips)
+todo tidy            # remove all finished tasks from the list (prompts; -y / --yes skips)
 todo new "foo"
-todo edit <id> "bar"
+todo edit <id>          # edit in VISUAL, EDITOR, or nano (default nano)
+todo edit <id> "bar"    # inline, no editor
 todo del <id>
-todo finished <id>
-todo unfinished <id>
+todo finish <id>
+todo unfinish <id>
 todo help            # usage (-h and --help also work)
 todo version
 ```
@@ -43,6 +45,7 @@ todo version
 
 - `bash`
 - `jq`
+- `nano` (or another editor via `VISUAL` / `EDITOR`) for `todo edit <id>` without inline text
 
 ## install
 
