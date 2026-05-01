@@ -104,9 +104,9 @@ reader -n annual-report-2025 - "/path/to/document.pdf"
 # List past reader workspaces
 reader ls
 
-# Resume the latest reader workspace
+# Choose a reader workspace to resume
 reader resume
 
-# Resume a specific workspace by prefix
-reader resume 2026-04-28
+# Resume a specific workspace by exact basename
+reader resume 2026-04-28-091500
 ```

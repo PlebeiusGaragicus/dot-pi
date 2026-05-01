@@ -299,36 +299,30 @@ function expandEnvVars(value: string, env: Record<string, string>): string {
 	return value.replace(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g, (_match, name: string) => env[name] ?? "");
 }
 
-function filterModelFlags(args: string[], existingArgs: string[], agentModel: string, inlineAliases: Set<string>): string[] {
-	const explicitModel = existingArgs.includes("--model");
-	const explicitThinking = existingArgs.includes("--thinking");
+function filterModelFlags(args: string[], agentModel: string, inlineAliases: Set<string>): string[] {
 	const out: string[] = [];
 	for (let i = 0; i < args.length; i++) {
 		const arg = args[i];
-		if (arg !== "--model" && arg !== "--thinking") {
+		if (arg !== "--model") {
 			out.push(arg);
 			continue;
 		}
 		const value = args[i + 1];
 		if (!value || value.startsWith("--")) continue;
 		i++;
-		if (arg === "--model" && explicitModel) continue;
-		if (arg === "--thinking" && explicitThinking) continue;
-		if (arg === "--model") {
-			const alias = value.match(/^__DOTPI_MODEL_ALIAS__:([^:]+):(.*)$/);
-			if (alias) {
-				const [, name, expandedValue = ""] = alias;
-				const resolvedValue = agentModel && name && !inlineAliases.has(name) ? agentModel : expandedValue;
-				if (resolvedValue) out.push(arg, resolvedValue);
-				continue;
-			}
+		const alias = value.match(/^__DOTPI_MODEL_ALIAS__:([^:]+):(.*)$/);
+		if (alias) {
+			const [, name, expandedValue = ""] = alias;
+			const resolvedValue = agentModel && name && !inlineAliases.has(name) ? agentModel : expandedValue;
+			if (resolvedValue) out.push(arg, resolvedValue);
+			continue;
 		}
 		out.push(arg, value);
 	}
 	return out;
 }
 
-function readPiArgs(agentDir: string, existingArgs: string[]): string[] {
+function readPiArgs(agentDir: string): string[] {
 	const piArgsPath = path.join(agentDir, "pi-args");
 	if (!fs.existsSync(piArgsPath)) return [];
 
@@ -339,12 +333,12 @@ function readPiArgs(agentDir: string, existingArgs: string[]): string[] {
 		const lines = fs.readFileSync(piArgsPath, "utf-8").split(/\r?\n/);
 		for (const rawLine of lines) {
 			const trimmed = rawLine.trim();
-			const alias = trimmed.match(/^\$?\{?(DEFAULT_[A-Z0-9_]+)\}?$/);
+			const alias = trimmed.match(/^\$?\{?(DEFAULT_(?:AGENTIC|FAST|VLM)_MODEL)\}?$/);
 			const line = alias ? `__DOTPI_MODEL_ALIAS__:${alias[1]}:${expandEnvVars(trimmed, env)}` : expandEnvVars(trimmed, env);
 			if (!line || line.startsWith("#")) continue;
 			args.push(...line.split(/\s+/).filter(Boolean));
 		}
-		return filterModelFlags(args, existingArgs, readAgentModel(agentDir), inlineAliases);
+		return filterModelFlags(args, readAgentModel(agentDir), inlineAliases);
 	} catch {
 		return [];
 	}
@@ -560,7 +554,7 @@ async function runSingleAgent(
 			args.push("--no-session");
 		}
 	}
-	const piArgs = readPiArgs(agent.dir, args);
+	const piArgs = readPiArgs(agent.dir);
 	args.push(...piArgs, "-p");
 
 	const currentResult: SingleResult = {

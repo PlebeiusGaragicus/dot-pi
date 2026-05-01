@@ -6,8 +6,8 @@ General-purpose conversational LLM agent. Runs in-situ (your current directory).
 
 ```
 lm                     # interactive session
-lm "your question"     # quick prompt
-echo "question" | lm   # pipe input (batch mode)
+lm - "your question"   # prompt, then stay interactive
+echo "question" | lm -p # pipe input as print-mode prompt
 ```
 
 ## Configuration

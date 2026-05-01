@@ -32,8 +32,6 @@ agent --print --verbose prompt words...
 
 Also runs non-interactively, but prints progress markers such as tool starts and `[agent done]` to stderr. The final assistant reply still goes to stdout.
 
-`--batch` is accepted as a compatibility alias for `-p`, but new scripts should prefer `-p` / `--print`.
-
 ## stdin
 
 Piped stdin is treated as prompt text only when no prompt was supplied:
@@ -87,12 +85,12 @@ List and resume workspaces:
 ```bash
 browser ls
 browser resume
-browser resume docs-audit
-browser resume docs-audit - continue from the last page
-browser resume docs-audit -p summarize the current state
+browser resume 2026-04-29-120000--docs-audit
+browser resume 2026-04-29-120000--docs-audit - continue from the last page
+browser resume 2026-04-29-120000--docs-audit -p summarize the current state
 ```
 
-`resume` changes into the existing workspace and invokes pi with `--continue`. If the workspace contains `sessions/`, that directory is passed as `--session-dir` so orchestration traces stay with the workspace.
+`resume` with no argument opens an interactive picker. With an argument, it requires an exact workspace directory basename or path. `resume` changes into the existing workspace and invokes pi with `--continue`. If the workspace contains `sessions/`, that directory is passed as `--session-dir` so orchestration traces stay with the workspace.
 
 ## Bootstrap Output
 
@@ -111,4 +109,4 @@ agent -h
 agent --help
 ```
 
-These print the agent root's `USAGE.md` when present. `USAGE.md` should be a plain, man-page-style terminal reference. `README.md` remains for human and agent-facing prose.
+These print the agent root's `USAGE.md`. If it is missing, the launcher reports that the agent has no `USAGE.md`; `README.md` remains for human and agent-facing prose.

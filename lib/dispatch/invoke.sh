@@ -24,6 +24,31 @@ _run_pi_with_args_array() {
   fi
 }
 
+_build_pi_command_args() {
+  local config_dir="$1" session_dir="${2:-}" continue_session="${3:-false}"
+  _dispatch_cmd_args=()
+  _filter_model_flags "$config_dir"
+  [ ${#_pi_args[@]} -gt 0 ] && _dispatch_cmd_args+=("${_pi_args[@]}")
+  [ "$_cli_print" = true ] && _dispatch_cmd_args+=(--mode json)
+  [ -n "$session_dir" ] && _dispatch_cmd_args+=(--session-dir "$session_dir")
+  [ "$continue_session" = true ] && _dispatch_cmd_args+=(--continue)
+  _build_prompt_args
+  [ ${#_prompt_args[@]} -gt 0 ] && _dispatch_cmd_args+=("${_prompt_args[@]}")
+  return 0
+}
+
+_run_pi_command() {
+  local config_dir="$1" status
+  if [ "$_cli_print" = true ]; then
+    set +e
+    _run_pi_with_args_array "$config_dir" _dispatch_cmd_args < /dev/null | _json_filter
+    status=${PIPESTATUS[0]}
+    set -e
+    return "$status"
+  fi
+  _run_pi_with_args_array "$config_dir" _dispatch_cmd_args
+}
+
 _json_filter() {
   local turn=0 final_text=""
   while IFS= read -r line; do

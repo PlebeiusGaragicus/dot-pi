@@ -113,7 +113,7 @@ Common examples:
 --no-context-files
 ```
 
-Model aliases come from repo-local `model-defaults` and optional agent-local `.model` overrides. If an expanded `--model` or `--thinking` value is empty, `dispatch-agent` skips that flag so pi falls back to its own defaults.
+Model aliases come from repo-local `model-defaults` and optional agent-local `.model` overrides. If an expanded `--model` value is empty, `dispatch-agent` skips that flag so pi falls back to its own default. Thinking policy is either hardcoded in `pi-args` or omitted.
 
 Use `--no-context-files` for agents that should not inherit repository guidance such as `AGENTS.md` from the current working directory. Coding agents may intentionally omit it.
 

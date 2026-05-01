@@ -2,10 +2,9 @@
 
 _cli_action="launch"
 _cli_workspace_name=""
-_cli_resume_prefix=""
+_cli_resume_target=""
 _cli_prompt=""
 _cli_has_prompt=false
-_cli_batch=false
 _cli_print=false
 _cli_verbose=false
 _cli_error=""
@@ -28,21 +27,15 @@ _parse_agent_cli() {
   _is_workspace_agent "$config_dir" && is_workspace=true
   _cli_action="launch"
   _cli_workspace_name=""
-  _cli_resume_prefix=""
+  _cli_resume_target=""
   _cli_prompt=""
   _cli_has_prompt=false
-  _cli_batch=false
   _cli_print=false
   _cli_verbose=false
   _cli_error=""
 
   while [ $# -gt 0 ]; do
     case "$1" in
-      --batch)
-        _cli_batch=true
-        _cli_print=true
-        shift
-        ;;
       -v|--verbose)
         _cli_verbose=true
         shift
@@ -85,11 +78,6 @@ _parse_agent_cli() {
       shift
       while [ $# -gt 0 ]; do
         case "$1" in
-          --batch)
-            _cli_batch=true
-            _cli_print=true
-            shift
-            ;;
           -v|--verbose)
             _cli_verbose=true
             shift
@@ -118,11 +106,11 @@ _parse_agent_cli() {
               _cli_has_prompt=true
               break
             fi
-            if [ -n "$_cli_resume_prefix" ]; then
-              _cli_error="resume accepts at most one workspace prefix"
+            if [ -n "$_cli_resume_target" ]; then
+              _cli_error="resume accepts at most one workspace name or path"
               return 1
             fi
-            _cli_resume_prefix="$1"
+            _cli_resume_target="$1"
             shift
             ;;
         esac
@@ -135,10 +123,6 @@ _parse_agent_cli() {
     arg="$1"
     shift
     case "$arg" in
-      --batch)
-        _cli_batch=true
-        _cli_print=true
-        ;;
       -v|--verbose)
         _cli_verbose=true
         ;;

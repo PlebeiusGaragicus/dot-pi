@@ -49,7 +49,7 @@ $mas_name - "your task"       # send prompt and stay interactive
 $mas_name -p "task"           # print final reply and exit
 $mas_name -p -v "task"        # print final reply plus progress
 $mas_name ls                  # list past workspaces (if workspace MAS)
-$mas_name resume              # resume latest workspace
+$mas_name resume              # choose a workspace to resume
 $mas_name -h                  # show USAGE.md
 \`\`\`
 README
@@ -72,9 +72,9 @@ SYNOPSIS
 
        $mas_name ls
 
-       $mas_name resume [workspace-prefix]
-       $mas_name resume [workspace-prefix] - prompt words...
-       $mas_name resume [workspace-prefix] -p prompt words...
+       $mas_name resume [workspace-name-or-path]
+       $mas_name resume [workspace-name-or-path] - prompt words...
+       $mas_name resume [workspace-name-or-path] -p prompt words...
 
 DESCRIPTION
        Coordinates subagents under agents/$mas_name/agents/.  Each fresh
@@ -90,9 +90,6 @@ OPTIONS
        -v, --verbose
               With -p/--print, also show turn/tool progress on stderr.
 
-       --batch
-              Compatibility alias for -p.  Prefer -p in new scripts.
-
        -n name, --name name
               Slug suffix for the new workspace directory.
 
@@ -102,8 +99,9 @@ COMMANDS
 
        ls     List workspaces.
 
-       resume [workspace-prefix]
-              Resume latest or a workspace matching the prefix.
+       resume [workspace-name-or-path]
+              With no argument, choose a workspace by number.  With an
+              argument, resume the exact workspace basename or path.
 
 FILES
        workspaces/$mas_name/<timestamp>[--<slug>]/
@@ -138,9 +136,6 @@ OPTIONS
 
        -v, --verbose
               With -p/--print, also show turn/tool progress on stderr.
-
-       --batch
-              Compatibility alias for -p.  Prefer -p in new scripts.
 
 COMMANDS
        help, usage, -h, --help

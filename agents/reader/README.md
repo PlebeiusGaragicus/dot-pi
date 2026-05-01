@@ -10,8 +10,8 @@ reader -p "/path/to/file.pdf"                  # print final reply and exit
 reader -p -v "/path/to/file.pdf"               # print final reply plus progress
 reader -n annual-report-2025 - "/path/to.pdf"  # named workspace prompt run
 reader ls                                      # list past reader workspaces
-reader resume                                  # resume latest workspace
-reader resume 2026-04-28                       # resume matching workspace prefix
+reader resume                                  # choose a workspace by number
+reader resume 2026-04-28-120000                # resume exact workspace name
 reader -h                            # show this help
 ```
 

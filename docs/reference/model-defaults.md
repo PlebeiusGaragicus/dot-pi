@@ -1,6 +1,6 @@
 # Model Defaults
 
-dot-pi uses `pi-args` as the canonical place where each agent chooses its model policy. The model default feature gives those `pi-args` files stable aliases, while still allowing local user preferences, one-off environment overrides, and pi's own `settings.json` default.
+dot-pi uses `pi-args` as the canonical place where each agent chooses its model policy. The model default feature gives those `pi-args` files stable aliases, while still allowing local user preferences, inline environment overrides, and pi's own `settings.json` default.
 
 ## Files And Commands
 
@@ -79,21 +79,15 @@ If `$DEFAULT_FAST_MODEL` expands to an empty value, `dispatch-agent` drops the `
 
 Model selection resolves in this order:
 
-1. Explicit CLI flags:
-
-   ```bash
-   deepresearch --model provider/model-name
-   ```
-
-2. Inline environment overrides:
+1. Inline environment overrides:
 
    ```bash
    DEFAULT_AGENTIC_MODEL=provider/model-name deepresearch
    ```
 
-3. Agent-local `.model` overrides written by `/model-default`.
-4. Required repo-root `model-defaults` values written by `dotpi model-defaults`.
-5. Pi's `settings.json` default, reached when no non-empty model value resolves.
+2. Agent-local `.model` overrides written by `/model-default`.
+3. Required repo-root `model-defaults` values written by `dotpi model-defaults`.
+4. Pi's `settings.json` default, reached when no non-empty model value resolves.
 
 ## Target Behavior
 
@@ -101,7 +95,6 @@ Model selection resolves in this order:
 - `model-defaults` supplies machine-local global fallback aliases.
 - Agent `.model` files supply persistent per-agent raw model overrides without editing `pi-args`.
 - Inline env overrides are temporary and highest priority among defaults.
-- Explicit CLI flags beat all defaults.
 - Empty default aliases are valid and result in no `--model` flag being passed.
 
 This makes both of these valid:
@@ -109,12 +102,6 @@ This makes both of these valid:
 ```bash
 deepresearch
 DEFAULT_AGENTIC_MODEL=provider/model-name deepresearch
-```
-
-And this remains an explicit one-run override:
-
-```bash
-deepresearch --model provider/other-model
 ```
 
 ## Typical Agent Policies
@@ -140,23 +127,16 @@ Vision-heavy subagents use the VLM default:
 $DEFAULT_VLM_MODEL
 ```
 
-## Thinking Defaults
+## Thinking
 
-`--thinking` follows the same empty-value handling as `--model`. If an agent includes:
-
-```text
---thinking
-$DEFAULT_THINKING
-```
-
-and `DEFAULT_THINKING` is empty, the flag is skipped. Agents can also set a fixed value:
+Thinking is not part of the model-default alias system. Agents that need a fixed thinking policy should hardcode it in `pi-args`:
 
 ```text
 --thinking
 off
 ```
 
-Explicit CLI `--thinking` overrides the `pi-args` value for that run.
+Agents that should use pi's provider default should leave `--thinking` out.
 
 ## Runtime Flow
 
@@ -167,8 +147,7 @@ flowchart TD
   modelDefaults["model-defaults fallbacks"] --> modelEnv
   piArgs["Agent pi-args"] --> expand["Expand env vars"]
   modelEnv --> expand
-  expand --> filter["Drop empty model/thinking flags"]
-  cliFlags["Explicit CLI flags"] --> filter
+  expand --> filter["Drop empty model flags"]
   filter --> launch["Launch pi"]
   piSettings["pi settings.json default"] --> launch
 ```
@@ -179,7 +158,6 @@ Subagents are separate pi config roots, so their own `pi-args` files are read be
 
 - Load the subagent's own `.model` and repo-root `model-defaults`.
 - Expand `$DEFAULT_*` in the subagent's `pi-args`.
-- Drop empty `--model` or `--thinking` values.
-- Respect explicit launch flags when present.
+- Drop empty `--model` values.
 
 This keeps parent agents, standalone agents, and subagents on one model selection mechanism.

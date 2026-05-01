@@ -13,11 +13,9 @@ SYNOPSIS
 
        deepresearch ls
 
-       deepresearch resume [workspace-prefix]
-       deepresearch resume [workspace-prefix] - prompt words...
-       deepresearch resume [workspace-prefix] -p prompt words...
-
-       --batch remains accepted as a compatibility alias for -p.
+       deepresearch resume [workspace-name-or-path]
+       deepresearch resume [workspace-name-or-path] - prompt words...
+       deepresearch resume [workspace-name-or-path] -p prompt words...
 
 DESCRIPTION
        Orchestrates subagents to search, collect evidence, and produce a
@@ -33,9 +31,6 @@ OPTIONS
        -v, --verbose
               With -p/--print, also show turn/tool progress on stderr.
 
-       --batch
-              Compatibility alias for -p.  Prefer -p in new scripts.
-
        -n name, --name name
               Append a slug to the new workspace directory name.
 
@@ -45,8 +40,9 @@ COMMANDS
 
        ls     List workspaces under workspaces/deepresearch/.
 
-       resume [workspace-prefix]
-              Continue the latest workspace or match a directory prefix.
+       resume [workspace-name-or-path]
+              With no argument, choose a workspace by number.  With an
+              argument, resume the exact workspace basename or path.
 
 FILES
        workspaces/deepresearch/<timestamp>[--<slug>]/

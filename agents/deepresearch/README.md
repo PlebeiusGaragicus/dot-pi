@@ -10,7 +10,7 @@ deepresearch -p survey on topic X            # print final reply and exit
 deepresearch -p -v survey on topic X         # print final reply plus progress
 deepresearch -n project-name - survey topic  # named workspace prompt run
 deepresearch ls                              # list past workspaces
-deepresearch resume                          # resume latest workspace
-deepresearch resume project-name             # resume matching workspace
+deepresearch resume                          # choose a workspace by number
+deepresearch resume 2026-04-28-120000--project-name # resume exact workspace
 resume                             # choose from recent workspaces
 ```

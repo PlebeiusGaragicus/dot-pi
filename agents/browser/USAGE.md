@@ -13,11 +13,9 @@ SYNOPSIS
 
        browser ls
 
-       browser resume [workspace-prefix]
-       browser resume [workspace-prefix] - prompt words...
-       browser resume [workspace-prefix] -p prompt words...
-
-       --batch remains accepted as a compatibility alias for -p.
+       browser resume [workspace-name-or-path]
+       browser resume [workspace-name-or-path] - prompt words...
+       browser resume [workspace-name-or-path] -p prompt words...
 
 DESCRIPTION
        browser launches pi with this agent’s config inside a dated
@@ -44,9 +42,6 @@ OPTIONS
        -v, --verbose
               With -p/--print, also show turn/tool progress on stderr.
 
-       --batch
-              Compatibility alias for -p.  Prefer -p in new scripts.
-
        -n name, --name name
               Suffix the new workspace directory with a slug from name
               (workspace agents only).  Example: .../2026-04-29-120000--
@@ -58,11 +53,11 @@ COMMANDS
 
        ls     List workspaces under workspaces/browser/.
 
-       resume [workspace-prefix]
-              Continue the latest workspace, or the newest workspace
-              whose directory name matches the given prefix (timestamp
-              or slug).  Add - prompt to continue interactively with an
-              initial instruction, or -p prompt to print a final reply.
+       resume [workspace-name-or-path]
+              With no argument, choose a workspace by number.  With an
+              argument, resume the exact workspace basename or path.  Add
+              - prompt to continue interactively with an initial instruction,
+              or -p prompt to print a final reply.
 
 FILES
        workspaces/browser/<timestamp>[--<slug>]/
@@ -95,9 +90,9 @@ EXAMPLES
        browser ls
 
        browser resume
-       browser resume docs-audit
-       browser resume 2026-04-29 - list open tabs
-       browser resume 2026-04-29 -p list open tabs
+       browser resume 2026-04-29-120000--docs-audit
+       browser resume 2026-04-29-120000--docs-audit - list open tabs
+       browser resume 2026-04-29-120000--docs-audit -p list open tabs
 
 SEE ALSO
        agents/browser/SYSTEM.md, agents/browser/bootstrap.sh,

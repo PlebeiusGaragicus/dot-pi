@@ -23,9 +23,6 @@ OPTIONS
        -v, --verbose
               With -p/--print, also show turn/tool progress on stderr.
 
-       --batch
-              Compatibility alias for -p.  Prefer -p in new scripts.
-
 COMMANDS
        help, usage, -h, --help
               Show this page on standard output.

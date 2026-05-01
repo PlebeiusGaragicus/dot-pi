@@ -13,9 +13,9 @@ SYNOPSIS
 
        reader ls
 
-       reader resume [workspace-prefix]
-       reader resume [workspace-prefix] - prompt words...
-       reader resume [workspace-prefix] -p prompt words...
+       reader resume [workspace-name-or-path]
+       reader resume [workspace-name-or-path] - prompt words...
+       reader resume [workspace-name-or-path] -p prompt words...
 
 DESCRIPTION
        Renders PDFs to page images, OCRs with vision subagents, and writes
@@ -30,9 +30,6 @@ OPTIONS
        -v, --verbose
               With -p/--print, also show turn/tool progress on stderr.
 
-       --batch
-              Compatibility alias for -p.  Prefer -p in new scripts.
-
        -n name, --name name
               Slug suffix for the new workspace directory.
 
@@ -42,8 +39,9 @@ COMMANDS
 
        ls     List reader workspaces.
 
-       resume [workspace-prefix]
-              Resume latest or a workspace matching the prefix.
+       resume [workspace-name-or-path]
+              With no argument, choose a workspace by number.  With an
+              argument, resume the exact workspace basename or path.
 
 FILES
        workspaces/reader/<timestamp>[--<slug>]/

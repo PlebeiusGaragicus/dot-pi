@@ -3,28 +3,14 @@
 _show_help() {
   local config_dir="$1"
   local usage="$config_dir/USAGE.md"
-  local readme="$config_dir/README.md"
   # USAGE.md is the canonical CLI reference (man-page style plain text).
   if [ -f "$usage" ]; then
     cat "$usage"
     exit 0
   fi
-  _show_agent_usage "$config_dir"
-  echo ""
-  if [ -f "$readme" ]; then
-    if command -v glow &>/dev/null; then
-      glow -p "$readme"
-    elif command -v bat &>/dev/null; then
-      bat --style=plain --paging=never "$readme"
-    else
-      cat "$readme"
-    fi
-  else
-    echo "No USAGE.md or README.md for $AGENT_NAME"
-    echo "  config: $config_dir"
-    echo "  Add USAGE.md (man-style CLI help) or README.md (human overview)."
-  fi
-  exit 0
+  echo "$AGENT_NAME does not have USAGE.md" >&2
+  echo "  config: $config_dir" >&2
+  exit 1
 }
 
 _show_agent_usage() {
@@ -41,9 +27,9 @@ _show_agent_usage() {
     echo "  $AGENT_NAME --name <name> - <prompt>"
     echo "  $AGENT_NAME -p -n <name> <prompt>"
     echo "  $AGENT_NAME ls"
-    echo "  $AGENT_NAME resume [workspace-prefix]"
-    echo "  $AGENT_NAME resume [workspace-prefix] - <prompt>"
-    echo "  $AGENT_NAME resume [workspace-prefix] -p <prompt>"
+    echo "  $AGENT_NAME resume [workspace-name-or-path]"
+    echo "  $AGENT_NAME resume [workspace-name-or-path] - <prompt>"
+    echo "  $AGENT_NAME resume [workspace-name-or-path] -p <prompt>"
   fi
 }
 

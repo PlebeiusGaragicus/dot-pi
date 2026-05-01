@@ -42,22 +42,18 @@ _read_agent_model() {
 
 _filter_model_flags() {
   local config_dir="$1"
-  shift
-  local explicit_model=false explicit_thinking=false out=() arg next agent_model alias_name alias_value
-  _has_flag "--model" "$@" && explicit_model=true
-  _has_flag "--thinking" "$@" && explicit_thinking=true
+  local out=() arg next agent_model alias_name alias_value
   agent_model="$(_read_agent_model "$config_dir")"
   while [ ${#_pi_args[@]} -gt 0 ]; do
     arg="${_pi_args[0]}"
     _pi_args=("${_pi_args[@]:1}")
     case "$arg" in
-      --model|--thinking)
+      --model)
         next="${_pi_args[0]:-}"
         [ ${#_pi_args[@]} -gt 0 ] && _pi_args=("${_pi_args[@]:1}")
         [ -z "$next" ] && continue
         [[ "$next" == --* ]] && { _pi_args=("$next" "${_pi_args[@]}"); continue; }
-        [ "$arg" = "--model" ] && [ "$explicit_model" = true ] && continue
-        if [[ "$arg" = "--model" && "$next" == __DOTPI_MODEL_ALIAS__:* ]]; then
+        if [[ "$next" == __DOTPI_MODEL_ALIAS__:* ]]; then
           alias_name="${next#__DOTPI_MODEL_ALIAS__:}"
           alias_name="${alias_name%%:*}"
           alias_value="${next#__DOTPI_MODEL_ALIAS__:${alias_name}:}"
@@ -69,8 +65,7 @@ _filter_model_flags() {
             next="$alias_value"
           fi
         fi
-        [ "$arg" = "--model" ] && [ -z "$next" ] && continue
-        [ "$arg" = "--thinking" ] && [ "$explicit_thinking" = true ] && continue
+        [ -z "$next" ] && continue
         out+=("$arg" "$next")
         ;;
       *)

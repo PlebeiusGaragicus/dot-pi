@@ -26,25 +26,14 @@ _resume_workspace_path() {
   config_dir="$DOT_PI_DIR/agents/$agent"
   [ -d "$config_dir" ] || { echo "No agent config for workspace: $agent" >&2; return 1; }
   _load_pi_args "$config_dir"
-  _filter_model_flags "$config_dir"
   echo "Resuming: $ws_path" >&2
-  local cmd_args=()
-  [ ${#_pi_args[@]} -gt 0 ] && cmd_args+=("${_pi_args[@]}")
   (
     cd "$ws_path"
     _source_bootstrap "$config_dir" "resume" "$ws_path" "$agent"
-    local _resume_args=()
-    [ -d "$ws_path/sessions" ] && _resume_args+=(--session-dir "$ws_path/sessions")
-    [ "$_cli_print" = true ] && cmd_args+=(--mode json)
-    [ ${#_resume_args[@]} -gt 0 ] && cmd_args+=("${_resume_args[@]}")
-    cmd_args+=(--continue)
-    _build_prompt_args
-    [ ${#_prompt_args[@]} -gt 0 ] && cmd_args+=("${_prompt_args[@]}")
-    if [ "$_cli_print" = true ]; then
-      _run_pi_with_args_array "$config_dir" cmd_args < /dev/null
-    else
-      _run_pi_with_args_array "$config_dir" cmd_args
-    fi
+    local session_dir=""
+    [ -d "$ws_path/sessions" ] && session_dir="$ws_path/sessions"
+    _build_pi_command_args "$config_dir" "$session_dir" true
+    _run_pi_command "$config_dir"
   )
 }
 
@@ -103,6 +92,41 @@ _collect_workspaces() {
   done
 }
 
+_collect_agent_workspaces() {
+  local name="$1" limit="${2:-0}" ws_root="$DOT_PI_DIR/workspaces/$name"
+  local d count=0
+  shopt -s nullglob
+  for d in "$ws_root"/*/; do
+    [ -d "$d" ] || continue
+    printf '%s\t%s\n' "$(stat -f '%m' "$d" 2>/dev/null || stat -c '%Y' "$d" 2>/dev/null || echo 0)" "${d%/}"
+  done | sort -rn | while IFS=$'\t' read -r _mtime d; do
+    [ -n "$d" ] || continue
+    printf '%s\n' "$d"
+    count=$((count + 1))
+    [ "$limit" -gt 0 ] && [ "$count" -ge "$limit" ] && break
+  done
+}
+
+_resolve_workspace_exact() {
+  local name="$1" target="$2" ws_root="$DOT_PI_DIR/workspaces/$name" candidate
+  target="${target%/}"
+  if [ -d "$target" ]; then
+    candidate="$target"
+  else
+    candidate="$ws_root/$target"
+  fi
+  if [ ! -d "$candidate" ]; then
+    echo "No workspace named '$target' under $ws_root" >&2
+    return 1
+  fi
+  candidate="${candidate%/}"
+  if [ "$(basename "$(dirname "$candidate")")" != "$name" ]; then
+    echo "Workspace is not for $name: $candidate" >&2
+    return 1
+  fi
+  printf '%s\n' "$candidate"
+}
+
 _workspace_launch() {
   local name="$1" config_dir="$2"
   local ws_root="$DOT_PI_DIR/workspaces/$name"
@@ -115,23 +139,13 @@ _workspace_launch() {
   fi
   mkdir -p "$ws"
   echo "Workspace: $ws" >&2
-  _filter_model_flags "$config_dir"
-  local cmd_args=()
-  [ ${#_pi_args[@]} -gt 0 ] && cmd_args+=("${_pi_args[@]}")
   (
     cd "$ws"
     _source_bootstrap "$config_dir" "fresh" "$ws" "$name"
-    local _launch_args=()
-    [ -d "$ws/sessions" ] && _launch_args+=(--session-dir "$ws/sessions")
-    [ "$_cli_print" = true ] && cmd_args+=(--mode json)
-    [ ${#_launch_args[@]} -gt 0 ] && cmd_args+=("${_launch_args[@]}")
-    _build_prompt_args
-    [ ${#_prompt_args[@]} -gt 0 ] && cmd_args+=("${_prompt_args[@]}")
-    if [ "$_cli_print" = true ]; then
-      _run_pi_with_args_array "$config_dir" cmd_args < /dev/null
-    else
-      _run_pi_with_args_array "$config_dir" cmd_args
-    fi
+    local session_dir=""
+    [ -d "$ws/sessions" ] && session_dir="$ws/sessions"
+    _build_pi_command_args "$config_dir" "$session_dir" false
+    _run_pi_command "$config_dir"
   )
   return $?
 }
@@ -154,28 +168,19 @@ _workspace_list() {
 }
 
 _workspace_resume() {
-  local name="$1" prefix="${2:-}" target slug d base
-  local ws_root="$DOT_PI_DIR/workspaces/$name"
-  if [ -n "$prefix" ]; then
-    slug="$(_slugify_workspace_name "$prefix")"
-    while IFS= read -r d; do
-      [ -n "$d" ] || continue
-      base=$(basename "${d%/}")
-      if [[ "$base" == "$prefix"* || "$base" == *"--$slug"* ]]; then
-        target="${d%/}"
-        break
-      fi
-    done < <(ls -dt "$ws_root"/*/ 2>/dev/null)
-    if [ -z "$target" ]; then
-      echo "No workspace matching '$prefix' in $ws_root"
-      return 1
-    fi
+  local name="$1" exact="${2:-}" target selected
+  local paths=()
+  if [ -n "$exact" ]; then
+    target=$(_resolve_workspace_exact "$name" "$exact") || return $?
   else
-    target=$(ls -dt "$ws_root"/*/ 2>/dev/null | head -1)
-    if [ -z "$target" ]; then
-      echo "No workspaces to resume for $name"
+    while IFS= read -r selected; do
+      [ -n "$selected" ] && paths+=("$selected")
+    done < <(_collect_agent_workspaces "$name")
+    if [ ${#paths[@]} -eq 0 ]; then
+      echo "No workspaces to resume for $name" >&2
       return 1
     fi
+    target=$(_pick_workspace "Workspaces for $name:" "${paths[@]}") || return $?
   fi
   _resume_workspace_path "$target"
 }

@@ -76,39 +76,18 @@ if _is_workspace_agent "$config_dir"; then
       exit $?
       ;;
     resume)
-      if [ "$_cli_print" = true ]; then
-        _workspace_resume "$AGENT_NAME" "$_cli_resume_prefix" | _json_filter
-        exit ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}
-      else
-        _workspace_resume "$AGENT_NAME" "$_cli_resume_prefix"
-        exit $?
-      fi
+      _workspace_resume "$AGENT_NAME" "$_cli_resume_target"
+      exit $?
       ;;
     launch)
-      if [ "$_cli_print" = true ]; then
-        _workspace_launch "$AGENT_NAME" "$config_dir" | _json_filter
-        exit ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}
-      else
-        _workspace_launch "$AGENT_NAME" "$config_dir"
-        exit $?
-      fi
+      _workspace_launch "$AGENT_NAME" "$config_dir"
+      exit $?
       ;;
   esac
 else
-  _filter_model_flags "$config_dir"
-  _in_situ_args=()
-  [ ${#_pi_args[@]} -gt 0 ] && _in_situ_args+=("${_pi_args[@]}")
-  [ "$_cli_print" = true ] && _in_situ_args+=(--mode json)
-  _build_prompt_args
-  [ ${#_prompt_args[@]} -gt 0 ] && _in_situ_args+=("${_prompt_args[@]}")
-  if [ "$_cli_print" = true ]; then
-    _source_bootstrap "$config_dir" "in-situ" "" "$AGENT_NAME"
-    _run_pi_with_args_array "$config_dir" _in_situ_args < /dev/null | _json_filter
-    exit ${PIPESTATUS[0]:-${pipestatus[1]:-$?}}
-  else
-    _source_bootstrap "$config_dir" "in-situ" "" "$AGENT_NAME"
-    _run_pi_with_args_array "$config_dir" _in_situ_args
-    exit $?
-  fi
+  _source_bootstrap "$config_dir" "in-situ" "" "$AGENT_NAME"
+  _build_pi_command_args "$config_dir"
+  _run_pi_command "$config_dir"
+  exit $?
 fi
 }

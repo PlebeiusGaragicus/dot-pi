@@ -132,13 +132,13 @@ Workspaces for deepresearch:
   2026-04-10-130214  (3 files)
 ```
 
-To resume the most recent workspace session:
+To choose a workspace session to resume:
 
 ```bash
 deepresearch resume
 ```
 
-Or resume a specific one by prefix:
+Or resume a specific one by exact workspace basename:
 
 ```bash
 deepresearch resume 2026-04-10-125602

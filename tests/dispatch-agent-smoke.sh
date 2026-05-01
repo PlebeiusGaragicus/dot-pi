@@ -34,6 +34,20 @@ run_capture() {
   CAPTURE_OUT="$output"
 }
 
+run_capture_stdin() {
+  local label="$1" stdin="$2"
+  shift 2
+  local output status
+  set +e
+  output=$(printf '%s' "$stdin" | DOT_PI_DIR="$FIXTURE" DOTPI_DISPATCH_CAPTURE_PI=1 "$@" 2>&1)
+  status=$?
+  set -e
+  if [ "$status" -ne 0 ] && [[ "$output" != *"PI_CODING_AGENT_DIR="* ]]; then
+    fail "$label exited $status: $output"
+  fi
+  CAPTURE_OUT="$output"
+}
+
 mkdir -p "$FIXTURE/bin" "$FIXTURE/agents/coder" "$FIXTURE/agents/lm" \
   "$FIXTURE/agents/browser" "$FIXTURE/workspaces/browser/2026-04-29-000000--prefix/sessions"
 ln -s "$ROOT/lib" "$FIXTURE/lib"
@@ -95,10 +109,6 @@ run_capture "lm print verbose prompt" "$FIXTURE/bin/lm" -p -v hi
 assert_contains "$CAPTURE_OUT" $'\t--mode\tjson' "lm print verbose prompt"
 assert_contains "$CAPTURE_OUT" $'\t-p\thi' "lm print verbose prompt"
 
-run_capture "lm batch compatibility" "$FIXTURE/bin/lm" --batch hi
-assert_contains "$CAPTURE_OUT" $'\t--mode\tjson' "lm batch compatibility"
-assert_contains "$CAPTURE_OUT" $'\t-p\thi' "lm batch compatibility"
-
 run_capture "browser print workspace" "$FIXTURE/bin/browser" -p status
 assert_contains "$CAPTURE_OUT" "PI_CODING_AGENT_DIR=$FIXTURE/agents/browser" "browser print workspace"
 assert_contains "$CAPTURE_OUT" $'\t--tools\tread,ls,bash' "browser print workspace"
@@ -113,10 +123,15 @@ assert_contains "$CAPTURE_OUT" $'\tprompt text' "browser named interactive works
 assert_not_contains "$CAPTURE_OUT" $'\t--mode\tjson' "browser named interactive workspace"
 assert_not_contains "$CAPTURE_OUT" $'\t-p\t' "browser named interactive workspace"
 
-run_capture "browser resume prompt" "$FIXTURE/bin/browser" resume prefix - continue here
+run_capture "browser exact resume prompt" "$FIXTURE/bin/browser" resume 2026-04-29-000000--prefix - continue here
 assert_contains "$CAPTURE_OUT" "Resuming: $FIXTURE/workspaces/browser/2026-04-29-000000--prefix" "browser resume prompt"
 assert_contains "$CAPTURE_OUT" $'\t--continue' "browser resume prompt"
 assert_contains "$CAPTURE_OUT" $'\tcontinue here' "browser resume prompt"
 assert_not_contains "$CAPTURE_OUT" $'\t--mode\tjson' "browser resume prompt"
+
+run_capture_stdin "browser picker resume prompt" $'3\n' "$FIXTURE/bin/browser" resume - continue from picker
+assert_contains "$CAPTURE_OUT" "Workspaces for browser:" "browser picker resume prompt"
+assert_contains "$CAPTURE_OUT" "Resuming: $FIXTURE/workspaces/browser/2026-04-29-000000--prefix" "browser picker resume prompt"
+assert_contains "$CAPTURE_OUT" $'\tcontinue from picker' "browser picker resume prompt"
 
 echo "dispatch-agent smoke: ok"

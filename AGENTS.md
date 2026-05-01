@@ -199,7 +199,7 @@ Recommended subagent files:
 - `USAGE.md` -- invocation contract appended to the orchestrator prompt.
 - `pi-args` -- subagent-specific tools, context-file behavior, and model alias.
 
-At the **root** of any `agents/<name>/` directory (MAS or standalone), **`USAGE.md`** is also the file **`dispatch-agent`** prints for `<name> help`, `usage`, `-h`, and `--help` (plain text; use a man-style layout). **`README.md`** is for human- and agent-facing prose; it is not printed for help when **`USAGE.md`** is present (if **`USAGE.md`** is missing, help shows generated usage plus **`README.md`** with `glow`/`bat` when available).
+At the **root** of any `agents/<name>/` directory (MAS or standalone), **`USAGE.md`** is the file **`dispatch-agent`** prints for `<name> help`, `usage`, `-h`, and `--help` (plain text; use a man-style layout). **`README.md`** is for human- and agent-facing prose; launcher help does not fall back to it.
 
 ### Skills
 
@@ -261,9 +261,9 @@ This creates a timestamped directory with a slug suffix, e.g. `workspaces/deepre
 **Resuming a workspace session**: Workspace agents support `resume` and `ls`, and dot-pi also provides a global picker:
 ```bash
 deepresearch ls                             # show existing workspaces
-deepresearch resume                         # resume most recent workspace
-deepresearch resume 2026-04-10              # resume workspace matching prefix
-deepresearch resume 2026-04-10 - continue   # resume matching workspace with a prompt
+deepresearch resume                         # choose a workspace by number
+deepresearch resume 2026-04-10-125602       # resume exact workspace name
+deepresearch resume 2026-04-10-125602 - continue # resume exact workspace with a prompt
 deepresearch -p quick report                 # print final reply and exit
 deepresearch -p -v quick report              # print final reply plus progress
 resume                                      # choose from the 10 most recent workspaces

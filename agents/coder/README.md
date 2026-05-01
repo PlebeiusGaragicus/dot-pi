@@ -6,7 +6,7 @@ Coding agent — general-purpose code assistant. Runs in-situ.
 
 ```
 coder                          # interactive session
-coder "refactor this module"   # quick prompt
+coder - "refactor this module" # prompt, then stay interactive
 ```
 
 ## Configuration

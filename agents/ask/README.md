@@ -6,8 +6,8 @@ Explain agent — helps you understand what's in your current working directory.
 
 ```
 ask                              # interactive session
-ask "how does the auth work?"    # quick question about your codebase
-echo "summarize this repo" | ask # pipe input (batch mode)
+ask - "how does the auth work?"  # prompt, then stay interactive
+echo "summarize this repo" | ask -p # pipe input as print-mode prompt
 ```
 
 ## Configuration

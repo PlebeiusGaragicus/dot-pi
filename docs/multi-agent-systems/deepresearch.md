@@ -91,11 +91,11 @@ deepresearch - "What are the latest developments in WebTransport protocol?"
 # List past workspaces
 deepresearch ls
 
-# Resume the most recent workspace
+# Choose a workspace to resume
 deepresearch resume
 
-# Resume a specific workspace by prefix
-deepresearch resume 2026-04-12
+# Resume a specific workspace by exact basename
+deepresearch resume 2026-04-12-153000
 ```
 
 ## Running Evals

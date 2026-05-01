@@ -80,9 +80,9 @@ SYNOPSIS
 
        $agent_name ls
 
-       $agent_name resume [workspace-prefix]
-       $agent_name resume [workspace-prefix] - prompt words...
-       $agent_name resume [workspace-prefix] -p prompt words...
+       $agent_name resume [workspace-name-or-path]
+       $agent_name resume [workspace-name-or-path] - prompt words...
+       $agent_name resume [workspace-name-or-path] -p prompt words...
 
 DESCRIPTION
        Fresh launches create workspaces/$agent_name/<timestamp>/ (with an
@@ -97,9 +97,6 @@ OPTIONS
        -v, --verbose
               With -p/--print, also show turn/tool progress on stderr.
 
-       --batch
-              Compatibility alias for -p.  Prefer -p in new scripts.
-
        -n name, --name name
               Slug suffix for the new workspace directory.
 
@@ -109,8 +106,9 @@ COMMANDS
 
        ls     List workspaces.
 
-       resume [workspace-prefix]
-              Resume latest or a workspace matching the prefix.
+       resume [workspace-name-or-path]
+              With no argument, choose a workspace by number.  With an
+              argument, resume the exact workspace basename or path.
 
 FILES
        workspaces/$agent_name/<timestamp>[--<slug>]/
@@ -144,9 +142,6 @@ OPTIONS
 
        -v, --verbose
               With -p/--print, also show turn/tool progress on stderr.
-
-       --batch
-              Compatibility alias for -p.  Prefer -p in new scripts.
 
 COMMANDS
        help, usage, -h, --help

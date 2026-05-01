@@ -1,11 +1,5 @@
 # General helpers used by dispatch modules.
 
-_has_flag() {
-  local flag="$1"; shift
-  for arg in "$@"; do [ "$arg" = "$flag" ] && return 0; done
-  return 1
-}
-
 _expand_env_vars() {
   local s="$1" out="" var name
   while [[ "$s" =~ \$\{?([A-Za-z_][A-Za-z0-9_]*)\}? ]]; do

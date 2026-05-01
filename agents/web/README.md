@@ -6,8 +6,8 @@ Research agent — searches the open web and academic papers (arXiv) via Tavily.
 
 ```
 web                                     # interactive session
-web "latest advances in RISC-V"         # quick research query
-echo "compare Rust vs Zig" | web        # pipe input (batch mode)
+web - "latest advances in RISC-V"       # prompt, then stay interactive
+echo "compare Rust vs Zig" | web -p     # pipe input as print-mode prompt
 ```
 
 ## Configuration
