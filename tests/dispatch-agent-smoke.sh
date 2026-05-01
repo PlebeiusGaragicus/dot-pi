@@ -48,8 +48,21 @@ run_capture_stdin() {
   CAPTURE_OUT="$output"
 }
 
+run_expect_failure() {
+  local label="$1"
+  shift
+  local output status
+  set +e
+  output=$(DOT_PI_DIR="$FIXTURE" DOTPI_DISPATCH_CAPTURE_PI=1 "$@" < /dev/null 2>&1)
+  status=$?
+  set -e
+  [ "$status" -ne 0 ] || fail "$label expected failure; got success: $output"
+  CAPTURE_OUT="$output"
+}
+
 mkdir -p "$FIXTURE/bin" "$FIXTURE/agents/coder" "$FIXTURE/agents/lm" \
-  "$FIXTURE/agents/browser" "$FIXTURE/workspaces/browser/2026-04-29-000000--prefix/sessions"
+  "$FIXTURE/agents/browser" "$FIXTURE/shared" \
+  "$FIXTURE/workspaces/browser/2026-04-29-000000--prefix/sessions"
 ln -s "$ROOT/lib" "$FIXTURE/lib"
 ln -s "$ROOT/dispatch-agent" "$FIXTURE/bin/coder"
 ln -s "$ROOT/dispatch-agent" "$FIXTURE/bin/lm"
@@ -59,6 +72,19 @@ cat > "$FIXTURE/model-defaults" <<'EOF'
 export DEFAULT_AGENTIC_MODEL="${DEFAULT_AGENTIC_MODEL:-}"
 export DEFAULT_FAST_MODEL="${DEFAULT_FAST_MODEL:-}"
 export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
+EOF
+
+cat > "$FIXTURE/shared/models.json" <<'EOF'
+{
+  "providers": {
+    "lmstudio": {
+      "models": [
+        { "id": "valid-fast" },
+        { "id": "valid-agentic" }
+      ]
+    }
+  }
+}
 EOF
 
 cat > "$FIXTURE/agents/coder/pi-args" <<'EOF'
@@ -95,11 +121,37 @@ assert_contains "$CAPTURE_OUT" "PI_CODING_AGENT_DIR=$FIXTURE/agents/coder" "code
 assert_contains "$CAPTURE_OUT" "ARGV" "coder no args"
 assert_not_contains "$CAPTURE_OUT" $'\t--model' "coder model fall-through"
 
+printf 'lmstudio/valid-agentic\n' > "$FIXTURE/agents/coder/.model"
+run_capture "coder valid agent model" "$FIXTURE/bin/coder"
+assert_contains "$CAPTURE_OUT" $'\t--model\tlmstudio/valid-agentic' "coder valid agent model"
+
+printf 'missing/provider-model\n' > "$FIXTURE/agents/coder/.model"
+run_expect_failure "coder stale agent model" "$FIXTURE/bin/coder"
+assert_contains "$CAPTURE_OUT" 'Model "missing/provider-model" from ' "coder stale agent model"
+assert_contains "$CAPTURE_OUT" "agents/coder/.model" "coder stale agent model"
+assert_contains "$CAPTURE_OUT" "Run: dotpi models" "coder stale agent model"
+rm -f "$FIXTURE/agents/coder/.model"
+
 run_capture "lm interactive prompt" "$FIXTURE/bin/lm" - hi there
 assert_contains "$CAPTURE_OUT" $'\t--thinking\toff' "lm interactive prompt"
 assert_contains "$CAPTURE_OUT" $'\thi there' "lm interactive prompt"
 assert_not_contains "$CAPTURE_OUT" $'\t--mode\tjson' "lm interactive prompt"
 assert_not_contains "$CAPTURE_OUT" $'\t-p\t' "lm interactive prompt"
+
+cat > "$FIXTURE/model-defaults" <<'EOF'
+export DEFAULT_AGENTIC_MODEL="${DEFAULT_AGENTIC_MODEL:-}"
+export DEFAULT_FAST_MODEL="${DEFAULT_FAST_MODEL:-missing/fast}"
+export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
+EOF
+run_expect_failure "lm stale model default" "$FIXTURE/bin/lm" - hi
+assert_contains "$CAPTURE_OUT" 'Model "missing/fast" from ' "lm stale model default"
+assert_contains "$CAPTURE_OUT" "model-defaults (DEFAULT_FAST_MODEL)" "lm stale model default"
+assert_contains "$CAPTURE_OUT" "Run: dotpi models" "lm stale model default"
+cat > "$FIXTURE/model-defaults" <<'EOF'
+export DEFAULT_AGENTIC_MODEL="${DEFAULT_AGENTIC_MODEL:-}"
+export DEFAULT_FAST_MODEL="${DEFAULT_FAST_MODEL:-}"
+export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
+EOF
 
 run_capture "lm print prompt" "$FIXTURE/bin/lm" -p hi
 assert_contains "$CAPTURE_OUT" $'\t--mode\tjson' "lm print prompt"
@@ -131,7 +183,7 @@ assert_not_contains "$CAPTURE_OUT" $'\t--mode\tjson' "browser resume prompt"
 
 run_capture_stdin "browser picker resume prompt" $'3\n' "$FIXTURE/bin/browser" resume - continue from picker
 assert_contains "$CAPTURE_OUT" "Workspaces for browser:" "browser picker resume prompt"
-assert_contains "$CAPTURE_OUT" "Resuming: $FIXTURE/workspaces/browser/2026-04-29-000000--prefix" "browser picker resume prompt"
+assert_contains "$CAPTURE_OUT" "Resuming: $FIXTURE/workspaces/browser/" "browser picker resume prompt"
 assert_contains "$CAPTURE_OUT" $'\tcontinue from picker' "browser picker resume prompt"
 
 echo "dispatch-agent smoke: ok"

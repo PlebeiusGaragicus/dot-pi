@@ -299,8 +299,36 @@ function expandEnvVars(value: string, env: Record<string, string>): string {
 	return value.replace(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g, (_match, name: string) => env[name] ?? "");
 }
 
-function filterModelFlags(args: string[], agentModel: string, inlineAliases: Set<string>): string[] {
+type PiArgsResult = { args: string[]; error?: string };
+
+function readAvailableModelIds(agentDir: string): Set<string> {
+	const modelsPath = path.join(findDotPiRoot(agentDir), "shared", "models.json");
+	try {
+		const config = JSON.parse(fs.readFileSync(modelsPath, "utf-8")) as {
+			providers?: Record<string, { models?: Array<{ id?: string }> }>;
+		};
+		const ids = new Set<string>();
+		for (const [providerName, provider] of Object.entries(config.providers ?? {})) {
+			for (const model of provider.models ?? []) {
+				if (model.id) ids.add(`${providerName}/${model.id}`);
+			}
+		}
+		return ids;
+	} catch {
+		return new Set();
+	}
+}
+
+function formatMissingModelError(agentDir: string, model: string, source: string): string {
+	const modelsPath = path.join(findDotPiRoot(agentDir), "shared", "models.json");
+	const available = Array.from(readAvailableModelIds(agentDir)).sort();
+	const suffix = available.length > 0 ? `\nAvailable models:\n${available.map((id) => `  - ${id}`).join("\n")}` : "";
+	return `Model "${model}" from ${source} was not found in ${modelsPath}.\nRun: dotpi models${suffix}`;
+}
+
+function filterModelFlags(args: string[], agentDir: string, agentModel: string, inlineAliases: Set<string>): PiArgsResult {
 	const out: string[] = [];
+	const availableModels = readAvailableModelIds(agentDir);
 	for (let i = 0; i < args.length; i++) {
 		const arg = args[i];
 		if (arg !== "--model") {
@@ -310,21 +338,31 @@ function filterModelFlags(args: string[], agentModel: string, inlineAliases: Set
 		const value = args[i + 1];
 		if (!value || value.startsWith("--")) continue;
 		i++;
+		let resolvedValue = value;
+		let source = `${path.join(agentDir, "pi-args")}`;
 		const alias = value.match(/^__DOTPI_MODEL_ALIAS__:([^:]+):(.*)$/);
 		if (alias) {
 			const [, name, expandedValue = ""] = alias;
-			const resolvedValue = agentModel && name && !inlineAliases.has(name) ? agentModel : expandedValue;
-			if (resolvedValue) out.push(arg, resolvedValue);
-			continue;
+			if (agentModel && name && !inlineAliases.has(name)) {
+				resolvedValue = agentModel;
+				source = path.join(agentDir, ".model");
+			} else {
+				resolvedValue = expandedValue;
+				source = name && inlineAliases.has(name) ? `inline env ${name}` : `${path.join(findDotPiRoot(agentDir), "model-defaults")} (${name})`;
+			}
 		}
-		out.push(arg, value);
+		if (!resolvedValue) continue;
+		if (!availableModels.has(resolvedValue)) {
+			return { args: out, error: formatMissingModelError(agentDir, resolvedValue, source) };
+		}
+		out.push(arg, resolvedValue);
 	}
-	return out;
+	return { args: out };
 }
 
-function readPiArgs(agentDir: string): string[] {
+function readPiArgs(agentDir: string): PiArgsResult {
 	const piArgsPath = path.join(agentDir, "pi-args");
-	if (!fs.existsSync(piArgsPath)) return [];
+	if (!fs.existsSync(piArgsPath)) return { args: [] };
 
 	const args: string[] = [];
 	try {
@@ -338,9 +376,9 @@ function readPiArgs(agentDir: string): string[] {
 			if (!line || line.startsWith("#")) continue;
 			args.push(...line.split(/\s+/).filter(Boolean));
 		}
-		return filterModelFlags(args, readAgentModel(agentDir), inlineAliases);
+		return filterModelFlags(args, agentDir, readAgentModel(agentDir), inlineAliases);
 	} catch {
-		return [];
+		return { args: [] };
 	}
 }
 
@@ -554,7 +592,20 @@ async function runSingleAgent(
 			args.push("--no-session");
 		}
 	}
-	const piArgs = readPiArgs(agent.dir);
+	const piArgsResult = readPiArgs(agent.dir);
+	if (piArgsResult.error) {
+		return {
+			agent: agentName,
+			agentSource: agent.source,
+			task,
+			exitCode: 1,
+			messages: [],
+			stderr: piArgsResult.error,
+			usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0 },
+			step,
+		};
+	}
+	const piArgs = piArgsResult.args;
 	args.push(...piArgs, "-p");
 
 	const currentResult: SingleResult = {

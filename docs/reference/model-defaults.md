@@ -9,8 +9,10 @@ dot-pi uses `pi-args` as the canonical place where each agent chooses its model 
 Required repo-root local config. It is created from `bootstrap/model-defaults.example` during install or `dotpi sync`, and can be managed with:
 
 ```bash
-dotpi model-defaults
+dotpi models
 ```
+
+`dotpi model-defaults` remains available as a compatibility shortcut for editing only the global aliases.
 
 It defines fallback aliases:
 
@@ -86,7 +88,7 @@ Model selection resolves in this order:
    ```
 
 2. Agent-local `.model` overrides written by `/model-default`.
-3. Required repo-root `model-defaults` values written by `dotpi model-defaults`.
+3. Required repo-root `model-defaults` values written by `dotpi models`.
 4. Pi's `settings.json` default, reached when no non-empty model value resolves.
 
 ## Target Behavior
@@ -96,6 +98,7 @@ Model selection resolves in this order:
 - Agent `.model` files supply persistent per-agent raw model overrides without editing `pi-args`.
 - Inline env overrides are temporary and highest priority among defaults.
 - Empty default aliases are valid and result in no `--model` flag being passed.
+- Non-empty explicit models are validated against `shared/models.json` before launch. If a `.model` or `model-defaults` value is stale, an interactive launch offers to pick a replacement and then continues.
 
 This makes both of these valid:
 
@@ -148,7 +151,8 @@ flowchart TD
   piArgs["Agent pi-args"] --> expand["Expand env vars"]
   modelEnv --> expand
   expand --> filter["Drop empty model flags"]
-  filter --> launch["Launch pi"]
+  filter --> validate["Validate explicit model"]
+  validate --> launch["Launch pi"]
   piSettings["pi settings.json default"] --> launch
 ```
 
@@ -159,5 +163,6 @@ Subagents are separate pi config roots, so their own `pi-args` files are read be
 - Load the subagent's own `.model` and repo-root `model-defaults`.
 - Expand `$DEFAULT_*` in the subagent's `pi-args`.
 - Drop empty `--model` values.
+- Fail before spawning pi if a resolved explicit model is not in `shared/models.json`.
 
 This keeps parent agents, standalone agents, and subagents on one model selection mechanism.

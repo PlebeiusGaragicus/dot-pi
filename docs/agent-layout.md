@@ -113,7 +113,7 @@ Common examples:
 --no-context-files
 ```
 
-Model aliases come from repo-local `model-defaults` and optional agent-local `.model` overrides. If an expanded `--model` value is empty, `dispatch-agent` skips that flag so pi falls back to its own default. Thinking policy is either hardcoded in `pi-args` or omitted.
+Model aliases come from repo-local `model-defaults` and optional agent-local `.model` overrides. If an expanded `--model` value is empty, `dispatch-agent` skips that flag so pi falls back to its own default. Non-empty explicit models are validated against `shared/models.json` before launch. Thinking policy is either hardcoded in `pi-args` or omitted.
 
 Use `--no-context-files` for agents that should not inherit repository guidance such as `AGENTS.md` from the current working directory. Coding agents may intentionally omit it.
 
@@ -292,7 +292,7 @@ export DEFAULT_FAST_MODEL="${DEFAULT_FAST_MODEL:-}"
 export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
 ```
 
-Configure it with `dotpi model-defaults`. Empty values are allowed. The `/model-default` command can write an agent-local `.model` file containing a single raw `provider/model` id for that specific agent.
+Configure it with `dotpi models`. Empty values are allowed. The `/model-default` command or `dotpi models` can write an agent-local `.model` file containing a single raw `provider/model` id for that specific agent. `dotpi model-defaults` remains as a compatibility shortcut for editing global aliases only.
 
 ## Subagent Roots
 

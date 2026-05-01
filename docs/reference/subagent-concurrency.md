@@ -41,7 +41,7 @@ Subagents do not declare pools directly. They declare model intent through `pi-a
 $DEFAULT_VLM_MODEL
 ```
 
-Model selection is resolved the same way it is for launch: explicit model flags, inline environment overrides, agent-local `.model`, repo-local `model-defaults`, and then pi settings fallback. `agent-orchestrator` derives the provider from the resolved `provider/model` string. If no model flag resolves, it uses `shared/settings.json`'s `defaultProvider`.
+Model selection is resolved the same way it is for launch: inline environment overrides, agent-local `.model`, repo-local `model-defaults`, and then pi settings fallback when no explicit model resolves. `agent-orchestrator` validates resolved explicit models against `shared/models.json` before spawning pi, then derives the provider from the resolved `provider/model` string. If no model flag resolves, it uses `shared/settings.json`'s `defaultProvider`.
 
 ## Local Limits
 

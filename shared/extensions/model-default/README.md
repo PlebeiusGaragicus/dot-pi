@@ -1,6 +1,6 @@
 # Model Default Extension
 
-Interactive command for viewing and overriding repo-local model defaults.
+Interactive in-agent command for viewing and overriding repo-local model defaults. For the terminal picker that can repair global defaults and agent/subagent `.model` overrides, use `dotpi models`.
 
 ## Commands
 

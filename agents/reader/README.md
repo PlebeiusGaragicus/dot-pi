@@ -25,4 +25,4 @@ Each run creates `workspaces/reader/<timestamp>/` with:
 - `summary.md` when a concise summary is requested.
 - `sessions/` with the orchestrator and subagent session logs.
 
-Reader OCR workers should run on a vision-capable model. Configure `DEFAULT_VLM_MODEL` with `dotpi model-defaults`, or use `/model-default` for a local `.model` override. The OCR subagents reference `$DEFAULT_VLM_MODEL` from their `pi-args`.
+Reader OCR workers should run on a vision-capable model. Configure `DEFAULT_VLM_MODEL` with `dotpi models`, or use `/model-default` for a local `.model` override. The OCR subagents reference `$DEFAULT_VLM_MODEL` from their `pi-args`.

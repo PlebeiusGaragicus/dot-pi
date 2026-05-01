@@ -354,7 +354,7 @@ Key patterns:
 
 ### Example: Model Default
 
-A shared extension that registers `/model-default` for top-level agents. It displays resolved `DEFAULT_*` aliases, writes agent-local `.model` files as raw `provider/model` overrides, and can update repo-local `model-defaults` through global menu options.
+A shared extension that registers `/model-default` for top-level agents. It displays resolved `DEFAULT_*` aliases, writes agent-local `.model` files as raw `provider/model` overrides, and can update repo-local `model-defaults` through global menu options. The terminal command `dotpi models` provides the broader repair UI across agents and subagents.
 
 Source: `shared/extensions/model-default/index.ts`
 

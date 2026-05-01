@@ -70,7 +70,7 @@ After configuring providers, the wizard lets you assign local fallback models:
 - `DEFAULT_FAST_MODEL` — quick/cheap model fallback
 - `DEFAULT_VLM_MODEL` — vision model fallback
 
-These are exported from local `model-defaults` and can be overridden per-agent by a raw `agents/<name>/.model` value via `/model-default`. Each agent chooses which fallback to use in `pi-args`, for example `--model $DEFAULT_FAST_MODEL`. Empty defaults are valid; `dispatch-agent` skips empty `--model` values so pi uses its `settings.json` default.
+These are exported from local `model-defaults` and can be overridden per-agent by a raw `agents/<name>/.model` value via `/model-default` or `dotpi models`. Each agent chooses which fallback to use in `pi-args`, for example `--model $DEFAULT_FAST_MODEL`. Empty defaults are valid; `dispatch-agent` skips empty `--model` values so pi uses its `settings.json` default.
 
 ### First-party auth
 
@@ -145,11 +145,15 @@ The uninstaller removes `~/.dot-pi` and attempts to clean dot-pi lines from your
 
 ### `dotpi setup`
 
-Interactive wizard that configures model providers, fetches available models, and then walks through `model-defaults`. Supports multiple providers (Ollama, LM Studio, custom endpoints). Re-run anytime to add, edit, or remove providers.
+Interactive wizard that configures model providers, fetches available models, and then walks through global model defaults. Supports multiple providers (Ollama, LM Studio, custom endpoints). Re-run anytime to add, edit, or remove providers.
+
+### `dotpi models`
+
+Interactive picker for repo-local fallback model aliases and agent/subagent `.model` overrides. Re-run anytime after changing providers or model preferences. It also highlights stale `.model` and `model-defaults` values that no longer exist in `shared/models.json`.
 
 ### `dotpi model-defaults`
 
-Interactive picker for repo-local fallback model aliases in `model-defaults`. Re-run anytime after changing providers or model preferences.
+Compatibility shortcut for editing only the repo-local fallback aliases in `model-defaults`.
 
 ### `/model-default`
 

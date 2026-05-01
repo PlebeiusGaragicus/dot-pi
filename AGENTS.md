@@ -58,7 +58,7 @@ These files are **never tracked**. They're created locally by the installer or `
 
 | File | Source | Purpose |
 |------|--------|---------|
-| `model-defaults` | `cp bootstrap/model-defaults.example model-defaults` (or `dotpi model-defaults`) | Global fallback model aliases (`DEFAULT_AGENTIC_MODEL`, `DEFAULT_FAST_MODEL`, `DEFAULT_VLM_MODEL`). Loaded at agent launch time. |
+| `model-defaults` | `cp bootstrap/model-defaults.example model-defaults` (or `dotpi models`) | Global fallback model aliases (`DEFAULT_AGENTIC_MODEL`, `DEFAULT_FAST_MODEL`, `DEFAULT_VLM_MODEL`). Loaded at agent launch time. |
 | `shared/settings.json` | `cp bootstrap/settings.json.example shared/settings.json` (auto on `install` / `dotpi sync`) | Pi runtime settings (theme, defaults). Symlinked into every agent config. |
 | `shared/models.json` | Symlink → `~/.pi/agent/models.json` (created by installer or `dotpi sync`) | Multi-provider model config shared with system pi. `dotpi setup` edits the system file. |
 | `*/auth.json` | `dotpi link-auth` or set up by pi on first run | Per-agent credentials. |
@@ -378,7 +378,7 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `*/settings.json` (in agent configs) | **No** | Symlink — edit `shared/settings.json` |
 | `*/auth.json` | **No** | Credentials — gitignored |
 | `REFERENCES/**` | **No** | Local-only sibling checkouts; gitignored. Cloned manually for agent context (see `REFERENCE-REPOS.md`). |
-| `model-defaults` | Local | Per-machine global fallback model aliases. Written by `dotpi model-defaults`, loaded at agent launch time. Bootstrap manually with `cp bootstrap/model-defaults.example model-defaults`. |
+| `model-defaults` | Local | Per-machine global fallback model aliases. Written by `dotpi models` (or compatibility shortcut `dotpi model-defaults`), loaded at agent launch time. Bootstrap manually with `cp bootstrap/model-defaults.example model-defaults`. |
 | `agents/*/.model`, `subagents/*/.model`, `agents/*/agents/*/.model` | Local | Per-agent raw `provider/model` overrides written by `/model-default`; gitignored. |
 | `shared/settings.json` | Local | Bootstrapped from `bootstrap/settings.json.example` by `install` / `dotpi sync`; gitignored thereafter. Edit freely; not tracked. |
 | `.exa.env`, `.tavily.env` | Local | Repo-root API keys for Exa / Tavily; convention `.service-name.env`. Gitignored. |
