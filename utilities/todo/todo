@@ -59,9 +59,7 @@ usage:
   todo help               show this help
   todo version            print version
 
-On success, new / edit / finish / unfinish print one line like todo list:
-  - [ ] (id) text   or   - [x] (id) text
-todo del prints:  Deleted: (id) text
+
 EOF
 }
 
