@@ -35,6 +35,8 @@ ln -sf "../../shared/bin" "$mas_dir/bin"
 
 ln -sf "../../shared/models.json" "$mas_dir/models.json"
 
+ln -sf "../../shared/auth.json" "$mas_dir/auth.json"
+
 ln -sf "../../shared/settings.json" "$mas_dir/settings.json"
 
 cat > "$mas_dir/README.md" <<README
@@ -203,6 +205,7 @@ echo "    sessions/            (runtime session data, gitignored)"
 echo "    SYSTEM.md            (orchestrator system prompt)"
 echo "    banner.txt           (startup branding -- edit to customize)"
 echo "    models.json          (symlinked to shared)"
+echo "    auth.json            (symlink → shared/auth.json)"
 echo "    settings.json        (symlink → shared/settings.json)"
 echo "    pi-args              (optional default CLI flags; see IMPORTANT line inside)"
 [ "$workspace" = true ] && echo "    bootstrap.sh         (workspace setup, environment, and preflight checks)"

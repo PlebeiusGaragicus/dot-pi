@@ -20,9 +20,9 @@ Commands:
   create-agent [--workspace] <agent-name>  Create a standalone agent directory with a stub extension
   list                                     List existing agent configs
   link-skill <agent> <skill> [...]         Symlink one or more shared skills into an agent config
-  link-auth <src> <dst>                    Symlink auth.json from one agent config (or path) into another
+  link-auth <src> <dst>                    Override auth.json symlink (src: agent name, file path, or "shared")
   doctor [--strict]                        Run health checks on the dot-pi install
-  sync                                     Rebuild bin/ symlinks from agents/
+  sync                                     Rebuild bin/, bootstrap shared/auth.json if needed, link agents/*/auth.json -> shared
   version | --version | -v                 Print dotpi version (from VERSION file) and exit
 
 Options:
@@ -40,7 +40,7 @@ Examples:
   dotpi create-agent --workspace my-researcher
   dotpi list
   dotpi link-skill my-agent searxng
-  dotpi link-auth recon blog
+  dotpi link-auth shared blog             # point blog at shared/auth.json (optional; dotpi sync does this by default)
 EOF
   exit 1
 }

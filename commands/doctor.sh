@@ -45,7 +45,14 @@ else
   _warn "shared/settings.json missing (bootstrap: cp bootstrap/settings.json.example shared/settings.json)"
 fi
 
-# 5. shared/models.json symlink
+# 5. shared/auth.json
+if [ -f "$DOT_PI_DIR/shared/auth.json" ]; then
+  _ok "shared/auth.json exists"
+else
+  _warn "shared/auth.json missing (bootstrap: dotpi sync or cp bootstrap/auth.json.example shared/auth.json)"
+fi
+
+# 6. shared/models.json symlink
 if [ -L "$DOT_PI_DIR/shared/models.json" ]; then
   _target="$(readlink "$DOT_PI_DIR/shared/models.json")"
   if [ -f "$DOT_PI_DIR/shared/models.json" ]; then
@@ -59,7 +66,7 @@ else
   _fail "shared/models.json missing"
 fi
 
-# 6. bin/ on PATH
+# 7. bin/ on PATH
 if echo "$PATH" | tr ':' '\n' | grep -qF "$DOT_PI_DIR/bin" 2>/dev/null ||
    echo "$PATH" | tr ':' '\n' | grep -qF "$HOME/.dot-pi/bin" 2>/dev/null; then
   _ok "bin/ is on PATH"
@@ -67,7 +74,7 @@ else
   _warn "bin/ not found on PATH — add to your shell RC: export PATH=\"\$HOME/.dot-pi/bin:\$PATH\""
 fi
 
-# 7. Per-agent config checks
+# 8. Per-agent config checks
 _check_agent_dir() {
   local dir="$1" label="$2"
   local _had_fail=false
@@ -126,9 +133,24 @@ _check_agent_dir() {
     done
   fi
 
-  # auth.json
-  if [ ! -f "$dir/auth.json" ]; then
-    _warn "$label: auth.json missing"
+  # auth.json (symlink to shared, like models.json)
+  if [ -L "$dir/auth.json" ]; then
+    if [ ! -f "$dir/auth.json" ]; then
+      _fail "$label: auth.json symlink broken"
+      _had_fail=true
+    else
+      _atarget="$(readlink "$dir/auth.json")"
+      case "$_atarget" in
+        ../../shared/auth.json|"$DOT_PI_DIR/shared/auth.json") ;;
+        *)
+          _warn "$label: auth.json -> $_atarget (expected ../../shared/auth.json — run dotpi sync)"
+          ;;
+      esac
+    fi
+  elif [ -f "$dir/auth.json" ]; then
+    _warn "$label: auth.json is a regular file (merge into shared/auth.json then dotpi sync)"
+  else
+    _warn "$label: auth.json missing (run dotpi sync)"
   fi
 
   if [ "$_had_fail" = false ]; then
@@ -141,7 +163,7 @@ for d in "$DOT_PI_DIR"/agents/*/; do
   _check_agent_dir "$d" "agents/$(basename "$d")"
 done
 
-# 8. Optional binaries
+# 9. Optional binaries
 for _bin in fd rg; do
   if [ -f "$DOT_PI_DIR/shared/bin/$_bin" ]; then
     _ok "shared/bin/$_bin found"

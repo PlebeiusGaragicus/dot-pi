@@ -43,6 +43,8 @@ ln -sf "../../shared/bin" "$agent_dir/bin"
 
 ln -sf "../../shared/models.json" "$agent_dir/models.json"
 
+ln -sf "../../shared/auth.json" "$agent_dir/auth.json"
+
 ln -sf "../../shared/settings.json" "$agent_dir/settings.json"
 
 cat > "$agent_dir/README.md" <<README
@@ -203,6 +205,7 @@ echo "    themes/                  (individual themes symlinked from shared)"
 echo "    bin/                     (symlinked to shared/bin, gitignored contents)"
 echo "    sessions/                (runtime session data, gitignored)"
 echo "    models.json              (symlinked to shared)"
+echo "    auth.json                (symlink → shared/auth.json)"
 echo "    settings.json            (symlink → shared/settings.json)"
 echo "    pi-args                  (optional default CLI flags; see IMPORTANT line inside)"
 echo "    SYSTEM.md                (system prompt — edit to customize)"

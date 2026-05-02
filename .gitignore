@@ -1,13 +1,14 @@
 .DS_Store
+model-defaults
+shared/models.json
+shared/settings.json
+shared/auth.json
 .env
 .*.env
 # .exa.env
 # .tavily.env
 .tts-wpm
 .browser-control/
-model-defaults
-shared/models.json
-shared/settings.json
 bin/
 .ssh
 google.json

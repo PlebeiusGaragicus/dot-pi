@@ -6,12 +6,18 @@
 src="$1"
 dst="$2"
 
-if [ -f "$src" ]; then
+if [ "$src" = "shared" ]; then
+  src_path="$DOT_PI_DIR/shared/auth.json"
+  if [ ! -f "$src_path" ]; then
+    echo "Error: shared/auth.json missing — run dotpi sync or cp bootstrap/auth.json.example shared/auth.json"
+    exit 1
+  fi
+elif [ -f "$src" ]; then
   src_path="$(cd "$(dirname "$src")" && pwd)/$(basename "$src")"
 elif [ -f "$DOT_PI_DIR/agents/$src/auth.json" ]; then
   src_path="$DOT_PI_DIR/agents/$src/auth.json"
 else
-  echo "Error: cannot find auth.json at '$src' or in agent '$src'"
+  echo "Error: cannot find auth.json at '$src' or in agent '$src' (use 'shared' for shared/auth.json)"
   exit 1
 fi
 

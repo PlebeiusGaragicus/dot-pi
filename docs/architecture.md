@@ -35,7 +35,8 @@ dot-pi/
 │   ├── skills/               # Shared skill definitions (SKILL.md files)
 │   ├── themes/               # Shared themes (JSON)
 │   ├── bin/                  # Downloaded binaries (fd, rg) -- gitignored contents
-│   └── models.json           # Custom model provider config
+│   ├── models.json           # Custom model provider config (symlink)
+│   └── auth.json             # API credentials (gitignored local file)
 ├── agents/                   # MAS and standalone agent directories
 │   └── <name>/               # Each is a complete PI_CODING_AGENT_DIR root
 │       ├── extensions/       # Custom extension (+ shared symlinks)
@@ -47,7 +48,8 @@ dot-pi/
 │       ├── banner.txt        # Startup branding (ASCII art + usage)
 │       ├── bin/              # ← symlink to shared/bin/
 │       ├── sessions/         # Runtime (gitignored)
-│       └── models.json       # ← symlink to shared/models.json
+│       ├── models.json       # ← symlink to shared/models.json
+│       └── auth.json         # ← symlink to shared/auth.json
 ├── docs/                     # This documentation (MkDocs)
 └── references/               # Reference submodules
     ├── pi-mono/              # Read-only upstream pi source
@@ -150,11 +152,4 @@ Each agent directory is a complete pi config root. This provides:
 - **Session isolation** -- separate conversation history per agent config
 - **Settings isolation** -- per-agent config model preferences and configuration
 
-Shared resources (extensions, themes, models, binaries) are symlinked from `shared/` when you scaffold an agent config. **Skills are opt-in:** link them with `dotpi link-skill` (or `ln -sf`) into `skills/`. Downloaded binaries (`fd`, `rg`) are written once to `shared/bin/` through directory symlinks and shared across all agent configs automatically. Subagents can further tune their own tools, skills, and model choices through their own config roots.
-
-For shared authentication across agent configs, symlink `auth.json`:
-
-```bash
-dotpi link-auth recon blog
-dotpi link-auth recon twenty-questions
-```
+Shared resources (extensions, themes, models, binaries, **auth**) are symlinked from `shared/` when you scaffold an agent config. **Skills are opt-in:** link them with `dotpi link-skill` (or `ln -sf`) into `skills/`. Downloaded binaries (`fd`, `rg`) are written once to `shared/bin/` through directory symlinks and shared across all agent configs automatically. API credentials live in **`shared/auth.json`**; `dotpi sync` links each top-level `agents/<name>/auth.json` to that file (same pattern as `models.json` / `settings.json`). Use **`dotpi link-auth`** only when an agent must use a different credential file. Subagents can further tune their own tools, skills, and model choices through their own config roots.

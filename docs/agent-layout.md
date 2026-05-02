@@ -25,7 +25,7 @@ agents/example-mas/
 ├── pi-args
 ├── banner.txt
 ├── bootstrap.sh
-├── auth.json
+├── auth.json -> ../../shared/auth.json
 ├── models.json -> ../../shared/models.json
 ├── settings.json -> ../../shared/settings.json
 ├── bin -> ../../shared/bin
@@ -169,12 +169,23 @@ agents/<name>/settings.json -> ../../shared/settings.json
 
 ### `auth.json`
 
-Per-agent credentials written by pi when authentication is configured, or linked with `dotpi link-auth`.
+Symlink to the shared credential store:
 
-This file is local and should not be committed. Sharing auth between agents is normally done with:
+```text
+agents/<name>/auth.json -> ../../shared/auth.json
+```
+
+The canonical file is **`shared/auth.json`** (gitignored, bootstrapped from `bootstrap/auth.json.example` by `install` / `dotpi sync`). pi reads credentials from each agent root via this symlink, so all top-level agents share one `auth.json`.
+
+`dotpi sync` creates `shared/auth.json` if missing and links every `agents/<name>/auth.json` → `shared/auth.json`. Scaffolds (`dotpi create`, `dotpi create-agent`) create the symlink as well.
+
+If you previously stored credentials as a **regular file** under `agents/<name>/auth.json`, merge those entries into `shared/auth.json` before running `dotpi sync`: **`ln -sf` replaces** a regular file with the symlink.
+
+Use **`dotpi link-auth`** when an agent must point at a different file (another agent, `shared`, or an explicit path):
 
 ```bash
-dotpi link-auth source-agent target-agent
+dotpi link-auth shared other-agent
+dotpi link-auth lm recon
 ```
 
 ## Root Directories
@@ -322,7 +333,7 @@ agents/example-standalone/
 ├── pi-args
 ├── banner.txt
 ├── bootstrap.sh
-├── auth.json
+├── auth.json -> ../../shared/auth.json
 ├── models.json -> ../../shared/models.json
 ├── settings.json -> ../../shared/settings.json
 ├── bin -> ../../shared/bin
@@ -391,7 +402,7 @@ Usually generated, symlinked, local, or runtime:
 - `settings.json`
 - `bin/`
 - shared extension, skill, and theme symlinks
-- `auth.json`
+- `auth.json` (symlink to `shared/auth.json`; edit the shared file)
 - `sessions/`
 - workspace directories under `workspaces/`
 

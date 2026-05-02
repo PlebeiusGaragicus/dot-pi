@@ -11,8 +11,8 @@ The installer will:
 1. Check for required tools (`git`, `curl`, `jq`)
 2. Offer to install `pi` via npm if not already present
 3. Clone dot-pi to `~/.dot-pi`
-4. Bootstrap local config files (`shared/settings.json`, `model-defaults`)
-5. Build `bin/` symlinks so agent commands are on your PATH
+4. Bootstrap local config files (`shared/settings.json`, `shared/auth.json`, `model-defaults`)
+5. Build `bin/` symlinks and per-agent `auth.json` links (`dotpi sync`) so agent commands are on your PATH
 
 Override the install location with `DOT_PI_HOME`:
 
@@ -62,6 +62,8 @@ The wizard offers quick presets for common setups:
 
 For each provider, the wizard fetches available models (with an Ollama `/api/tags` fallback), lets you pick which to include, and saves them to `~/.pi/agent/models.json` (pi's system config). dot-pi symlinks `shared/models.json` to this file so all agent configs share the same provider configuration as bare `pi`.
 
+**API credentials** for pi providers live in **`shared/auth.json`** (gitignored). `install` and `dotpi sync` bootstrap it from `bootstrap/auth.json.example` if missing, then symlink each top-level `agents/<name>/auth.json` → `shared/auth.json`. Edit that single file, or use `/login` in any agent so updates flow through the same path.
+
 ### Model defaults
 
 After configuring providers, the wizard lets you assign local fallback models:
@@ -74,16 +76,18 @@ These are exported from local `model-defaults` and can be overridden per-agent b
 
 ### First-party auth
 
-For pi's built-in providers, use `/login` inside any agent session. Share that auth across agent configs with `dotpi link-auth`:
+Use `/login` inside any agent session; credentials are stored in **`shared/auth.json`** (reachable via each agent’s `auth.json` symlink).
+
+You normally **do not** need `dotpi link-auth` — **`dotpi sync`** points every top-level agent at **`shared/auth.json`**. Use `link-auth` only for overrides, for example:
 
 ```bash
-lm                          # start a session, use /login to authenticate
-dotpi link-auth lm recon    # share auth.json from lm to recon
+dotpi link-auth shared recon
+dotpi link-auth lm recon
 ```
 
 ### Multi-provider
 
-`~/.pi/agent/models.json` supports multiple providers side-by-side. Each `dotpi setup` run adds or edits one provider without disturbing others. The default picker shows models from all providers. dot-pi's `shared/models.json` is a symlink to this system file — there is only one copy.
+`~/.pi/agent/models.json` supports multiple providers side-by-side. Each `dotpi setup` run adds or edits one provider without disturbing others. The default picker shows models from all providers. dot-pi's `shared/models.json` is a symlink to this system file — there is only one copy. Likewise, **`shared/auth.json`** is the single local credential store symlinked into each top-level agent config.
 
 ## Local one-device setup
 
@@ -135,13 +139,13 @@ Re-running the installer on an existing install shows an "already installed" mes
 ~/.dot-pi/install --uninstall
 ```
 
-The uninstaller removes `~/.dot-pi` and attempts to clean dot-pi lines from your shell rc file. If it can't write to the rc file (e.g. permissions), it will show the lines to remove manually. Your system `~/.pi/agent/` directory (including `models.json` and `auth.json`) is not touched.
+The uninstaller removes `~/.dot-pi` and attempts to clean dot-pi lines from your shell rc file. If it can't write to the rc file (e.g. permissions), it will show the lines to remove manually. Your system `~/.pi/agent/` directory (including `models.json` and `auth.json`) is not touched. If you keep credentials only under dot-pi's `shared/auth.json`, back it up before uninstall if needed.
 
 ---
 
 ## The `dotpi` CLI
 
-`dotpi` manages agent config directories. It handles setup, scaffolding, listing, and auth sharing.
+`dotpi` manages agent config directories. It handles setup, scaffolding, listing, **`shared/auth.json`** wiring via **`dotpi sync`**, and optional **`dotpi link-auth`** overrides.
 
 ### `dotpi setup`
 
@@ -180,8 +184,8 @@ Symlink shared skills into an agent config's `skills/` folder.
 
 ### `dotpi link-auth <source> <destination>`
 
-Share `auth.json` from one agent config to another via symlink. Useful after authenticating via `/login` in one agent.
+Override **`auth.json`** with a symlink to another agent’s file, **`shared/auth.json`** (`dotpi link-auth shared <agent>`), or an explicit path. The default layout uses **`dotpi sync`** so every top-level agent points at **`shared/auth.json`** — only use `link-auth` for exceptions.
 
 ### `dotpi sync`
 
-Rebuild `bin/` symlinks from `agents/`. Called automatically after `dotpi create` / `create-agent`.
+Rebuild `bin/` symlinks from `agents/`, bootstrap **`shared/auth.json`** from the example if missing, and link each **`agents/<name>/auth.json`** → **`shared/auth.json`**. Called automatically after `dotpi create` / `create-agent`.

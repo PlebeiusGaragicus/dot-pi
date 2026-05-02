@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# dotpi sync — rebuild bin/ symlinks from agents/ directories.
+# dotpi sync — rebuild bin/ symlinks, bootstrap shared/auth.json if needed, and link
+# agents/<name>/auth.json -> ../../shared/auth.json for every top-level agent config.
 # Called automatically after dotpi create / create-agent and by the installer.
 
 BIN_DIR="$DOT_PI_DIR/bin"
@@ -17,6 +18,13 @@ if [ ! -f "$DOT_PI_DIR/model-defaults" ] && \
    [ -f "$DOT_PI_DIR/bootstrap/model-defaults.example" ]; then
   cp "$DOT_PI_DIR/bootstrap/model-defaults.example" "$DOT_PI_DIR/model-defaults"
   echo "sync: created model-defaults from bootstrap/model-defaults.example"
+fi
+
+# Bootstrap shared/auth.json from example if missing (gitignored, local-only)
+if [ ! -f "$DOT_PI_DIR/shared/auth.json" ] && \
+   [ -f "$DOT_PI_DIR/bootstrap/auth.json.example" ]; then
+  cp "$DOT_PI_DIR/bootstrap/auth.json.example" "$DOT_PI_DIR/shared/auth.json"
+  echo "sync: created shared/auth.json from bootstrap/auth.json.example"
 fi
 
 # Symlink shared/models.json to system pi config if missing
@@ -44,6 +52,7 @@ done
 for d in "$DOT_PI_DIR"/agents/*/; do
   [ -d "$d" ] || continue
   name=$(basename "$d")
+  ln -sf ../../shared/auth.json "$d/auth.json"
   link_extension_bundle "$SHARED_DIR/extensions-common" "$d/extensions" "../../../shared/extensions-common"
   if [ -e "$d/extensions/agent-orchestrator/index.ts" ]; then
     for subagent in "$d"/agents/*/; do

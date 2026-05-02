@@ -221,6 +221,12 @@ do_install() {
     info "Created shared/settings.json from bootstrap/settings.json.example"
   fi
 
+  if [ ! -f "$DOT_PI_HOME/shared/auth.json" ] && \
+     [ -f "$DOT_PI_HOME/bootstrap/auth.json.example" ]; then
+    cp "$DOT_PI_HOME/bootstrap/auth.json.example" "$DOT_PI_HOME/shared/auth.json"
+    info "Created shared/auth.json from bootstrap/auth.json.example"
+  fi
+
   if [ ! -f "$DOT_PI_HOME/model-defaults" ] && \
      [ -f "$DOT_PI_HOME/bootstrap/model-defaults.example" ]; then
     cp "$DOT_PI_HOME/bootstrap/model-defaults.example" "$DOT_PI_HOME/model-defaults"
