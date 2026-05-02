@@ -24,7 +24,3 @@ Skipped entirely when `process.stdout.isTTY` is false.
 ## Hooks Registered
 
 - `agent_end`
-
-## Related Docs
-
-- [Writing Extensions](https://PlebeiusGaragicus.github.io/dot-pi/reference/extensions/) -- referenced as a worked example

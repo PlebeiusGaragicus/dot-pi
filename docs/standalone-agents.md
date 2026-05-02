@@ -35,6 +35,7 @@ agents/<name>/
 ├── banner.txt                # Startup branding (ASCII art + usage text)
 ├── bin/                      # → shared/bin/ (fd, rg)
 ├── models.json               # → shared/models.json
+├── auth.json                 # → shared/auth.json
 ├── sessions/                 # Runtime conversation history (gitignored)
 └── settings.json             # Pi settings: theme, quietStartup (gitignored)
 ```

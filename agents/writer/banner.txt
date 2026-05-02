@@ -1,0 +1,10 @@
+            _ _           
+__ __ ___ _(_) |_ ___ _ _ 
+\ V  V / '_| |  _/ -_) '_|
+ \_/\_/|_| |_|\__\___|_|  
+                          
+
+---
+Agent: writer
+
+Writing and documentation assistant — prose, revisions, and repo docs in your cwd.
