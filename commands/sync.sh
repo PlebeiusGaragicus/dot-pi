@@ -1,30 +1,45 @@
 #!/usr/bin/env bash
-# dotpi sync — rebuild bin/ symlinks, bootstrap shared/auth.json if needed, and link
+# dotpi sync — rebuild bin/ symlinks, ensure shared/ symlinks to ~/.pi/agent/, and link
 # agents/<name>/auth.json -> ../../shared/auth.json for every top-level agent config.
 # Called automatically after dotpi create / create-agent and by the installer.
 
 BIN_DIR="$DOT_PI_DIR/bin"
 mkdir -p "$BIN_DIR"
 
-# Bootstrap shared/settings.json from example if missing (gitignored, local-only)
-if [ ! -f "$DOT_PI_DIR/shared/settings.json" ] && \
-   [ -f "$DOT_PI_DIR/bootstrap/settings.json.example" ]; then
-  cp "$DOT_PI_DIR/bootstrap/settings.json.example" "$DOT_PI_DIR/shared/settings.json"
-  echo "sync: created shared/settings.json from bootstrap/settings.json.example"
+# Symlink shared/settings.json to system pi config if missing
+_dotpi_settings="$DOT_PI_DIR/shared/settings.json"
+_pi_system_settings="$HOME/.pi/agent/settings.json"
+if [ ! -e "$_dotpi_settings" ] && [ ! -L "$_dotpi_settings" ]; then
+  if [ -f "$_pi_system_settings" ]; then
+    ln -sf "$_pi_system_settings" "$_dotpi_settings"
+    echo "sync: symlinked shared/settings.json -> $_pi_system_settings"
+  else
+    echo "sync: shared/settings.json missing and ~/.pi/agent/settings.json not found — run 'pi' first"
+  fi
 fi
 
-# Bootstrap model-defaults from example if missing (gitignored, local-only)
-if [ ! -f "$DOT_PI_DIR/model-defaults" ] && \
-   [ -f "$DOT_PI_DIR/bootstrap/model-defaults.example" ]; then
-  cp "$DOT_PI_DIR/bootstrap/model-defaults.example" "$DOT_PI_DIR/model-defaults"
-  echo "sync: created model-defaults from bootstrap/model-defaults.example"
+# Create model-defaults with empty defaults if missing (gitignored, local-only)
+if [ ! -f "$DOT_PI_DIR/model-defaults" ]; then
+  cat > "$DOT_PI_DIR/model-defaults" <<'DEFAULTS'
+# Local fallback model aliases used by pi-args files.
+# Leave a value empty to let pi fall back to its settings.json default.
+export DEFAULT_AGENTIC_MODEL="${DEFAULT_AGENTIC_MODEL:-}"
+export DEFAULT_FAST_MODEL="${DEFAULT_FAST_MODEL:-}"
+export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
+DEFAULTS
+  echo "sync: created model-defaults with empty defaults"
 fi
 
-# Bootstrap shared/auth.json from example if missing (gitignored, local-only)
-if [ ! -f "$DOT_PI_DIR/shared/auth.json" ] && \
-   [ -f "$DOT_PI_DIR/bootstrap/auth.json.example" ]; then
-  cp "$DOT_PI_DIR/bootstrap/auth.json.example" "$DOT_PI_DIR/shared/auth.json"
-  echo "sync: created shared/auth.json from bootstrap/auth.json.example"
+# Symlink shared/auth.json to system pi config if missing
+_dotpi_auth="$DOT_PI_DIR/shared/auth.json"
+_pi_system_auth="$HOME/.pi/agent/auth.json"
+if [ ! -e "$_dotpi_auth" ] && [ ! -L "$_dotpi_auth" ]; then
+  if [ -f "$_pi_system_auth" ]; then
+    ln -sf "$_pi_system_auth" "$_dotpi_auth"
+    echo "sync: symlinked shared/auth.json -> $_pi_system_auth"
+  else
+    echo "sync: shared/auth.json missing and ~/.pi/agent/auth.json not found — run 'pi' first"
+  fi
 fi
 
 # Symlink shared/models.json to system pi config if missing

@@ -35,21 +35,35 @@ fi
 if [ -f "$DOT_PI_DIR/model-defaults" ]; then
   _ok "model-defaults exists"
 else
-  _warn "model-defaults file not found (bootstrap: cp bootstrap/model-defaults.example model-defaults)"
+  _warn "model-defaults file not found (run dotpi sync to create it)"
 fi
 
-# 4. shared/settings.json
-if [ -f "$DOT_PI_DIR/shared/settings.json" ]; then
-  _ok "shared/settings.json exists"
+# 4. shared/settings.json symlink
+if [ -L "$DOT_PI_DIR/shared/settings.json" ]; then
+  _target="$(readlink "$DOT_PI_DIR/shared/settings.json")"
+  if [ -f "$DOT_PI_DIR/shared/settings.json" ]; then
+    _ok "shared/settings.json -> $_target"
+  else
+    _fail "shared/settings.json symlink broken -> $_target"
+  fi
+elif [ -f "$DOT_PI_DIR/shared/settings.json" ]; then
+  _warn "shared/settings.json is a regular file (expected symlink to ~/.pi/agent/settings.json — run dotpi sync)"
 else
-  _warn "shared/settings.json missing (bootstrap: cp bootstrap/settings.json.example shared/settings.json)"
+  _fail "shared/settings.json missing"
 fi
 
-# 5. shared/auth.json
-if [ -f "$DOT_PI_DIR/shared/auth.json" ]; then
-  _ok "shared/auth.json exists"
+# 5. shared/auth.json symlink
+if [ -L "$DOT_PI_DIR/shared/auth.json" ]; then
+  _target="$(readlink "$DOT_PI_DIR/shared/auth.json")"
+  if [ -f "$DOT_PI_DIR/shared/auth.json" ]; then
+    _ok "shared/auth.json -> $_target"
+  else
+    _fail "shared/auth.json symlink broken -> $_target"
+  fi
+elif [ -f "$DOT_PI_DIR/shared/auth.json" ]; then
+  _warn "shared/auth.json is a regular file (expected symlink to ~/.pi/agent/auth.json — run dotpi sync)"
 else
-  _warn "shared/auth.json missing (bootstrap: dotpi sync or cp bootstrap/auth.json.example shared/auth.json)"
+  _fail "shared/auth.json missing"
 fi
 
 # 6. shared/models.json symlink

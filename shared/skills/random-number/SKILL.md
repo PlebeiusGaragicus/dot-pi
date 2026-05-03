@@ -1,6 +1,7 @@
 ---
 name: random-number
 description: Generate random numbers using bash. Supports ranges, multiple values, and seeded output.
+disable-model-invocation: false
 ---
 
 # Random Number Generation with bash

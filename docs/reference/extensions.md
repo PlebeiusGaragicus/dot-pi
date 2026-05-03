@@ -24,10 +24,9 @@ Current common extensions:
 | `startup-branding` | Render `banner.txt` at startup. |
 | `save` | Provide the shared save tool. |
 | `say` | Provide text-to-speech / `say` behavior. |
-| `reasoning-off-shim` | Make `--thinking off` explicit for OpenAI-compatible backends. |
 | `model-default` | View and override agent-local `.model` values or repo-local `model-defaults`. |
 
-Subagents are not interactive, so they do not get the top-level common bundle. `dotpi sync` wires only `shared/extensions-subagents/` into subagent config roots. For reusable subagents, the canonical root is `subagents/<name>/`, and MAS configs link those directories into `agents/<mas>/agents/`. MAS-specific local subagents can live directly under `agents/<mas>/agents/<name>/`. Today the subagent bundle contains `reasoning-off-shim`, because subagents launch as separate `PI_CODING_AGENT_DIR` roots and still need provider-request behavior.
+Subagents are not interactive, so they do not get the top-level common bundle. `dotpi sync` wires only `shared/extensions-subagents/` into subagent config roots. For reusable subagents, the canonical root is `subagents/<name>/`, and MAS configs link those directories into `agents/<mas>/agents/`. MAS-specific local subagents can live directly under `agents/<mas>/agents/<name>/`.
 
 Specialized extensions stay out of the default bundles. Examples include `agent-orchestrator`, `agent-prompt`, `tavily`, `moods`, `plan-mode`, `questionnaire`, `bash-guardrails`, `auto-theme`, and `theme-cycler`.
 
@@ -338,19 +337,6 @@ Key patterns:
 - Uses `ctx.ui.setStatus()` for a lightweight live status segment
 - Updates once per second while the agent is running
 - Uses `agent_end` to replace `Running: 00:00` with `Trajectory time: 00:00`
-
-### Example: Reasoning Off Shim
-
-A shared extension that makes Pi's `--thinking off` behavior explicit for OpenAI-compatible chat-completions backends that otherwise use a server-side reasoning default.
-
-Source: `shared/extensions/reasoning-off-shim/index.ts`
-
-Key patterns:
-
-- Uses `before_provider_request` to inspect and shallow-clone outgoing provider payloads
-- Adds `reasoning_effort: "none"` only when the payload is chat-completions-shaped and has no existing reasoning controls
-- Included in `shared/extensions-common/` for top-level agents
-- Included in `shared/extensions-subagents/` for subagent roots
 
 ### Example: Model Default
 

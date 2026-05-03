@@ -62,7 +62,7 @@ The wizard offers quick presets for common setups:
 
 For each provider, the wizard fetches available models (with an Ollama `/api/tags` fallback), lets you pick which to include, and saves them to `~/.pi/agent/models.json` (pi's system config). dot-pi symlinks `shared/models.json` to this file so all agent configs share the same provider configuration as bare `pi`.
 
-**API credentials** for pi providers live in **`shared/auth.json`** (gitignored). `install` and `dotpi sync` bootstrap it from `bootstrap/auth.json.example` if missing, then symlink each top-level `agents/<name>/auth.json` → `shared/auth.json`. Edit that single file, or use `/login` in any agent so updates flow through the same path.
+**API credentials** for pi providers live in **`shared/auth.json`** (gitignored). `install` and `dotpi sync` symlink it from `~/.pi/agent/auth.json` if missing, then symlink each top-level `agents/<name>/auth.json` → `shared/auth.json`. Edit that single file, or use `/login` in any agent so updates flow through the same path.
 
 ### Model defaults
 

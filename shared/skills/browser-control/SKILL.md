@@ -1,14 +1,14 @@
 ---
 name: browser-control
-description: Persistent Playwright Chromium control through dot-pi's browser-control CLI. Use for headless browsing, UI interaction, screenshots, scraping, and repeatable browser skills.
-allowed-tools: Bash
+description: Use for web browsing, UI interaction, screenshots, scraping, and repeatable browser skills. Read skill before using browser.
+disable-model-invocation: false
 ---
 
 # Browser Control
 
 **`browser-control` is the product name for this CLI, not a command on `PATH`.** Invoke it only as **`$B <subcommand> …`**.
 
-Use **`$B`** to drive a persistent Playwright Chromium daemon. The first command starts the daemon; later commands reuse the same browser state through `.browser-control/browse.json`. By default this is project-local; workspace agents set **`BROWSER_CONTROL_STATE_DIR`** so state, screenshots, and logs stay inside the current workspace.
+Use **`$B`** to drive a persistent Playwright Chromium daemon. The first command starts the daemon; later commands reuse the same browser state through `.browser-control/browse.json`. By default this is project-local; workspace agents set **`BROWSER_CONTROL_STATE_DIR`** so state, screenshots, and logs stay inside the current workspace. 
 
 ## Setup
 

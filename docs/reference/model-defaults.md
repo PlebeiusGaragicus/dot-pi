@@ -6,7 +6,7 @@ dot-pi uses `pi-args` as the canonical place where each agent chooses its model 
 
 ### `model-defaults`
 
-Required repo-root local config. It is created from `bootstrap/model-defaults.example` during install or `dotpi sync`, and can be managed with:
+Required repo-root local config. It is created by `dotpi sync` (with empty defaults) if missing, and can be managed with:
 
 ```bash
 dotpi model-defaults

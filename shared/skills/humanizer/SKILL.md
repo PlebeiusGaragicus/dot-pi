@@ -9,6 +9,7 @@ description: |
   attributions, em dash overuse, rule of three, AI vocabulary words, passive
   voice, negative parallelisms, and filler phrases.
 source: https://github.com/blader/humanizer/blob/main/SKILL.md
+disable-model-invocation: false
 ---
 
 # Humanizer: Remove AI Writing Patterns

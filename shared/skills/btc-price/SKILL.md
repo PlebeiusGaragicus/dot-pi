@@ -1,6 +1,7 @@
 ---
 name: btc-price
 description: Fetch the current Bitcoin price using public REST APIs. No API key required.
+disable-model-invocation: false
 ---
 
 # Bitcoin Price Check

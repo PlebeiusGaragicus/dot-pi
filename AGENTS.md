@@ -35,12 +35,8 @@ dot-pi/
 │   ├── themes/               # Shared themes (JSON)
 │   ├── bin/                  # Downloaded binaries (fd, rg) — gitignored contents
 │   ├── models.json           # Symlink → ~/.pi/agent/models.json (system pi config; managed by `dotpi setup`)
-│   └── settings.json         # Pi settings (gitignored; bootstrapped from bootstrap/settings.json.example)
-│
-├── bootstrap/                # Tracked seed/template files (copied into place on first run)
-│   ├── model-defaults.example # Template for local fallback model aliases (-> ./model-defaults)
-│   ├── settings.json.example # Template for shared/settings.json (auto-copied by install / dotpi sync)
-│   └── lmstudio-models.json  # Reference catalogue of known LM Studio models (manual lookup)
+│   ├── auth.json             # Symlink → ~/.pi/agent/auth.json (API credentials; managed by pi)
+│   └── settings.json         # Symlink → ~/.pi/agent/settings.json (Pi settings; managed by pi)
 │
 ├── agents/                   # MAS and standalone agent directories
 ├── workspaces/               # Ephemeral workspace directories (gitignored contents)
@@ -54,14 +50,15 @@ dot-pi/
 
 ### Local Config Files (gitignored, per-machine)
 
-These files are **never tracked**. They're created locally by the installer or `dotpi setup`, edited like a `.env`, and persist across pulls. If any are missing, bootstrap from the `.example` sibling.
+These files are **never tracked**. They're created locally by the installer or `dotpi setup`, edited like a `.env`, and persist across pulls.
 
 | File | Source | Purpose |
 |------|--------|---------|
-| `model-defaults` | `cp bootstrap/model-defaults.example model-defaults` (or `dotpi model-defaults`) | Global fallback model aliases (`DEFAULT_AGENTIC_MODEL`, `DEFAULT_FAST_MODEL`, `DEFAULT_VLM_MODEL`). Loaded at agent launch time. |
-| `shared/settings.json` | `cp bootstrap/settings.json.example shared/settings.json` (auto on `install` / `dotpi sync`) | Pi runtime settings (theme, defaults). Symlinked into every agent config. |
+| `model-defaults` | Created by `dotpi sync` or `dotpi model-defaults` | Global fallback model aliases (`DEFAULT_AGENTIC_MODEL`, `DEFAULT_FAST_MODEL`, `DEFAULT_VLM_MODEL`). Loaded at agent launch time. |
 | `shared/models.json` | Symlink → `~/.pi/agent/models.json` (created by installer or `dotpi sync`) | Multi-provider model config shared with system pi. `dotpi setup` edits the system file. |
-| `*/auth.json` | `dotpi link-auth` or set up by pi on first run | Per-agent credentials. |
+| `shared/settings.json` | Symlink → `~/.pi/agent/settings.json` (created by `dotpi sync`) | Pi runtime settings (theme, defaults). Edit `~/.pi/agent/settings.json` or use pi's settings UI. |
+| `shared/auth.json` | Symlink → `~/.pi/agent/auth.json` (created by `dotpi sync`) | API credentials. Edit `~/.pi/agent/auth.json` directly. |
+| `*/auth.json` (under `agents/<name>/`) | Symlink → `../../shared/auth.json` (created by `dotpi sync` / scaffolds) | Same credential file for every top-level agent; edit `~/.pi/agent/auth.json`. Override with `dotpi link-auth` if needed. |
 | `.exa.env`, `.tavily.env` | `/exa-api-key`, `/tavily-api-key`, or manual `SERVICE_API_KEY=value` | Repo-root keys for optional search extensions. Convention: **`.service-name.env`** (gitignored). |
 | `REFERENCES/*` | Optional manual `git clone`s; see REFERENCE-REPOS.md` | Sibling project source for agents to read. |
 
@@ -86,7 +83,7 @@ agents/<name>/
 ├── models.json               # → shared/models.json
 ├── sessions/                 # Runtime (gitignored)
 ├── settings.json             # → shared/settings.json
-└── auth.json                 # API auth (gitignored, may be symlinked)
+└── auth.json                 # → shared/auth.json (gitignored)
 ```
 
 ### Standalone Agent Layout (`agents/<name>/`)
@@ -114,7 +111,7 @@ agents/<name>/
 ├── models.json               # → shared/models.json
 ├── sessions/                 # Runtime (gitignored)
 ├── settings.json             # → shared/settings.json
-└── auth.json                 # API auth (gitignored, may be symlinked)
+└── auth.json                 # → shared/auth.json (gitignored)
 ```
 
 No orchestrator subagent pool is required. The main pi process IS the agent. Custom behavior comes from the extension.
@@ -209,7 +206,6 @@ Markdown files (`SKILL.md`) that teach the agent how to use specific tools or wo
 ---
 name: searxng
 description: Search the web using a local SearXNG instance
-allowed-tools: Bash
 ---
 
 # SearXNG Web Search
@@ -221,7 +217,6 @@ Use this curl command to search: ...
 |-------------|----------|-------------|
 | `name` | Yes | Skill identifier |
 | `description` | Yes | Short description |
-| `allowed-tools` | No | Restrict which tools the agent may use with this skill |
 
 Skills live in `shared/skills/` and are symlinked per-skill into each agent config's `skills/` directory.
 
@@ -271,7 +266,7 @@ resume creatine                             # filter recent workspaces, then cho
 ```
 `resume` cd's into the existing workspace directory and continues the latest pi session in that workspace. `ls` shows each workspace with a file count. The global `resume` command lists workspace agents together and prompts for a numbered selection.
 
-**Rebuilding symlinks**: Run `dotpi sync` to rebuild the `bin/` symlinks after adding or removing agent configs.
+**Rebuilding symlinks**: Run `dotpi sync` to rebuild `bin/` symlinks, ensure `shared/` symlinks to `~/.pi/agent/` exist, and link each `agents/<name>/auth.json` → `shared/auth.json`, after adding or removing agent configs.
 
 **Unified session logging**: When a workspace has a `sessions/` directory, both the orchestrator and all subagent sessions are stored there. The workspace launcher passes `--session-dir` to pi, and `agent-orchestrator` uses the same directory for subagent sessions. This puts the complete run trajectory in one place for debugging.
 
@@ -288,18 +283,19 @@ Markdown files in `<agentDir>/prompts/` defining reusable workflows. Invoked via
 **How it works:**
 
 - **Extension implementations**: Shared extension source lives in `shared/extensions/`. Do not move source into bundle directories.
-- **Common top-level extensions**: `shared/extensions-common/` contains symlinks for standard interactive/top-level agent extensions (`run-finish-notify`, `run-timer`, `startup-branding`, `say`, `save`, `model-default`, `reasoning-off-shim`). `dotpi create`, `dotpi create-agent`, and `dotpi sync` link this bundle into top-level `agents/<name>/extensions/`.
-- **Subagent extensions**: `shared/extensions-subagents/` contains default subagent extension symlinks, currently `reasoning-off-shim`. Reusable subagents live canonically under `subagents/<name>/` and are symlinked into MAS roots (`agents/<mas>/agents/<name> -> ../../../subagents/<name>`). `dotpi sync` links the subagent bundle into canonical reusable subagents and MAS-local subagent directories. Subagents do not get the full common top-level bundle.
+- **Common top-level extensions**: `shared/extensions-common/` contains symlinks for standard interactive/top-level agent extensions (`run-finish-notify`, `run-timer`, `startup-branding`, `say`, `save`, `model-default`). `dotpi create`, `dotpi create-agent`, and `dotpi sync` link this bundle into top-level `agents/<name>/extensions/`.
+- **Subagent extensions**: `shared/extensions-subagents/` contains default subagent extension symlinks. Reusable subagents live canonically under `subagents/<name>/` and are symlinked into MAS roots (`agents/<mas>/agents/<name> -> ../../../subagents/<name>`). `dotpi sync` links the subagent bundle into canonical reusable subagents and MAS-local subagent directories. Subagents do not get the full common top-level bundle.
 - **Specialized extensions**: MAS roots link `agent-orchestrator` explicitly. Other one-off extensions (`agent-prompt`, `tavily`, `moods`, `plan-mode`, etc.) are linked intentionally per agent as needed.
 - **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
 - **Themes**: Each theme JSON in `shared/themes/` is symlinked individually into `<dir>/themes/`.
 - **bin**: A single directory symlink (`bin → ../../shared/bin`) so pi downloads `fd`/`rg` once and all agent configs share them.
 - **models.json**: A single file symlink (`models.json → ../../shared/models.json → ~/.pi/agent/models.json`). All agent configs and bare `pi` share one system config file. `dotpi setup` adds/edits/removes providers in the system file.
-- **settings.json**: A single file symlink (`settings.json → ../../shared/settings.json`) so all agent configs share Pi preferences (theme, defaults, etc.).
+- **settings.json**: A single file symlink (`settings.json → ../../shared/settings.json → ~/.pi/agent/settings.json`). All agent configs share Pi preferences (theme, defaults, etc.). Edit `~/.pi/agent/settings.json` directly or use pi's settings UI.
+- **auth.json**: A single file symlink (`auth.json → ../../shared/auth.json → ~/.pi/agent/auth.json`). All agent configs share one credential store. Edit `~/.pi/agent/auth.json` directly. `dotpi sync` creates or repairs the `shared/` and agent-level symlinks. Use `dotpi link-auth` only when an agent must point at a different `auth.json`.
 
 All symlinks use relative paths (e.g. `../../../shared/extensions-common/...` for common extensions under `agents/<name>/extensions/`).
 
-**Do not edit symlink targets** — edit the source in `shared/` instead.
+**Do not edit symlink targets at the agent root for models, settings, or auth** — edit the canonical files in `~/.pi/agent/` (or use `dotpi setup` for provider configuration) instead.
 
 ## Common Tasks
 
@@ -373,14 +369,14 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `agents/*/themes/*` | **No** | Symlinks — edit `shared/themes/` instead |
 | `*/models.json` (in agent configs) | **No** | Symlink chain → `shared/models.json` → `~/.pi/agent/models.json` |
 | `shared/models.json` | **No** | Symlink → `~/.pi/agent/models.json`. Edit the system file directly or via `dotpi setup`. |
+| `shared/auth.json` | **No** | Symlink → `~/.pi/agent/auth.json`. Edit `~/.pi/agent/auth.json` directly. |
 | `*/bin/` | **No** | Symlink — managed by pi runtime |
 | `*/sessions/` | **No** | Runtime data — gitignored |
-| `*/settings.json` (in agent configs) | **No** | Symlink — edit `shared/settings.json` |
-| `*/auth.json` | **No** | Credentials — gitignored |
+| `*/settings.json` (in agent configs) | **No** | Symlink chain → `shared/settings.json` → `~/.pi/agent/settings.json` |
+| `*/auth.json` | **No** | Symlink chain → `shared/auth.json` → `~/.pi/agent/auth.json` |
 | `REFERENCES/**` | **No** | Local-only sibling checkouts; gitignored. Cloned manually for agent context (see `REFERENCE-REPOS.md`). |
-| `model-defaults` | Local | Per-machine global fallback model aliases. Written by `dotpi model-defaults`, loaded at agent launch time. Bootstrap manually with `cp bootstrap/model-defaults.example model-defaults`. |
+| `model-defaults` | Local | Per-machine global fallback model aliases. Created by `dotpi sync` or `dotpi model-defaults`, loaded at agent launch time. |
 | `agents/*/.model`, `subagents/*/.model`, `agents/*/agents/*/.model` | Local | Per-agent raw `provider/model` overrides written by `/model-default`; gitignored. |
-| `shared/settings.json` | Local | Bootstrapped from `bootstrap/settings.json.example` by `install` / `dotpi sync`; gitignored thereafter. Edit freely; not tracked. |
+| `shared/settings.json` | **No** | Symlink → `~/.pi/agent/settings.json`. Edit the system file directly or use pi's settings UI. |
 | `.exa.env`, `.tavily.env` | Local | Repo-root API keys for Exa / Tavily; convention `.service-name.env`. Gitignored. |
-| `bootstrap/*.example`, `bootstrap/lmstudio-models.json` | Yes | Tracked seed/template files used to bootstrap local config. Edit to change defaults seen by new installs. |
 | `VERSION` | Yes | Bump on releases. Surfaced via `dotpi --version`. |

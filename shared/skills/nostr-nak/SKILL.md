@@ -1,6 +1,7 @@
 ---
 name: nostr-nak
 description: General purpose skill for using the Nostr Army Knife (nak) CLI tool with PTY support.
+disable-model-invocation: false
 ---
 # nostr-nak
 

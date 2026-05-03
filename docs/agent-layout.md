@@ -37,8 +37,7 @@ agents/example-mas/
 │   ├── startup-branding -> ../../../shared/extensions-common/startup-branding
 │   ├── save -> ../../../shared/extensions-common/save
 │   ├── say -> ../../../shared/extensions-common/say
-│   ├── model-default -> ../../../shared/extensions-common/model-default
-│   └── reasoning-off-shim -> ../../../shared/extensions-common/reasoning-off-shim
+│   └── model-default -> ../../../shared/extensions-common/model-default
 ├── prompts/
 │   ├── help.md -> ../../../shared/prompts/help.md
 │   └── research-and-write.md
@@ -54,7 +53,6 @@ agents/example-mas/
         ├── USAGE.md
         ├── pi-args
         ├── extensions/
-        │   └── reasoning-off-shim -> ../../../../../shared/extensions-subagents/reasoning-off-shim
         ├── prompts/
         ├── skills/
         ├── themes/
@@ -165,7 +163,7 @@ Symlink to shared pi settings:
 agents/<name>/settings.json -> ../../shared/settings.json
 ```
 
-`dotpi sync` bootstraps `shared/settings.json` from `bootstrap/settings.json.example` if needed. The shared file is local machine configuration and is not tracked.
+`dotpi sync` symlinks `shared/settings.json` from `~/.pi/agent/settings.json` if needed. The shared file is local machine configuration and is not tracked.
 
 ### `auth.json`
 
@@ -175,7 +173,7 @@ Symlink to the shared credential store:
 agents/<name>/auth.json -> ../../shared/auth.json
 ```
 
-The canonical file is **`shared/auth.json`** (gitignored, bootstrapped from `bootstrap/auth.json.example` by `install` / `dotpi sync`). pi reads credentials from each agent root via this symlink, so all top-level agents share one `auth.json`.
+The canonical file is **`shared/auth.json`** (gitignored, symlinked from `~/.pi/agent/auth.json` by `dotpi sync`). pi reads credentials from each agent root via this symlink, so all top-level agents share one `auth.json`.
 
 `dotpi sync` creates `shared/auth.json` if missing and links every `agents/<name>/auth.json` → `shared/auth.json`. Scaffolds (`dotpi create`, `dotpi create-agent`) create the symlink as well.
 
@@ -201,7 +199,6 @@ Top-level MAS and standalone roots link the standard bundle from `shared/extensi
 - `startup-branding`
 - `save`
 - `say`
-- `reasoning-off-shim`
 
 MAS scaffolds also link the specialized `agent-orchestrator` extension. Standalone scaffolds create a custom extension at `extensions/<agent-name>/index.ts`.
 
@@ -295,7 +292,7 @@ Reusable subagents live canonically under `subagents/<name>/` and are symlinked 
 
 ### `model-defaults`
 
-Required local repo-root file created from `bootstrap/model-defaults.example`. It provides fallback model aliases:
+Required local repo-root file created by `dotpi sync` (with empty defaults) if missing. It provides fallback model aliases:
 
 ```sh
 export DEFAULT_AGENTIC_MODEL="${DEFAULT_AGENTIC_MODEL:-}"
@@ -315,8 +312,6 @@ Recommended subagent files:
 - `README.md`: short human-readable capability description; also used in orchestrator listings.
 - `USAGE.md`: invocation contract appended to the orchestrator prompt.
 - `pi-args`: subagent-specific tool, context-file, and skill flags.
-- `extensions/reasoning-off-shim`: linked through `shared/extensions-subagents/` because subagents launch as separate pi processes.
-
 Subagents can also have their own `skills/`, `prompts/`, `themes/`, `sessions/`, `models.json`, `settings.json`, and `auth.json` if needed. Keep the root minimal unless the subagent actually needs those capabilities.
 
 ## Standalone Agent Layout
@@ -346,8 +341,7 @@ agents/example-standalone/
 │   ├── startup-branding -> ../../../shared/extensions-common/startup-branding
 │   ├── say -> ../../../shared/extensions-common/say
 │   ├── save -> ../../../shared/extensions-common/save
-│   ├── model-default -> ../../../shared/extensions-common/model-default
-│   └── reasoning-off-shim -> ../../../shared/extensions-common/reasoning-off-shim
+│   └── model-default -> ../../../shared/extensions-common/model-default
 ├── prompts/
 │   └── help.md -> ../../../shared/prompts/help.md
 ├── skills/

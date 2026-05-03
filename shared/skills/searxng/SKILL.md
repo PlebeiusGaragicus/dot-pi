@@ -1,7 +1,7 @@
 ---
 name: searxng
 description: "Search the web via bash+curl against http://localhost:8080. MUST use format=json and jq. No searxng tool exists."
-allowed-tools: Bash
+disable-model-invocation: false
 ---
 
 ## Search Command

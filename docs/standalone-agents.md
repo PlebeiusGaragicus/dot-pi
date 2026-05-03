@@ -24,8 +24,7 @@ agents/<name>/
 │   ├── startup-branding      # Common extension bundle symlink
 │   ├── say                   # Common extension bundle symlink
 │   ├── save                  # Common extension bundle symlink
-│   ├── model-default         # Common extension bundle symlink
-│   └── reasoning-off-shim    # Common extension bundle symlink
+│   └── model-default         # Common extension bundle symlink
 ├── AGENT.md                  # (optional) Requires agent-prompt.ts symlink — see below
 ├── SYSTEM.md                 # (optional) Replaces pi's default system prompt
 ├── APPEND_SYSTEM.md          # (optional) Appends to pi's default system prompt
@@ -60,7 +59,7 @@ dotpi create-agent my-agent
 
 This creates the directory structure with common extension bundle symlinks and a stub extension at `agents/my-agent/extensions/my-agent/index.ts`.
 
-The common bundle includes `reasoning-off-shim` and `/model-default`, so top-level standalone agents can manage local model defaults while keeping agent policy in `pi-args`.
+The common bundle includes `/model-default`, so top-level standalone agents can manage local model defaults while keeping agent policy in `pi-args`.
 
 ### Customizing the Prompt and Tools
 

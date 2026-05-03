@@ -1,7 +1,7 @@
 ---
 name: nak
 description: "Read this skill file to learn the nak commands for interacting with the Nostr protocol. Use the bash tool to run nak — there is no nak tool, only bash."
-allowed-tools: Bash
+disable-model-invocation: false
 ---
 
 # nak — the nostr army knife

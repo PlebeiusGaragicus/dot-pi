@@ -16,16 +16,13 @@ agents/deepresearch/
 ├── pi-args
 ├── bootstrap.sh
 ├── extensions/
-│   ├── agent-orchestrator -> ../../../shared/extensions/agent-orchestrator
-│   └── reasoning-off-shim -> ../../../shared/extensions-common/reasoning-off-shim
+│   └── agent-orchestrator -> ../../../shared/extensions/agent-orchestrator
 └── agents/
     └── scout/
         ├── README.md
         ├── SYSTEM.md
         ├── USAGE.md
-        ├── pi-args
-        └── extensions/
-            └── reasoning-off-shim -> ../../../../../shared/extensions-subagents/reasoning-off-shim
+        └── pi-args
 ```
 
 The parent process loads `extensions/agent-orchestrator`, which registers the `subagent` tool. When the model calls that tool, the extension launches child pi processes using the selected subagent directories as their `PI_CODING_AGENT_DIR` roots.
@@ -84,8 +81,6 @@ Recommended files:
 - `README.md`: short description used in orchestrator listings.
 - `USAGE.md`: invocation contract appended to the orchestrator prompt.
 - `pi-args`: tool, model, context-file, and skill restrictions for this subagent.
-- `extensions/reasoning-off-shim`: linked from `shared/extensions-subagents/` because every subagent is its own pi config root.
-
 Subagents do not get the top-level common extension bundle. They are non-interactive child processes, so only extensions in `shared/extensions-subagents/` are wired into them by `dotpi sync`. For reusable symlinked subagents, `sync` wires the canonical `subagents/<name>/` directory rather than treating the MAS link as the source of truth.
 
 The `USAGE.md` file is especially important. It tells the orchestrator how to call the subagent, what input the subagent expects, what artifacts it may read or write, and what it should return.

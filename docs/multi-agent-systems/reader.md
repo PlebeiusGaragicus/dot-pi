@@ -84,13 +84,11 @@ Runtime configuration is file-based:
 | `bootstrap.sh` | Marks the agent as workspace-mode and creates `pages` and `sessions` before pi starts |
 | `SYSTEM.md` | Orchestrator workflow and resume policy |
 | `pi-args` | Orchestrator tool restrictions and `--no-context-files` |
-| `extensions/reasoning-off-shim` | Common top-level extension link for explicit OpenAI-compatible reasoning disable behavior |
-| `agents/*/extensions/reasoning-off-shim` | Subagent extension bundle link for the same provider-request shim |
 | `agents/ocr-page/pi-args` | Restricts OCR workers to page read/write tools |
 
 For OCR, configure `DEFAULT_VLM_MODEL` with `dotpi model-defaults`, or use `/model-default` from an OCR subagent context for a subagent-local `.model` override. The OCR subagents reference `$DEFAULT_VLM_MODEL` from their `pi-args`. If the resolved provider is listed in `local-providers.conf`, OCR is throttled by the local limit in `agent-orchestrator.conf`; otherwise it is treated as API-backed and unbounded.
 
-Reader gets `reasoning-off-shim` through the standard top-level extension bundle, and reader subagents get it through the subagent extension bundle. Run `dotpi sync` after adding a reader subagent so its default subagent extensions are wired.
+Run `dotpi sync` after adding a reader subagent so its default subagent extensions are wired.
 
 ## Usage
 
