@@ -195,6 +195,10 @@ Recommended subagent files:
 - `README.md` -- short description used in orchestrator listings.
 - `USAGE.md` -- invocation contract appended to the orchestrator prompt.
 - `pi-args` -- subagent-specific tools, context-file behavior, and model alias.
+- `models.json` -- symlink to `shared/models.json` (wired by `dotpi sync`).
+- `settings.json` -- symlink to `shared/settings.json` (wired by `dotpi sync`).
+- `auth.json` -- symlink to `shared/auth.json` (wired by `dotpi sync`).
+- `bin/` -- symlink to `shared/bin/` (wired by `dotpi sync`).
 
 At the **root** of any `agents/<name>/` directory (MAS or standalone), **`USAGE.md`** is the file **`dispatch-agent`** prints for `<name> help`, `usage`, `-h`, and `--help` (plain text; use a man-style layout). **`README.md`** is for human- and agent-facing prose; launcher help does not fall back to it.
 

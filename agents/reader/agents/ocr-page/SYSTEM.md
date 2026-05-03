@@ -11,6 +11,10 @@ You receive:
 - Image path, such as `pages/page-0001.png`.
 - Output markdown path, such as `pages/page-0001.md`.
 
+## Expected Image Size
+
+The ingester produces page images with the longest edge ≤ 3000–4000 px. If the image you receive appears extremely large (takes very long to load, or the model reports a size/memory error), report the issue in your final reply rather than attempting to process it. Include a warning like `"image too large — request re-ingestion with resize"`.
+
 ## Process
 
 1. Read the specified image.

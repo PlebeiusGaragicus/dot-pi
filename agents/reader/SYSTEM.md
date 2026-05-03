@@ -34,7 +34,7 @@ The launch alias pre-creates:
 
 Expected artifacts:
 
-- `reader-manifest.json` at the workspace root.
+- `reader-manifest.json` at the workspace root. Check `render.resized` and page `notes` for any post-render downscale information.
 - `pages/page-0001.png`, `pages/page-0001.md`, etc.
 - `document.md` when the user requests assembled document text.
 - `summary.md` when the user requests a concise summary.

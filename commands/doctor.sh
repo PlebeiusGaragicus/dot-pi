@@ -155,9 +155,9 @@ _check_agent_dir() {
     else
       _atarget="$(readlink "$dir/auth.json")"
       case "$_atarget" in
-        ../../shared/auth.json|"$DOT_PI_DIR/shared/auth.json") ;;
+        *shared/auth.json) ;;
         *)
-          _warn "$label: auth.json -> $_atarget (expected ../../shared/auth.json — run dotpi sync)"
+          _warn "$label: auth.json -> $_atarget (expected symlink to shared/auth.json — run dotpi sync)"
           ;;
       esac
     fi
@@ -175,6 +175,17 @@ _check_agent_dir() {
 for d in "$DOT_PI_DIR"/agents/*/; do
   [ -d "$d" ] || continue
   _check_agent_dir "$d" "agents/$(basename "$d")"
+  [ -d "$d/agents" ] || continue
+  for sub in "$d"agents/*/; do
+    [ -d "$sub" ] || continue
+    [ -L "${sub%/}" ] && continue
+    _check_agent_dir "$sub" "agents/$(basename "$d")/agents/$(basename "$sub")"
+  done
+done
+
+for d in "$DOT_PI_DIR"/subagents/*/; do
+  [ -d "$d" ] || continue
+  _check_agent_dir "$d" "subagents/$(basename "$d")"
 done
 
 # 9. Optional binaries

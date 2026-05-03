@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# dotpi sync — rebuild bin/ symlinks, ensure shared/ symlinks to ~/.pi/agent/, and link
-# agents/<name>/auth.json -> ../../shared/auth.json for every top-level agent config.
-# Called automatically after dotpi create / create-agent and by the installer.
+# dotpi sync — rebuild bin/ symlinks, ensure shared/ symlinks to ~/.pi/agent/, and wire
+# auth.json, models.json, settings.json, bin/, and extensions into every agent and
+# subagent config directory. Called after dotpi create / create-agent and by the installer.
 
 BIN_DIR="$DOT_PI_DIR/bin"
 mkdir -p "$BIN_DIR"
@@ -61,6 +61,9 @@ for subagent in "$DOT_PI_DIR"/subagents/*/; do
   [ -d "$subagent" ] || continue
   [ -f "$subagent/SYSTEM.md" ] || [ -f "$subagent/APPEND_SYSTEM.md" ] || continue
   ln -sf ../../shared/auth.json "$subagent/auth.json"
+  ln -sf ../../shared/models.json "$subagent/models.json"
+  ln -sf ../../shared/settings.json "$subagent/settings.json"
+  [ -L "$subagent/bin" ] || ln -sf ../../shared/bin "$subagent/bin"
   link_extension_bundle "$SHARED_DIR/extensions-subagents" "$subagent/extensions" "../../../shared/extensions-subagents"
 done
 
@@ -87,6 +90,9 @@ for d in "$DOT_PI_DIR"/agents/*/; do
       fi
       [ -f "$subagent/SYSTEM.md" ] || [ -f "$subagent/APPEND_SYSTEM.md" ] || continue
       ln -sf ../../../../shared/auth.json "$subagent/auth.json"
+      ln -sf ../../../../shared/models.json "$subagent/models.json"
+      ln -sf ../../../../shared/settings.json "$subagent/settings.json"
+      [ -L "$subagent/bin" ] || ln -sf ../../../../shared/bin "$subagent/bin"
       link_extension_bundle "$SHARED_DIR/extensions-subagents" "$subagent/extensions" "../../../../../shared/extensions-subagents"
     done
   fi
