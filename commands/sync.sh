@@ -56,10 +56,11 @@ fi
 
 added=0 removed=0
 
-# Wire default extensions into reusable subagent configs at their canonical roots.
+# Wire default extensions and auth into reusable subagent configs at their canonical roots.
 for subagent in "$DOT_PI_DIR"/subagents/*/; do
   [ -d "$subagent" ] || continue
   [ -f "$subagent/SYSTEM.md" ] || [ -f "$subagent/APPEND_SYSTEM.md" ] || continue
+  ln -sf ../../shared/auth.json "$subagent/auth.json"
   link_extension_bundle "$SHARED_DIR/extensions-subagents" "$subagent/extensions" "../../../shared/extensions-subagents"
 done
 
@@ -85,6 +86,7 @@ for d in "$DOT_PI_DIR"/agents/*/; do
         continue
       fi
       [ -f "$subagent/SYSTEM.md" ] || [ -f "$subagent/APPEND_SYSTEM.md" ] || continue
+      ln -sf ../../../../shared/auth.json "$subagent/auth.json"
       link_extension_bundle "$SHARED_DIR/extensions-subagents" "$subagent/extensions" "../../../../../shared/extensions-subagents"
     done
   fi
