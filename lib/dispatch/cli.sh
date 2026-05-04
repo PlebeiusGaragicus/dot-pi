@@ -58,10 +58,6 @@ _parse_agent_cli() {
       return 0
       ;;
     ls)
-      if [ "$is_workspace" != true ]; then
-        _cli_error="'ls' is only available for workspace agents"
-        return 1
-      fi
       if [ $# -ne 1 ]; then
         _cli_error="'ls' does not accept additional arguments"
         return 1

@@ -82,7 +82,19 @@ For tool restriction, use a **`pi-args`** file with CLI flags:
 
 The `dispatch-agent` script reads this file and prepends the flags to every `pi` invocation. Lines starting with `#` are comments.
 
-Available flags include `--tools <list>` (whitelist), `--no-tools` (disable all built-in tools), `--no-skills`, `--no-prompt-templates`, `--no-context-files`, `--model <provider/id>`, etc. See `pi --help` for the full list.
+Available flags include `--tools <list>` (allowlist), `--no-tools` (disable all tools), `--no-builtin-tools` (disable built-in tools but keep extension tools), `--no-skills`, `--no-prompt-templates`, `--no-context-files`, `--model <provider/id>`, etc. See `pi --help` for the full list.
+
+!!! warning "`--tools` gates extension tools too"
+
+    `--tools` is a strict allowlist that applies to **all** tool types — built-in, extension-registered (`pi.registerTool()`), and SDK custom. If an agent loads an extension that registers a tool (e.g. `tavily_search`) but the `--tools` line does not include that name, the tool will not be available and the LLM will see "Tool not found."
+
+    To combine a restricted built-in set with extension tools, list everything explicitly:
+
+    ```text
+    --tools read,ls,bash,tavily_search
+    ```
+
+    Omitting `--tools` entirely enables all tools. Use `--no-builtin-tools` to suppress only the default built-ins while keeping all extension tools enabled.
 
 Use `--no-context-files` for non-coding agents and workspace agents that should not inherit repository instructions such as `AGENTS.md` from parent directories. Omit it only when the agent is meant to work inside codebases and should read project guidance, such as the `coder` agent.
 

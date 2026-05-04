@@ -85,9 +85,17 @@ if _is_workspace_agent "$config_dir"; then
       ;;
   esac
 else
-  _source_bootstrap "$config_dir" "in-situ" "" "$AGENT_NAME"
-  _build_pi_command_args "$config_dir"
-  _run_pi_command "$config_dir"
-  exit $?
+  case "$_cli_action" in
+    ls)
+      _insitu_list "$AGENT_NAME" "$config_dir"
+      exit $?
+      ;;
+    *)
+      _source_bootstrap "$config_dir" "in-situ" "" "$AGENT_NAME"
+      _build_pi_command_args "$config_dir"
+      _run_pi_command "$config_dir"
+      exit $?
+      ;;
+  esac
 fi
 }

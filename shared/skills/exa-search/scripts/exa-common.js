@@ -60,6 +60,10 @@ export function parseNum(value, fallback = 10, max = 10) {
 	return Math.min(max, parsed);
 }
 
+export function printJson(data) {
+	console.log(JSON.stringify(data, null, 2));
+}
+
 export async function postExa(endpoint, body) {
 	const response = await fetch(`${API_BASE}${endpoint}`, {
 		method: "POST",

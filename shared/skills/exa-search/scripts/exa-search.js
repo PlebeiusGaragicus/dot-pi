@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import process from "node:process";
-import { parseNum, postExa, printResultList, readOption } from "./exa-common.js";
+import { parseNum, postExa, printJson, printResultList, readOption } from "./exa-common.js";
 
 const args = process.argv.slice(2);
 
@@ -16,6 +16,7 @@ function usage() {
 	console.log("  --date-before YYYY-MM-DD Only results before this date");
 	console.log("  --highlights QUERY       Return highlighted excerpts for each result");
 	console.log("  --text                   Return page text, capped at 10000 characters per result");
+	console.log("  --json                   Print raw JSON response instead of readable text");
 	console.log("");
 	console.log("Examples:");
 	console.log('  exa-search.js "AI search APIs" --num 5');
@@ -32,6 +33,7 @@ const queryParts = [];
 const body = {
 	numResults: 10,
 };
+let jsonOutput = false;
 
 try {
 	for (let i = 0; i < args.length; i++) {
@@ -63,6 +65,8 @@ try {
 				...(body.contents ?? {}),
 				text: { maxCharacters: 10000 },
 			};
+		} else if (arg === "--json") {
+			jsonOutput = true;
 		} else if (arg.startsWith("--")) {
 			throw new Error(`Unknown option: ${arg}`);
 		} else {
@@ -74,6 +78,11 @@ try {
 	if (!query) throw new Error("No query provided");
 
 	const data = await postExa("/search", { ...body, query });
+	if (jsonOutput) {
+		printJson(data);
+		process.exit(0);
+	}
+
 	printResultList(data.results, "results");
 	console.log("Tip: Use exa-contents.js with promising URLs to fetch highlights or text.");
 } catch (error) {

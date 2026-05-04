@@ -150,6 +150,26 @@ _workspace_launch() {
   return $?
 }
 
+_session_first_prompt() {
+  local file="$1" max_chars="${2:-80}"
+  local line prompt
+  line=$(grep -m1 '"role":"user"' "$file" 2>/dev/null) || return 0
+  # Extract text after "text":" up to max_chars, handling JSON escapes
+  prompt=$(printf '%s' "$line" | sed 's/.*"text":"//; s/"}].*//' | sed 's/\\n/ /g; s/\\t/ /g; s/\\"/"/g; s/\\\\/ /g' | cut -c1-"$max_chars")
+  if [ ${#prompt} -ge "$max_chars" ]; then
+    prompt="${prompt}…"
+  fi
+  printf '%s' "$prompt"
+}
+
+_cwd_to_session_dir() {
+  local cwd="$1"
+  local encoded
+  encoded="${cwd#/}"
+  encoded="${encoded//\//-}"
+  printf -- '--%s--' "$encoded"
+}
+
 _workspace_list() {
   local name="$1"
   local ws_root="$DOT_PI_DIR/workspaces/$name"
@@ -160,10 +180,49 @@ _workspace_list() {
   echo "Workspaces for $name:"
   for d in "$ws_root"/*/; do
     [ -d "$d" ] || continue
-    local ts files
-    ts=$(basename "$d")
-    files=$(find "$d" -maxdepth 2 -type f 2>/dev/null | wc -l | tr -d ' ')
-    echo "  $ts  ($files files)"
+    local base ts prompt session_file
+    base=$(basename "$d")
+    ts="${base%%--*}"
+    prompt=""
+    session_file=$(find "$d" -maxdepth 3 -name '*.jsonl' -type f 2>/dev/null | sort | head -1)
+    if [ -n "$session_file" ]; then
+      prompt=$(_session_first_prompt "$session_file" 60)
+    fi
+    if [ -n "$prompt" ]; then
+      printf '  %-22s  %s\n' "$ts" "$prompt"
+    else
+      printf '  %-22s\n' "$ts"
+    fi
+  done
+}
+
+_insitu_list() {
+  local name="$1" config_dir="$2"
+  local sessions_root="$config_dir/sessions"
+  local cwd_dir
+  cwd_dir="$sessions_root/$(_cwd_to_session_dir "$PWD")"
+  if [ ! -d "$cwd_dir" ] || [ -z "$(ls -A "$cwd_dir" 2>/dev/null)" ]; then
+    echo "No sessions for $name in $PWD"
+    return 0
+  fi
+  echo "Sessions for $name ($PWD):"
+  for f in "$cwd_dir"/*.jsonl; do
+    [ -f "$f" ] || continue
+    local base ts prompt
+    base=$(basename "$f" .jsonl)
+    # Filename: 2026-04-15T20-18-33-299Z_<uuid>
+    ts="${base%%_*}"
+    # Strip milliseconds+Z: 2026-04-15T20-18-33
+    ts="${ts%-*}"
+    # 2026-04-15T20-18-33 → 2026-04-15 20:18:33
+    ts="${ts/T/ }"
+    ts=$(printf '%s' "$ts" | sed 's/\(.*\) \(..\)-\(..\)-\(..\)/\1 \2:\3:\4/')
+    prompt=$(_session_first_prompt "$f" 60)
+    if [ -n "$prompt" ]; then
+      printf '  %-22s  %s\n' "$ts" "$prompt"
+    else
+      printf '  %-22s\n' "$ts"
+    fi
   done
 }
 

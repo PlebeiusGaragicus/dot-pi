@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import process from "node:process";
-import { postExa, readOption } from "./exa-common.js";
+import { postExa, printJson, readOption } from "./exa-common.js";
 
 const args = process.argv.slice(2);
 
@@ -11,6 +11,7 @@ function usage() {
 	console.log("Options:");
 	console.log("  --text                  Get clean text, capped at 10000 characters per URL");
 	console.log('  --highlights "query"    Get highlighted excerpts matching query');
+	console.log("  --json                  Print raw JSON response instead of readable text");
 	console.log("");
 	console.log("Examples:");
 	console.log("  exa-contents.js https://example.com --text");
@@ -26,6 +27,7 @@ const urls = [];
 const body = {
 	text: { maxCharacters: 10000 },
 };
+let jsonOutput = false;
 
 try {
 	for (let i = 0; i < args.length; i++) {
@@ -38,6 +40,8 @@ try {
 			body.highlights = { query: readOption(args, i, arg), maxCharacters: 4000 };
 			delete body.text;
 			i++;
+		} else if (arg === "--json") {
+			jsonOutput = true;
 		} else if (arg.startsWith("http://") || arg.startsWith("https://")) {
 			urls.push(arg);
 		} else if (arg.startsWith("--")) {
@@ -50,6 +54,11 @@ try {
 	if (urls.length === 0) throw new Error("No URLs provided");
 
 	const data = await postExa("/contents", { ...body, urls });
+	if (jsonOutput) {
+		printJson(data);
+		process.exit(0);
+	}
+
 	const results = data.results ?? [];
 
 	if (results.length === 0) {

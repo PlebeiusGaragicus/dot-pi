@@ -115,6 +115,18 @@ Model aliases come from repo-local `model-defaults` and optional agent-local `.m
 
 Use `--no-context-files` for agents that should not inherit repository guidance such as `AGENTS.md` from the current working directory. Coding agents may intentionally omit it.
 
+!!! warning "`--tools` is an allowlist that gates extension tools"
+
+    When `--tools` is present, **only the listed tool names are available** to the agent. This applies equally to built-in tools, extension-registered tools (`pi.registerTool()`), and SDK custom tools. If an extension registers a tool (e.g. `tavily_search`) but the name is not in the `--tools` list, the LLM will receive "Tool not found" when it tries to call it.
+
+    To use extension tools with a restricted built-in set, name them explicitly:
+
+    ```text
+    --tools read,ls,bash,tavily_search
+    ```
+
+    Omitting `--tools` entirely enables all tools (built-in defaults plus all extension tools). Use `--no-builtin-tools` to suppress only the default built-ins (read, bash, edit, write) while keeping all extension tools enabled.
+
 ### `banner.txt`
 
 Startup branding displayed by the `startup-branding` extension. The scaffold writes it when `figlet` is available; otherwise it is simply absent.

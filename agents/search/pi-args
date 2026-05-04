@@ -1,8 +1,6 @@
 --model
 $DEFAULT_FAST_MODEL
---no-tools
---no-skills
+--tools
+ls,read,find,grep
 # Disable repo context files for non-coding agents (prevents parent AGENTS.md leakage).
 --no-context-files
-# TTS enabled (say extension)
---tts-enable

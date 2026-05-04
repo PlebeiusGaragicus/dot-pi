@@ -1,141 +1,75 @@
 ---
 name: tavily-search
-description: Search the web with for primary sources, news, events and information.
+description: Search and extract live web content with Tavily using scripts. Use for current web research, source discovery, news, vendor docs, and citation-backed synthesis.
 disable-model-invocation: false
 ---
 
-# Tavily Web Search
+# Tavily CLI
 
-This skill teaches you how to use the `tavily_search` tool effectively. Use it whenever the user's question needs information from the live web - non-academic sources, current events, vendor or product docs, blog posts, or cross-checking a claim from a paper against the broader internet.
+Use the scripts in `scripts/` for Tavily web search and extraction. They read the API key from `TAVILY_API_KEY` first, then repo-root `.tavily.env`. If no key is configured, ask the user to run `/tavily-api-key`, export `TAVILY_API_KEY`, or create `.tavily.env` at the dot-pi repo root.
 
-## Tool Capabilities
+Run commands from this skill directory unless you provide an absolute script path. The scripts are intentionally verbose on failure: missing keys, unknown options, missing option values, rate limits, plan limits, and Tavily HTTP errors print a specific `Error:` line to stderr and exit nonzero.
 
-`tavily_search` accepts these parameters:
+## Commands
 
-| Parameter | Use When |
-|-----------|----------|
-| `query` (required) | Your search phrase - be specific, include key terms, prefer noun phrases over questions |
-| `max_results` | 3-5 for quick answers, 10-20 for comprehensive research (default 5, max 20) |
-| `topic: "general"` | Default, broad coverage across all topics |
-| `topic: "news"` | Recent events and trending topics |
-| `topic: "finance"` | Stock prices, financial data, market info |
-| `time_range: "day"` | Very recent events (past 24 hours) |
-| `time_range: "week"` | Recent developments (past week) |
-| `time_range: "month"` | Monthly trends, recent history |
-| `time_range: "year"` | Annual patterns, yearly context |
+Always invoke scripts by path from this skill directory:
 
-The tool always requests full raw page content and never asks Tavily for a pre-synthesized answer - you do the synthesis yourself from the raw excerpts.
-
-## Search Strategy
-
-### For Simple Questions
-
-One direct query is usually enough:
-
-```ts
-tavily_search({ query: "What is the capital of France?" })
+```bash
+node scripts/tavily-search.js "query" --num 8
+node scripts/tavily-search.js "latest AI regulation" --topic news --time-range week
+node scripts/tavily-extract.js https://example.com/article --max-chars 4000
 ```
 
-Extract the answer from the cited sources in the result.
+Add `--json` to either command when raw machine-readable output is more useful than the default readable text.
 
-### For Research Topics
+## Search
 
-1. **First search**: broad query to map the territory.
-2. **Follow-up searches**: refine based on what the first batch surfaced - narrow phrasing, add a topic, or constrain by time.
-3. **Stop when you have consensus**: 2-4 searches are usually enough; further searches mostly cost credits without changing your synthesis.
+Use `tavily-search.js` first to find candidate sources:
 
-### For Time-Sensitive Information
-
-Always pair the query with a `time_range`:
-
-- Breaking news / today's events: `time_range: "day"` and `topic: "news"`
-- Recent developments: `time_range: "week"` or `"month"`
-- Historical context: omit `time_range`, broaden the query
-
-## Output Format
-
-The tool returns:
-
-```
-## Results (N)     # Array of search results
-  ### [Title]      # Result title
-  [URL]            # Source URL
-  [Content]        # Snippet content
-  ---
-  Raw excerpt:     # Full page content - this is what you analyze and quote from
-  [text...]
+```bash
+node scripts/tavily-search.js "recent AI search APIs" --num 5
+node scripts/tavily-search.js "NVIDIA earnings guidance" --topic finance --time-range month
+node scripts/tavily-search.js "California AI safety law update" --topic news --time-range week
 ```
 
-Raw excerpts are truncated to ~2000 chars per result; if you need more from a specific page, fetch it directly with `bash` + `curl` rather than re-searching.
+Options:
+
+- `--num N`: result count, default 10, max 20.
+- `--topic TYPE`: `general`, `news`, or `finance`.
+- `--time-range RANGE`: `day`, `week`, `month`, or `year`.
+- `--search-depth DEPTH`: `basic` or `advanced`; default `basic`. Use `advanced` only when basic results are clearly insufficient because it can cost more credits.
+- `--max-raw-chars N`: max raw excerpt characters per result, default 2000.
+- `--json`: print the raw Tavily API response.
+
+The search script always requests raw page content, disables Tavily's generated answer, and requests usage data. Do the synthesis yourself from the returned sources.
+
+## Extract
+
+Use `tavily-extract.js` after search when one or more URLs are worth reading more deeply:
+
+```bash
+node scripts/tavily-extract.js https://url1.example https://url2.example
+node scripts/tavily-extract.js https://example.com/report --depth advanced --max-chars 8000
+```
+
+Options:
+
+- `--depth DEPTH`: `basic` or `advanced`; default `basic`.
+- `--max-chars N`: max content characters per URL in readable output, default 6000.
+- `--json`: print the raw Tavily API response.
 
 ## Workflow
 
-### Step-by-Step Search Process
+1. Search with 5-10 results unless the task clearly needs broader coverage.
+2. Add `--topic news` and `--time-range` when freshness matters.
+3. Extract only the URLs that look authoritative or unusually relevant.
+4. Cite URLs from the script output in the final answer.
+5. Stop when results converge; repeated Tavily calls cost credits.
 
-1. **Analyze the query**: identify key concepts, intent, and any time-sensitive elements.
+## Failure Handling
 
-2. **Plan searches**: decide how many targeted searches you need (usually 2-4 for research, 1 for simple lookups). Break complex topics into focused subqueries.
-
-3. **Execute searches**:
-   - Start broad, then narrow.
-   - Add `time_range` when freshness matters.
-   - Pick the right `topic` (news vs general vs finance) up front - changing it mid-thread wastes credits.
-
-4. **Refine based on results**:
-   - If results are off-topic, rephrase rather than re-searching the same thing.
-   - If results are stale, add or tighten `time_range`.
-   - If results are sparse, broaden phrasing or drop a topic constraint.
-
-5. **Synthesize**: combine raw excerpts from multiple sources, look for consensus, flag disagreements.
-
-6. **Cite sources**: include URLs from results and quote directly from raw excerpts where it matters.
-
-### Advanced Search Patterns
-
-**Pattern 1: Multi-Query Research**
-
-```ts
-// Query 1: broad overview
-tavily_search({ query: "topic X" })
-
-// Query 2: specific angle, refined from what Query 1 surfaced
-tavily_search({ query: "topic X specific aspect" })
-```
-
-**Pattern 2: Time-Sensitive News**
-
-```ts
-tavily_search({
-  query: "breaking event",
-  topic: "news",
-  time_range: "week"
-})
-```
-
-**Pattern 3: Triangulating a Paper Claim**
-
-When the user is reading a paper and you want to check whether a claim has held up or been contested:
-
-```ts
-tavily_search({
-  query: "<paper title or specific claim> critique replication",
-  time_range: "year"
-})
-```
-
-## Quality Checklist
-
-- [ ] At least 2-4 searches for multi-faceted questions; 1 is fine for simple lookups
-- [ ] Source URLs included in your final answer, with direct quotes from raw excerpts where relevant
-- [ ] Conflicting information across sources is called out, not silently averaged
-- [ ] When freshness matters, `time_range` was set
-- [ ] You did the synthesis - you did not parrot a summary from a single source
-
-## Standard Workflow
-
-When the user asks a question that warrants web search:
-
-1. Search 1-4 times depending on complexity.
-2. Synthesize results into a clear answer.
-3. Quote directly from raw excerpts when precision matters.
-4. Cite source URLs.
+- If a script exits nonzero, read stderr before retrying.
+- If the error says the API key is missing, ask the user to configure it instead of guessing.
+- If Tavily returns HTTP 429, report the retry guidance and avoid immediate repeated calls.
+- If Tavily returns a plan or credit limit error, tell the user and stop searching.
+- If output is too verbose, retry with fewer results or a lower character cap.
