@@ -8,21 +8,13 @@ disable-model-invocation: false
 
 **`browser-control` is the product name for this CLI, not a command on `PATH`.** Invoke it only as **`$B <subcommand> …`**.
 
-Use **`$B`** to drive a persistent Playwright Chromium daemon. The first command starts the daemon; later commands reuse the same browser state through `.browser-control/browse.json`. By default this is project-local; workspace agents set **`BROWSER_CONTROL_STATE_DIR`** so state, screenshots, and logs stay inside the current workspace. 
+Use **`$B`** to drive a persistent Playwright Chromium daemon. The first command starts the daemon; later commands reuse the same browser state through `.browser-control/browse.json`. By default this is project-local; workspace agents set **`BROWSER_CONTROL_STATE_DIR`** so state, screenshots, and logs stay inside the current workspace.
 
 ## Setup
 
-**dot-pi `browser` workspace:** `agents/browser/bootstrap.sh` runs before the agent. It exports **`B`** and **`BROWSER_CONTROL_STATE_DIR`** and runs **`$B status`**. Use **`$B …`** directly in bash; do not re-export the path on every command unless **`$B`** is unset or fails.
+**`$B`** and **`BROWSER_CONTROL_STATE_DIR`** are initialized at startup by the skill bootstrap (`scripts/bootstrap.sh`). No manual setup is needed. Use **`$B …`** directly in bash.
 
-**Any other context** (no bootstrap, or **`$B`** empty): set **`B`** once, then use **`$B …`**:
-
-```bash
-B="$HOME/.dot-pi/utilities/browser-runtime/dist/browser-control"
-[ -x "$B" ] || B="bun run $HOME/.dot-pi/utilities/browser-runtime/src/cli.ts"
-export B
-```
-
-If **`$B`** is already set (e.g. from bootstrap), keep it.
+If **`$B`** is missing or empty, check `bootstrap.log` for errors.
 
 ## Core Workflow
 

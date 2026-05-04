@@ -197,6 +197,8 @@ Remove a symlink to drop a skill:
 rm agents/my-agent/skills/playwright
 ```
 
+Some skills include a `scripts/bootstrap.sh` that `dispatch-agent` sources before pi starts. This lets skills export environment variables (tool paths, state directories) without any agent-level `bootstrap.sh` setup. See [Agent Layout — skill bootstraps](agent-layout.md#skill-bootstraps) for details.
+
 ### Adding Agent-Specific Files
 
 Place any files your extension needs in the agent directory. Use `getAgentDir()` to locate them:

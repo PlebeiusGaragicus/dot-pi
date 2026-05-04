@@ -240,6 +240,12 @@ dotpi link-skill <agent> <skill>
 
 The scaffold creates an empty `skills/` directory. No shared skill is active for an agent until it is linked into that agent root.
 
+#### Skill bootstraps
+
+A skill directory may contain `scripts/bootstrap.sh`. When present, `dispatch-agent` sources it before pi starts — after the agent-level `bootstrap.sh` (if any) and in alphabetical order by skill name. Because the script is sourced, exported variables persist into pi and are available in every bash tool call.
+
+Use this for environment setup that the skill's `SKILL.md` depends on: tool paths, state directories, daemon health checks. Skill bootstraps receive the same environment contract as `bootstrap.sh`: `DOT_PI_DIR`, `AGENT_NAME`, `AGENT_DIR`, `DOTPI_BOOTSTRAP_PHASE`, `WORKSPACE_AGENT`, optional `WORKSPACE_DIR`, and `BOOTSTRAP_LOG`. They should be idempotent and must not declare workspace mode. A non-zero exit stops the launch.
+
 ### `themes/`
 
 Per-theme symlinks to `shared/themes/*.json`. The scaffold links available shared themes into each top-level agent root.
