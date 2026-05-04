@@ -4,6 +4,7 @@ set -euo pipefail
 # BusyBox-style dispatcher: behavior determined by $0 (the symlink name).
 # All agent symlinks in bin/ point here.
 
+# shellcheck disable=SC2034  # used by sourced dispatch modules
 AGENT_NAME="$(basename "$0")"
 
 # When invoked outside a shell that sourced env.sh (e.g. cron, scripts),

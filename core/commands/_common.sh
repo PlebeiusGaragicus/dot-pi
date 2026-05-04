@@ -104,7 +104,8 @@ resolve_dir() {
 }
 
 agent_declares_workspace() {
-  local dir="$1" file="$dir/bootstrap.sh" line value
+  local dir="$1" line value
+  local file="$dir/bootstrap.sh"
   [ -f "$file" ] || return 1
   while IFS= read -r line || [ -n "$line" ]; do
     line="${line#"${line%%[![:space:]]*}"}"
