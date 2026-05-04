@@ -60,10 +60,10 @@ On resume, the orchestrator inspects the manifest and `pages/` first. Existing p
 
 ## Workspace Structure
 
-Each run creates a dated directory under `workspaces/reader/`:
+Each run creates a dated directory under `agents/reader/workspaces/`:
 
 ```
-workspaces/reader/2026-04-28-101500/
+agents/reader/workspaces/2026-04-28-101500/
 ├── pages/
 │   ├── page-0001.png
 │   ├── page-0001.md

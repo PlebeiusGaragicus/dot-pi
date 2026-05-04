@@ -80,7 +80,7 @@ SYNOPSIS
 
 DESCRIPTION
        Coordinates subagents under agents/$mas_name/agents/.  Each fresh
-       launch creates workspaces/$mas_name/<timestamp>/ (optional --name
+       launch creates agents/$mas_name/workspaces/<timestamp>/ (optional --name
        slug).  Subagent prompts use each subagent’s README.md and USAGE.md
        (orchestrator reads contracts via agent-orchestrator).
 
@@ -106,7 +106,7 @@ COMMANDS
               argument, resume the exact workspace basename or path.
 
 FILES
-       workspaces/$mas_name/<timestamp>[--<slug>]/
+       agents/$mas_name/workspaces/<timestamp>[--<slug>]/
               Workspace root (edit bootstrap.sh for layout).
 
 SEE ALSO

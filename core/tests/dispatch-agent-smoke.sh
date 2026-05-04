@@ -49,7 +49,7 @@ run_capture_stdin() {
 }
 
 mkdir -p "$FIXTURE/core/bin" "$FIXTURE/agents/coder" "$FIXTURE/agents/lm" \
-  "$FIXTURE/agents/browser" "$FIXTURE/workspaces/browser/2026-04-29-000000--prefix/sessions"
+  "$FIXTURE/agents/browser" "$FIXTURE/agents/browser/workspaces/2026-04-29-000000--prefix/sessions"
 ln -s "$ROOT/core" "$FIXTURE/core_src"
 ln -s "$FIXTURE/core_src/dispatch" "$FIXTURE/core/dispatch"
 ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/coder"
@@ -125,16 +125,16 @@ assert_not_contains "$CAPTURE_OUT" $'\t--mode\tjson' "browser named interactive 
 assert_not_contains "$CAPTURE_OUT" $'\t-p\t' "browser named interactive workspace"
 
 run_capture "browser exact resume prompt" "$FIXTURE/core/bin/browser" resume 2026-04-29-000000--prefix - continue here
-assert_contains "$CAPTURE_OUT" "Resuming: $FIXTURE/workspaces/browser/2026-04-29-000000--prefix" "browser resume prompt"
+assert_contains "$CAPTURE_OUT" "Resuming: $FIXTURE/agents/browser/workspaces/2026-04-29-000000--prefix" "browser resume prompt"
 assert_contains "$CAPTURE_OUT" $'\t--continue' "browser resume prompt"
 assert_contains "$CAPTURE_OUT" $'\tcontinue here' "browser resume prompt"
 assert_not_contains "$CAPTURE_OUT" $'\t--mode\tjson' "browser resume prompt"
 
 # Clean up workspace dirs created by earlier tests so the picker only has the fixture entry
-find "$FIXTURE/workspaces/browser" -mindepth 1 -maxdepth 1 -type d ! -name '2026-04-29-000000--prefix' -exec rm -rf {} +
+find "$FIXTURE/agents/browser/workspaces" -mindepth 1 -maxdepth 1 -type d ! -name '2026-04-29-000000--prefix' -exec rm -rf {} +
 run_capture_stdin "browser picker resume prompt" $'1\n' "$FIXTURE/core/bin/browser" resume - continue from picker
 assert_contains "$CAPTURE_OUT" "Workspaces for browser:" "browser picker resume prompt"
-assert_contains "$CAPTURE_OUT" "Resuming: $FIXTURE/workspaces/browser/2026-04-29-000000--prefix" "browser picker resume prompt"
+assert_contains "$CAPTURE_OUT" "Resuming: $FIXTURE/agents/browser/workspaces/2026-04-29-000000--prefix" "browser picker resume prompt"
 assert_contains "$CAPTURE_OUT" $'\tcontinue from picker' "browser picker resume prompt"
 
 # --- Skill bootstrap tests ---

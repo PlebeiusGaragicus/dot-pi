@@ -17,7 +17,7 @@ reader -h                            # show this help
 
 ## Workspace Output
 
-Each run creates `workspaces/reader/<timestamp>/` with:
+Each run creates `agents/reader/workspaces/<timestamp>/` with:
 
 - `pages/page-0001.png` and `pages/page-0001.md` pairs.
 - `reader-manifest.json` for PDF metadata, render settings, page paths, and OCR status.

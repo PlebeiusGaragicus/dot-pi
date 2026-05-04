@@ -87,7 +87,7 @@ SYNOPSIS
        $agent_name resume [workspace-name-or-path] -p prompt words...
 
 DESCRIPTION
-       Fresh launches create workspaces/$agent_name/<timestamp>/ (with an
+       Fresh launches create agents/$agent_name/workspaces/<timestamp>/ (with an
        optional --name slug).  Edit bootstrap.sh to export env vars and
        prepare directories.
 
@@ -113,7 +113,7 @@ COMMANDS
               argument, resume the exact workspace basename or path.
 
 FILES
-       workspaces/$agent_name/<timestamp>[--<slug>]/
+       agents/$agent_name/workspaces/<timestamp>[--<slug>]/
               Workspace root (edit bootstrap.sh for layout).
 
 SEE ALSO

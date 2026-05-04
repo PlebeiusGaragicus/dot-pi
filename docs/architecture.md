@@ -85,7 +85,7 @@ graph TD
 graph TD
   WUser["User runs: deepresearch 'topic'"]
   WAlias["dispatch-agent calls<br/>workspace launch logic"]
-  WDir["Creates dated workspace<br/>workspaces/deepresearch/timestamp/"]
+  WDir["Creates dated workspace<br/>agents/deepresearch/workspaces/timestamp/"]
   WBootstrap["Sources bootstrap.sh<br/>and captures bootstrap.log"]
   WPi["pi starts"]
   WSystem["pi loads<br/>SYSTEM.md orchestrator prompt"]

@@ -57,10 +57,10 @@ The standard pipeline runs four steps:
 
 ## Workspace Structure
 
-Each run creates a dated directory under `workspaces/deepresearch/`:
+Each run creates a dated directory under `agents/deepresearch/workspaces/`:
 
 ```
-workspaces/deepresearch/2026-04-12-141259/
+agents/deepresearch/workspaces/2026-04-12-141259/
 ├── sources/          # Cleaned source files (markdown + YAML frontmatter)
 ├── screenshots/      # Page screenshots (PNG)
 ├── drafts/           # Intermediate report draft

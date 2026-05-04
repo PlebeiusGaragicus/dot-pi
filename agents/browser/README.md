@@ -6,7 +6,7 @@ Standalone dot-pi browser automation agent backed by `core/utilities/browser-run
 
 The launcher sources [`bootstrap.sh`](bootstrap.sh) before pi starts. That script:
 
-- Sets **`WORKSPACE_DIR`** to a dated folder under `workspaces/browser/`.
+- Sets **`WORKSPACE_DIR`** to a dated folder under `agents/browser/workspaces/`.
 - Exports **`B`** (compiled `browser-control` binary, or `bun run …/cli.ts` fallback).
 - Exports **`BROWSER_CONTROL_STATE_DIR`** to `<workspace>/.browser-control/`.
 - Runs **`$B status`** and appends to **`bootstrap.log`**.

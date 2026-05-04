@@ -103,7 +103,7 @@ deepresearch - "What are the latest developments in WebTransport protocol?"
 
 This sends the prompt and keeps the pi session open. Use `-p "prompt"` when you want final-text output and process exit; add `-v` to see turn/tool progress on stderr.
 
-**What happens:** `deepresearch` creates `workspaces/deepresearch/<timestamp>/` with `sources/`, `screenshots/`, and `sessions/` subdirectories, then launches pi inside it. The orchestrator's `SYSTEM.md` requires research, collection, writing, and editing to go through subagents. Both the orchestrator and all subagent sessions are stored in `sessions/` for unified trajectory analysis. The orchestrator runs a four-step pipeline:
+**What happens:** `deepresearch` creates `agents/deepresearch/workspaces/<timestamp>/` with `sources/`, `screenshots/`, and `sessions/` subdirectories, then launches pi inside it. The orchestrator's `SYSTEM.md` requires research, collection, writing, and editing to go through subagents. Both the orchestrator and all subagent sessions are stored in `sessions/` for unified trajectory analysis. The orchestrator runs a four-step pipeline:
 
 1. **scout** searches the web via Tavily API for relevant sources
 2. **collector** (parallel, one per URL) fetches each page via headless browser, strips boilerplate, saves to `sources/`
@@ -116,7 +116,7 @@ To give a workspace a memorable name, pass `-n`/`--name` before the prompt separ
 deepresearch -n creatine-loading-protocol - research creatine loading protocol
 ```
 
-This creates a folder like `workspaces/deepresearch/2026-04-28-091454--creatine-loading-protocol/`. Without a name, dot-pi keeps the timestamp-only folder name.
+This creates a folder like `agents/deepresearch/workspaces/2026-04-28-091454--creatine-loading-protocol/`. Without a name, dot-pi keeps the timestamp-only folder name.
 
 ### Listing and resuming workspaces
 
@@ -163,7 +163,7 @@ Reader ingests a PDF once, renders each page to an image, OCRs each page with a 
 reader - "/path/to/document.pdf"
 ```
 
-**What happens:** `reader` creates `workspaces/reader/<timestamp>/` with `pages/` and `sessions/` subdirectories. The orchestrator first creates `reader-manifest.json`, then dispatches one `ocr-page` subagent per page image. Each page is stored as a pair:
+**What happens:** `reader` creates `agents/reader/workspaces/<timestamp>/` with `pages/` and `sessions/` subdirectories. The orchestrator first creates `reader-manifest.json`, then dispatches one `ocr-page` subagent per page image. Each page is stored as a pair:
 
 ```text
 pages/page-0001.png

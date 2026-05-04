@@ -218,7 +218,7 @@ For the exact rules, see [Subagent Concurrency](subagent-concurrency.md).
 MAS configs often run in workspace mode. A workspace gives all subagents a shared filesystem for durable artifacts:
 
 ```text
-workspaces/deepresearch/2026-04-28-120000/
+agents/deepresearch/workspaces/2026-04-28-120000/
 ├── sources/
 ├── drafts/
 ├── sessions/

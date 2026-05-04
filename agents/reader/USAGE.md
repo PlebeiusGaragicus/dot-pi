@@ -19,7 +19,7 @@ SYNOPSIS
 
 DESCRIPTION
        Renders PDFs to page images, OCRs with vision subagents, and writes
-       per-page markdown under a dated workspace in workspaces/reader/.
+       per-page markdown under a dated workspace in agents/reader/workspaces/.
        Subagent contracts live under agents/reader/agents/*/USAGE.md.
 
 OPTIONS
@@ -44,7 +44,7 @@ COMMANDS
               argument, resume the exact workspace basename or path.
 
 FILES
-       workspaces/reader/<timestamp>[--<slug>]/
+       agents/reader/workspaces/<timestamp>[--<slug>]/
               pages/*.png, pages/*.md, reader-manifest.json, document.md,
               summary.md, sessions/, etc.
 

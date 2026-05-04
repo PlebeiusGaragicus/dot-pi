@@ -34,9 +34,8 @@ agents/*-beta/
 # Eval results (generated per-run, can be large)
 evals/results/
 
-# Workspace MAS output (research artifacts are ephemeral)
-workspaces/*
-!workspaces/README.md
+# Workspace output (research artifacts are ephemeral)
+agents/*/workspaces/
 
 # Downloaded binaries (fd, rg) -- shared across MAS configs via symlinks
 shared/bin/*

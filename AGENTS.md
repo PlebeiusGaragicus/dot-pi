@@ -42,7 +42,7 @@ dot-pi/
 │   └── settings.json         # Symlink → ~/.pi/agent/settings.json (Pi settings; managed by pi)
 │
 ├── agents/                   # MAS and standalone agent directories
-├── workspaces/               # Ephemeral workspace directories (gitignored contents)
+│   (workspace data lives under agents/<name>/workspaces/ — see Workspace Agents)
 ├── docs/                     # MkDocs documentation source
 └── REFERENCES/               # Local-only sibling checkouts for agent context (gitignored).
                               # Optional manual `git clone`s of related projects (pi-mono,
@@ -241,7 +241,7 @@ Workspace mode (`WORKSPACE_AGENT=1`) remains an agent-level concern. Skill boots
 
 ### Workspace Agents
 
-Any MAS or standalone agent can run as a **workspace agent** by adding a `bootstrap.sh` file with `WORKSPACE_AGENT=1` to its directory. When present, running the command (e.g. `deepresearch`) launches pi in a fresh dated directory (`workspaces/<name>/<timestamp>/`) inside a subshell, so the user's shell stays in its original directory after pi exits.
+Any MAS or standalone agent can run as a **workspace agent** by adding a `bootstrap.sh` file with `WORKSPACE_AGENT=1` to its directory. When present, running the command (e.g. `deepresearch`) launches pi in a fresh dated directory (`agents/<name>/workspaces/<timestamp>/`) inside a subshell, so the user's shell stays in its original directory after pi exits.
 
 `bootstrap.sh` is sourced by `dispatch-agent` before pi starts on fresh launches, resumes, and in-situ launches. Because it is sourced, exported variables persist into pi. Use it to create directories, export env vars, initialize daemons, and run health checks. The launcher captures stdout/stderr in `BOOTSTRAP_LOG` (`$WORKSPACE_DIR/bootstrap.log` for workspace agents).
 
@@ -270,7 +270,7 @@ dotpi create-agent --workspace my-scraper
 ```bash
 deepresearch -n creatine-loading-protocol - research creatine loading protocol
 ```
-This creates a timestamped directory with a slug suffix, e.g. `workspaces/deepresearch/2026-04-28-091454--creatine-loading-protocol/`. Omitting the name keeps the timestamp-only directory.
+This creates a timestamped directory with a slug suffix, e.g. `agents/deepresearch/workspaces/2026-04-28-091454--creatine-loading-protocol/`. Omitting the name keeps the timestamp-only directory.
 
 **Resuming a workspace session**: Workspace agents support `resume` and `ls`, and dot-pi also provides a global picker:
 ```bash
@@ -289,7 +289,7 @@ resume creatine                             # filter recent workspaces, then cho
 
 **Unified session logging**: When a workspace has a `sessions/` directory, both the orchestrator and all subagent sessions are stored there. The workspace launcher passes `--session-dir` to pi, and `agent-orchestrator` uses the same directory for subagent sessions. This puts the complete run trajectory in one place for debugging.
 
-Workspace contents are gitignored (`workspaces/*/`).
+Workspace contents are gitignored (`agents/*/workspaces/`).
 
 ### Prompt Templates
 

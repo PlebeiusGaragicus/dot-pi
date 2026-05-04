@@ -19,7 +19,7 @@ SYNOPSIS
 
 DESCRIPTION
        browser launches pi with this agent’s config inside a dated
-       workspace under workspaces/browser/.  Bootstrap prepares state,
+       workspace under agents/browser/workspaces/.  Bootstrap prepares state,
        exports $B (browser-runtime binary or source fallback), sets
        BROWSER_CONTROL_STATE_DIR, runs $B status, and logs to
        bootstrap.log.
@@ -51,7 +51,7 @@ COMMANDS
        help, usage, -h, --help
               Show this page on standard output.
 
-       ls     List workspaces under workspaces/browser/.
+       ls     List workspaces under agents/browser/workspaces/.
 
        resume [workspace-name-or-path]
               With no argument, choose a workspace by number.  With an
@@ -60,7 +60,7 @@ COMMANDS
               or -p prompt to print a final reply.
 
 FILES
-       workspaces/browser/<timestamp>[--<slug>]/
+       agents/browser/workspaces/<timestamp>[--<slug>]/
               Workspace root: drafts, sessions/, bootstrap.log, and
               agent output as configured.
 

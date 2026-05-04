@@ -19,7 +19,7 @@ SYNOPSIS
 
 DESCRIPTION
        Orchestrates subagents to search, collect evidence, and produce a
-       report.  Each fresh launch creates workspaces/deepresearch/<timestamp>/
+       report.  Each fresh launch creates agents/deepresearch/workspaces/<timestamp>/
        (optionally with a --name slug).  Session logs may live under the
        workspace when sessions/ is present.
 
@@ -38,14 +38,14 @@ COMMANDS
        help, usage, -h, --help
               Show this page on standard output.
 
-       ls     List workspaces under workspaces/deepresearch/.
+       ls     List workspaces under agents/deepresearch/workspaces/.
 
        resume [workspace-name-or-path]
               With no argument, choose a workspace by number.  With an
               argument, resume the exact workspace basename or path.
 
 FILES
-       workspaces/deepresearch/<timestamp>[--<slug>]/
+       agents/deepresearch/workspaces/<timestamp>[--<slug>]/
               Run artifacts, drafts, sources, sessions as configured.
 
 SEE ALSO

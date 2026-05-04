@@ -22,7 +22,7 @@ _resume_workspace_path() {
   local ws_path="$1"
   ws_path="${ws_path%/}"
   local agent config_dir
-  agent=$(basename "$(dirname "$ws_path")")
+  agent=$(basename "$(dirname "$(dirname "$ws_path")")")
   config_dir="$DOT_PI_DIR/agents/$agent"
   [ -d "$config_dir" ] || { echo "No agent config for workspace: $agent" >&2; return 1; }
   _load_pi_args "$config_dir"
@@ -48,7 +48,7 @@ _pick_workspace() {
   echo "$title" >&2
   local i=1 path agent
   for path in "${paths[@]}"; do
-    agent=$(basename "$(dirname "${path%/}")")
+    agent=$(basename "$(dirname "$(dirname "${path%/}")")")
     printf '%2d) %s\n' "$i" "$(_workspace_label "$agent" "$path")" >&2
     i=$((i + 1))
   done
@@ -74,9 +74,9 @@ _pick_workspace() {
 _collect_workspaces() {
   local limit="${1:-10}" query="${2:-}" d agent base haystack count=0
   shopt -s nullglob
-  for d in "$DOT_PI_DIR"/workspaces/*/*/; do
+  for d in "$DOT_PI_DIR"/agents/*/workspaces/*/; do
     [ -d "$d" ] || continue
-    agent=$(basename "$(dirname "${d%/}")")
+    agent=$(basename "$(dirname "$(dirname "${d%/}")")")
     _is_workspace_agent "$DOT_PI_DIR/agents/$agent" || continue
     base=$(basename "${d%/}")
     haystack=$(printf '%s %s %s' "$agent" "$base" "${base//-/ }" | tr '[:upper:]' '[:lower:]')
@@ -93,7 +93,7 @@ _collect_workspaces() {
 }
 
 _collect_agent_workspaces() {
-  local name="$1" limit="${2:-0}" ws_root="$DOT_PI_DIR/workspaces/$name"
+  local name="$1" limit="${2:-0}" ws_root="$DOT_PI_DIR/agents/$name/workspaces"
   local d count=0
   shopt -s nullglob
   for d in "$ws_root"/*/; do
@@ -108,7 +108,7 @@ _collect_agent_workspaces() {
 }
 
 _resolve_workspace_exact() {
-  local name="$1" target="$2" ws_root="$DOT_PI_DIR/workspaces/$name" candidate
+  local name="$1" target="$2" ws_root="$DOT_PI_DIR/agents/$name/workspaces" candidate
   target="${target%/}"
   if [ -d "$target" ]; then
     candidate="$target"
@@ -120,7 +120,7 @@ _resolve_workspace_exact() {
     return 1
   fi
   candidate="${candidate%/}"
-  if [ "$(basename "$(dirname "$candidate")")" != "$name" ]; then
+  if [ "$(basename "$(dirname "$(dirname "$candidate")")")" != "$name" ]; then
     echo "Workspace is not for $name: $candidate" >&2
     return 1
   fi
@@ -129,7 +129,7 @@ _resolve_workspace_exact() {
 
 _workspace_launch() {
   local name="$1" config_dir="$2"
-  local ws_root="$DOT_PI_DIR/workspaces/$name"
+  local ws_root="$DOT_PI_DIR/agents/$name/workspaces"
   local slug ws
 
   ws="$ws_root/$(date +%Y-%m-%d-%H%M%S)"
@@ -172,7 +172,7 @@ _cwd_to_session_dir() {
 
 _workspace_list() {
   local name="$1"
-  local ws_root="$DOT_PI_DIR/workspaces/$name"
+  local ws_root="$DOT_PI_DIR/agents/$name/workspaces"
   if [ ! -d "$ws_root" ] || [ -z "$(ls -A "$ws_root" 2>/dev/null)" ]; then
     echo "No workspaces for $name"
     return 0

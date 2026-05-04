@@ -1,1 +1,0 @@
-The `workspaces` directory is used for workspace agents which initialize into a fresh directory each time they are run. The session traces for each agent, all artifacts, and final output files are co-located here.

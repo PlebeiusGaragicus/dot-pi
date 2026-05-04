@@ -138,7 +138,7 @@ Edit this as ordinary text if you want the agent command to show different start
 This sourced shell script prepares the launch environment before pi starts. If it contains a top-level `WORKSPACE_AGENT=1` line, the command runs in workspace mode. Instead of running in the current directory, `dispatch-agent` creates a dated workspace under:
 
 ```text
-workspaces/<agent>/<YYYY-mm-dd-HHMMSS>/
+agents/<agent>/workspaces/<YYYY-mm-dd-HHMMSS>/
 ```
 
 ```bash
@@ -375,10 +375,10 @@ The main differences are:
 
 ## Workspace Runtime Layout
 
-Workspace mode creates runtime directories under `workspaces/`, not under `agents/`:
+Workspace mode creates runtime directories under `agents/<name>/workspaces/`:
 
 ```text
-workspaces/example-mas/2026-04-28-120000--named-run/
+agents/example-mas/workspaces/2026-04-28-120000--named-run/
 ├── sources/
 ├── drafts/
 ├── sessions/
@@ -416,6 +416,6 @@ Usually generated, symlinked, local, or runtime:
 - shared extension, skill, and theme symlinks
 - `auth.json` (symlink to `shared/auth.json`; edit the shared file)
 - `sessions/`
-- workspace directories under `workspaces/`
+- workspace directories under `agents/<name>/workspaces/`
 
 When in doubt, edit the canonical source: extension implementations in `shared/extensions/`, extension bundle membership in `shared/extensions-common/` or `shared/extensions-subagents/`, shared skills in `shared/skills/`, shared themes in `shared/themes/`, and agent-specific prompts or config in the owning `agents/<name>/` root.
