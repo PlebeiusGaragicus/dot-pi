@@ -41,5 +41,5 @@ if [ "$standalone_found" -eq 0 ]; then
 fi
 
 echo ""
-echo "Each entry above is a command on PATH (via ~/.dot-pi/bin/)."
+echo "Each entry above is a command on PATH (via ~/.dot-pi/core/bin/)."
 echo "Run 'dotpi sync' to refresh symlinks after manual changes."

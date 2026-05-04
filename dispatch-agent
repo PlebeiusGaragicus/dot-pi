@@ -14,7 +14,7 @@ if [ -z "${DOT_PI_DIR:-}" ]; then
 fi
 
 _dispatch_source() {
-  local module="$DOT_PI_DIR/lib/dispatch/$1"
+  local module="$DOT_PI_DIR/core/dispatch/$1"
   if [ ! -f "$module" ]; then
     echo "Missing dispatch module: $module" >&2
     exit 1

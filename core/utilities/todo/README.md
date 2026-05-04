@@ -57,10 +57,10 @@ If this repository lives at `~/.dot-pi`, run:
 
 ```sh
 mkdir -p ~/.local/bin
-ln -sf "$HOME/.dot-pi/utilities/todo/todo" "$HOME/.local/bin/todo"
+ln -sf "$HOME/.dot-pi/core/utilities/todo/todo" "$HOME/.local/bin/todo"
 ```
 
-If the repo is elsewhere, replace the first path with the absolute path to `utilities/todo/todo` inside your checkout.
+If the repo is elsewhere, replace the first path with the absolute path to `core/utilities/todo/todo` inside your checkout.
 
 Check:
 

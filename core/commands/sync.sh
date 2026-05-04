@@ -3,7 +3,7 @@
 # auth.json, models.json, settings.json, bin/, and extensions into every agent and
 # subagent config directory. Called after dotpi create / create-agent and by the installer.
 
-BIN_DIR="$DOT_PI_DIR/bin"
+BIN_DIR="$DOT_PI_DIR/core/bin"
 mkdir -p "$BIN_DIR"
 
 # Symlink shared/settings.json to system pi config if missing
@@ -98,18 +98,18 @@ for d in "$DOT_PI_DIR"/agents/*/; do
   fi
   link="$BIN_DIR/$name"
   if [ ! -L "$link" ]; then
-    ln -sf ../dispatch-agent "$link"
+    ln -sf ../../dispatch-agent "$link"
     added=$((added + 1))
   fi
 done
 
 # Always ensure these special entries exist
 if [ ! -L "$BIN_DIR/resume" ]; then
-  ln -sf ../dispatch-agent "$BIN_DIR/resume"
+  ln -sf ../../dispatch-agent "$BIN_DIR/resume"
   added=$((added + 1))
 fi
 if [ ! -L "$BIN_DIR/dotpi" ]; then
-  ln -sf ../dotpi "$BIN_DIR/dotpi"
+  ln -sf ../../dotpi "$BIN_DIR/dotpi"
   added=$((added + 1))
 fi
 
@@ -123,7 +123,7 @@ for link in "$BIN_DIR"/*; do
 
   target=$(readlink "$link" 2>/dev/null || true)
   case "$target" in
-    ../dispatch-agent|*/dispatch-agent)
+    ../../dispatch-agent|*/dispatch-agent)
       if [ ! -d "$DOT_PI_DIR/agents/$name" ]; then
         rm "$link"
         removed=$((removed + 1))
@@ -132,4 +132,4 @@ for link in "$BIN_DIR"/*; do
   esac
 done
 
-echo "sync: $added added, $removed removed ($(ls "$BIN_DIR" | wc -l | tr -d ' ') total in bin/)"
+echo "sync: $added added, $removed removed ($(ls "$BIN_DIR" | wc -l | tr -d ' ') total in core/bin/)"

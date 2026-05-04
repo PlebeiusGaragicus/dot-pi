@@ -106,15 +106,15 @@ check_pi() {
 }
 
 install_node_modules() {
-  if [ ! -f "$DOT_PI_HOME/tests/package.json" ]; then return; fi
+  if [ ! -f "$DOT_PI_HOME/core/tests/package.json" ]; then return; fi
   if ! command -v npm &>/dev/null; then
     warn "npm not found — extension dependencies (typebox) not installed."
-    echo "    Install Node.js, then run:  cd $DOT_PI_HOME/tests && npm install"
+    echo "    Install Node.js, then run:  cd $DOT_PI_HOME/core/tests && npm install"
     return
   fi
   info "Installing extension dependencies (npm install)..."
-  ( cd "$DOT_PI_HOME/tests" && npm install --silent ) || \
-    warn "npm install failed. Run manually: cd $DOT_PI_HOME/tests && npm install"
+  ( cd "$DOT_PI_HOME/core/tests" && npm install --silent ) || \
+    warn "npm install failed. Run manually: cd $DOT_PI_HOME/core/tests && npm install"
 }
 
 check_espeak() {
@@ -192,7 +192,7 @@ do_install() {
         warn "Shell not configured yet. Add the following to $(bold "$rc"):"
         echo ""
         echo "$(green '# dot-pi — pi agent launcher')"
-        echo "$(green "export PATH=\"\$HOME/.dot-pi/bin:\$PATH\"")"
+        echo "$(green "export PATH=\"\$HOME/.dot-pi/core/bin:\$PATH\"")"
         echo "$(green "source \"\$HOME/.dot-pi/env.sh\"")"
         echo ""
       fi
@@ -265,7 +265,7 @@ do_install() {
     echo "  Add the following to $(bold "$rc"):"
     echo ""
     echo "$(green '# dot-pi — pi agent launcher')"
-    echo "$(green "export PATH=\"\$HOME/.dot-pi/bin:\$PATH\"")"
+    echo "$(green "export PATH=\"\$HOME/.dot-pi/core/bin:\$PATH\"")"
     echo "$(green "source \"\$HOME/.dot-pi/env.sh\"")"
     echo ""
   fi

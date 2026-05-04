@@ -51,7 +51,7 @@ When working in this repo, `.github/workflows/ci.yml` defines roughly:
 
 | Job | Typical failures |
 |-----|------------------|
-| `shellcheck` | SC#### in `dotpi`, `install`, `dispatch-agent`, `env.sh`, `commands/*.sh` |
+| `shellcheck` | SC#### in `dotpi`, `install`, `dispatch-agent`, `env.sh`, `core/commands/*.sh` |
 | `typecheck` | `npx tsc --noEmit` / extension TS errors |
 | `smoke` | `dotpi --help`, `install --help`, `pi-args` parsing smoke, `bash -n` on shell scripts |
 | `gitignore-guard` | Tracked files that match ignore rules (after negations) |

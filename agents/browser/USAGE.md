@@ -96,4 +96,4 @@ EXAMPLES
 
 SEE ALSO
        agents/browser/SYSTEM.md, agents/browser/bootstrap.sh,
-       shared/skills/browser-control/SKILL.md, utilities/browser-runtime
+       shared/skills/browser-control/SKILL.md, core/utilities/browser-runtime

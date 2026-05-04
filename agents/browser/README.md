@@ -1,6 +1,6 @@
 # browser
 
-Standalone dot-pi browser automation agent backed by `utilities/browser-runtime`.
+Standalone dot-pi browser automation agent backed by `core/utilities/browser-runtime`.
 
 ## Bootstrap and `$B`
 

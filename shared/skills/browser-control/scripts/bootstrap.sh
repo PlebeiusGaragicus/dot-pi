@@ -11,11 +11,11 @@ fi
 mkdir -p "$BROWSER_CONTROL_STATE_DIR"
 
 if [ -z "${B:-}" ]; then
-  _browser_control_bin="$HOME/.dot-pi/utilities/browser-runtime/dist/browser-control"
+  _browser_control_bin="$HOME/.dot-pi/core/utilities/browser-runtime/dist/browser-control"
   if [ -x "$_browser_control_bin" ]; then
     export B="$_browser_control_bin"
   else
-    export B="bun run $HOME/.dot-pi/utilities/browser-runtime/src/cli.ts"
+    export B="bun run $HOME/.dot-pi/core/utilities/browser-runtime/src/cli.ts"
   fi
   unset _browser_control_bin
 fi

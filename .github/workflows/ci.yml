@@ -24,7 +24,7 @@ jobs:
             install \
             dispatch-agent \
             env.sh \
-            commands/*.sh
+            core/commands/*.sh
 
   typecheck:
     name: typecheck (extensions)
@@ -35,9 +35,9 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
-        working-directory: tests
+        working-directory: core/tests
       - run: npx tsc --noEmit
-        working-directory: tests
+        working-directory: core/tests
 
   smoke:
     name: smoke tests (entry scripts)
@@ -93,7 +93,7 @@ jobs:
           bash -n install
           bash -n dispatch-agent
           bash -n env.sh
-          for f in commands/*.sh; do bash -n "$f"; done
+          for f in core/commands/*.sh; do bash -n "$f"; done
 
   gitignore-guard:
     name: gitignore vs tracked guard

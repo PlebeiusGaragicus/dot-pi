@@ -14,7 +14,7 @@ Or install manually — see [docs/install.md](docs/install.md) for details.
 
 ### Shell integration
 
-Commands are available directly on `PATH` via symlinks in `bin/`. Run `dotpi sync` to rebuild symlinks after adding or removing agent configs. Commands on PATH get native shell completion automatically.
+Commands are available directly on `PATH` via symlinks in `core/bin/`. Run `dotpi sync` to rebuild symlinks after adding or removing agent configs. Commands on PATH get native shell completion automatically.
 
 ## Create a Multi-Agent System
 

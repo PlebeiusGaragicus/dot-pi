@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FIXTURE="$(mktemp -d "${TMPDIR:-/tmp}/dotpi-dispatch-smoke.XXXXXX")"
 trap 'rm -rf "$FIXTURE"' EXIT
 
@@ -48,12 +48,13 @@ run_capture_stdin() {
   CAPTURE_OUT="$output"
 }
 
-mkdir -p "$FIXTURE/bin" "$FIXTURE/agents/coder" "$FIXTURE/agents/lm" \
+mkdir -p "$FIXTURE/core/bin" "$FIXTURE/agents/coder" "$FIXTURE/agents/lm" \
   "$FIXTURE/agents/browser" "$FIXTURE/workspaces/browser/2026-04-29-000000--prefix/sessions"
-ln -s "$ROOT/lib" "$FIXTURE/lib"
-ln -s "$ROOT/dispatch-agent" "$FIXTURE/bin/coder"
-ln -s "$ROOT/dispatch-agent" "$FIXTURE/bin/lm"
-ln -s "$ROOT/dispatch-agent" "$FIXTURE/bin/browser"
+ln -s "$ROOT/core" "$FIXTURE/core_src"
+ln -s "$FIXTURE/core_src/dispatch" "$FIXTURE/core/dispatch"
+ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/coder"
+ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/lm"
+ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/browser"
 
 cat > "$FIXTURE/model-defaults" <<'EOF'
 export DEFAULT_AGENTIC_MODEL="${DEFAULT_AGENTIC_MODEL:-}"
@@ -90,40 +91,40 @@ export WORKSPACE_AGENT
 mkdir -p "$WORKSPACE_DIR/sessions"
 EOF
 
-run_capture "coder no args" "$FIXTURE/bin/coder"
+run_capture "coder no args" "$FIXTURE/core/bin/coder"
 assert_contains "$CAPTURE_OUT" "PI_CODING_AGENT_DIR=$FIXTURE/agents/coder" "coder no args"
 assert_contains "$CAPTURE_OUT" "ARGV" "coder no args"
 assert_not_contains "$CAPTURE_OUT" $'\t--model' "coder model fall-through"
 
-run_capture "lm interactive prompt" "$FIXTURE/bin/lm" - hi there
+run_capture "lm interactive prompt" "$FIXTURE/core/bin/lm" - hi there
 assert_contains "$CAPTURE_OUT" $'\t--thinking\toff' "lm interactive prompt"
 assert_contains "$CAPTURE_OUT" $'\thi there' "lm interactive prompt"
 assert_not_contains "$CAPTURE_OUT" $'\t--mode\tjson' "lm interactive prompt"
 assert_not_contains "$CAPTURE_OUT" $'\t-p\t' "lm interactive prompt"
 
-run_capture "lm print prompt" "$FIXTURE/bin/lm" -p hi
+run_capture "lm print prompt" "$FIXTURE/core/bin/lm" -p hi
 assert_contains "$CAPTURE_OUT" $'\t--mode\tjson' "lm print prompt"
 assert_contains "$CAPTURE_OUT" $'\t-p\thi' "lm print prompt"
 
-run_capture "lm print verbose prompt" "$FIXTURE/bin/lm" -p -v hi
+run_capture "lm print verbose prompt" "$FIXTURE/core/bin/lm" -p -v hi
 assert_contains "$CAPTURE_OUT" $'\t--mode\tjson' "lm print verbose prompt"
 assert_contains "$CAPTURE_OUT" $'\t-p\thi' "lm print verbose prompt"
 
-run_capture "browser print workspace" "$FIXTURE/bin/browser" -p status
+run_capture "browser print workspace" "$FIXTURE/core/bin/browser" -p status
 assert_contains "$CAPTURE_OUT" "PI_CODING_AGENT_DIR=$FIXTURE/agents/browser" "browser print workspace"
 assert_contains "$CAPTURE_OUT" $'\t--tools\tread,ls,bash' "browser print workspace"
 assert_contains "$CAPTURE_OUT" $'\t--mode\tjson' "browser print workspace"
 assert_contains "$CAPTURE_OUT" $'\t--session-dir\t' "browser print workspace"
 assert_contains "$CAPTURE_OUT" $'\t-p\tstatus' "browser print workspace"
 
-run_capture "browser named interactive workspace" "$FIXTURE/bin/browser" -n named - prompt text
+run_capture "browser named interactive workspace" "$FIXTURE/core/bin/browser" -n named - prompt text
 assert_contains "$CAPTURE_OUT" "PI_CODING_AGENT_DIR=$FIXTURE/agents/browser" "browser named interactive workspace"
 assert_contains "$CAPTURE_OUT" $'\t--session-dir\t' "browser named interactive workspace"
 assert_contains "$CAPTURE_OUT" $'\tprompt text' "browser named interactive workspace"
 assert_not_contains "$CAPTURE_OUT" $'\t--mode\tjson' "browser named interactive workspace"
 assert_not_contains "$CAPTURE_OUT" $'\t-p\t' "browser named interactive workspace"
 
-run_capture "browser exact resume prompt" "$FIXTURE/bin/browser" resume 2026-04-29-000000--prefix - continue here
+run_capture "browser exact resume prompt" "$FIXTURE/core/bin/browser" resume 2026-04-29-000000--prefix - continue here
 assert_contains "$CAPTURE_OUT" "Resuming: $FIXTURE/workspaces/browser/2026-04-29-000000--prefix" "browser resume prompt"
 assert_contains "$CAPTURE_OUT" $'\t--continue' "browser resume prompt"
 assert_contains "$CAPTURE_OUT" $'\tcontinue here' "browser resume prompt"
@@ -131,7 +132,7 @@ assert_not_contains "$CAPTURE_OUT" $'\t--mode\tjson' "browser resume prompt"
 
 # Clean up workspace dirs created by earlier tests so the picker only has the fixture entry
 find "$FIXTURE/workspaces/browser" -mindepth 1 -maxdepth 1 -type d ! -name '2026-04-29-000000--prefix' -exec rm -rf {} +
-run_capture_stdin "browser picker resume prompt" $'1\n' "$FIXTURE/bin/browser" resume - continue from picker
+run_capture_stdin "browser picker resume prompt" $'1\n' "$FIXTURE/core/bin/browser" resume - continue from picker
 assert_contains "$CAPTURE_OUT" "Workspaces for browser:" "browser picker resume prompt"
 assert_contains "$CAPTURE_OUT" "Resuming: $FIXTURE/workspaces/browser/2026-04-29-000000--prefix" "browser picker resume prompt"
 assert_contains "$CAPTURE_OUT" $'\tcontinue from picker' "browser picker resume prompt"
@@ -140,7 +141,7 @@ assert_contains "$CAPTURE_OUT" $'\tcontinue from picker' "browser picker resume 
 
 # Create an in-situ agent with a skill that has scripts/bootstrap.sh
 mkdir -p "$FIXTURE/agents/searcher/skills/test-skill/scripts"
-ln -s "$ROOT/dispatch-agent" "$FIXTURE/bin/searcher"
+ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/searcher"
 
 cat > "$FIXTURE/agents/searcher/pi-args" <<'EOF'
 --model
@@ -161,7 +162,7 @@ description: Smoke test skill
 # Test Skill
 EOF
 
-run_capture "skill bootstrap runs" "$FIXTURE/bin/searcher"
+run_capture "skill bootstrap runs" "$FIXTURE/core/bin/searcher"
 assert_contains "$CAPTURE_OUT" "PI_CODING_AGENT_DIR=$FIXTURE/agents/searcher" "skill bootstrap agent"
 # Check bootstrap log recorded the skill
 BOOTSTRAP_LOG="$FIXTURE/agents/searcher/sessions/bootstrap.log"
@@ -177,7 +178,7 @@ export AGENT_BOOTSTRAP_SENTINEL="agent-ran"
 echo "agent bootstrap: searcher loaded"
 EOF
 
-run_capture "agent+skill bootstrap order" "$FIXTURE/bin/searcher"
+run_capture "agent+skill bootstrap order" "$FIXTURE/core/bin/searcher"
 BOOTSTRAP_LOG="$FIXTURE/agents/searcher/sessions/bootstrap.log"
 LOG_CONTENT=$(cat "$BOOTSTRAP_LOG")
 assert_contains "$LOG_CONTENT" "bootstrap start: agent searcher" "agent+skill: agent logged"
@@ -194,7 +195,7 @@ cat > "$FIXTURE/agents/searcher/skills/zeta-skill/scripts/bootstrap.sh" <<'EOF'
 echo "skill bootstrap: zeta loaded"
 EOF
 
-run_capture "multi-skill bootstrap order" "$FIXTURE/bin/searcher"
+run_capture "multi-skill bootstrap order" "$FIXTURE/core/bin/searcher"
 BOOTSTRAP_LOG="$FIXTURE/agents/searcher/sessions/bootstrap.log"
 LOG_CONTENT=$(cat "$BOOTSTRAP_LOG")
 # alpha before test-skill before zeta (sorted)
@@ -206,7 +207,7 @@ zeta_pos=$(printf '%s' "$LOG_CONTENT" | grep -n "skill zeta-skill" | head -1 | c
 
 # Failure path: skill bootstrap returning non-zero stops launch
 mkdir -p "$FIXTURE/agents/failtest/skills/bad-skill/scripts"
-ln -s "$ROOT/dispatch-agent" "$FIXTURE/bin/failtest"
+ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/failtest"
 cat > "$FIXTURE/agents/failtest/pi-args" <<'EOF'
 --no-context-files
 EOF
@@ -217,7 +218,7 @@ return 1
 EOF
 
 set +e
-output=$(DOT_PI_DIR="$FIXTURE" DOTPI_DISPATCH_CAPTURE_PI=1 "$FIXTURE/bin/failtest" < /dev/null 2>&1)
+output=$(DOT_PI_DIR="$FIXTURE" DOTPI_DISPATCH_CAPTURE_PI=1 "$FIXTURE/core/bin/failtest" < /dev/null 2>&1)
 status=$?
 set -e
 [ "$status" -ne 0 ] || fail "failing skill bootstrap: expected non-zero exit"
@@ -233,7 +234,7 @@ description: Skill with no bootstrap
 ---
 EOF
 
-run_capture "skill without bootstrap skipped" "$FIXTURE/bin/searcher"
+run_capture "skill without bootstrap skipped" "$FIXTURE/core/bin/searcher"
 BOOTSTRAP_LOG="$FIXTURE/agents/searcher/sessions/bootstrap.log"
 LOG_CONTENT=$(cat "$BOOTSTRAP_LOG")
 assert_not_contains "$LOG_CONTENT" "no-bootstrap-skill" "skill without bootstrap not logged"

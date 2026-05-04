@@ -12,7 +12,7 @@ The installer will:
 2. Offer to install `pi` via npm if not already present
 3. Clone dot-pi to `~/.dot-pi`
 4. Bootstrap local config files (`shared/settings.json`, `shared/auth.json`, `model-defaults`)
-5. Build `bin/` symlinks and per-agent `auth.json` links (`dotpi sync`) so agent commands are on your PATH
+5. Build `core/bin/` symlinks and per-agent `auth.json` links (`dotpi sync`) so agent commands are on your PATH
 
 Override the install location with `DOT_PI_HOME`:
 
@@ -31,7 +31,7 @@ DOT_PI_HOME=~/my-agents bash -c "$(curl -fsSL https://raw.githubusercontent.com/
 The installer prints the two lines to add to your shell config. If you installed manually, add to your `~/.zshrc` or `~/.bashrc`:
 
 ```bash
-export PATH="$HOME/.dot-pi/bin:$PATH"
+export PATH="$HOME/.dot-pi/core/bin:$PATH"
 source "$HOME/.dot-pi/env.sh"
 ```
 
@@ -101,9 +101,9 @@ For a fully local setup (no API keys needed):
 
 ```bash
 git clone https://github.com/PlebeiusGaragicus/dot-pi.git ~/.dot-pi
-echo 'export PATH="$HOME/.dot-pi/bin:$PATH"' >> ~/.zshrc
+echo 'export PATH="$HOME/.dot-pi/core/bin:$PATH"' >> ~/.zshrc
 echo 'source "$HOME/.dot-pi/env.sh"' >> ~/.zshrc
-export PATH="$HOME/.dot-pi/bin:$PATH"
+export PATH="$HOME/.dot-pi/core/bin:$PATH"
 source "$HOME/.dot-pi/env.sh"
 dotpi setup
 ```
@@ -172,7 +172,7 @@ After creating a MAS, you need to:
 
 ### `dotpi create-agent <agent-name>`
 
-Creates a standalone agent directory at `agents/<agent-name>/` with a stub extension and shared symlinks. Use `--workspace` to scaffold a `bootstrap.sh` that marks the agent as a workspace agent. Run `dotpi sync` to add the new agent to bin/.
+Creates a standalone agent directory at `agents/<agent-name>/` with a stub extension and shared symlinks. Use `--workspace` to scaffold a `bootstrap.sh` that marks the agent as a workspace agent. Run `dotpi sync` to add the new agent to `core/bin/`.
 
 ### `dotpi list`
 
@@ -188,4 +188,4 @@ Override **`auth.json`** with a symlink to another agent’s file, **`shared/aut
 
 ### `dotpi sync`
 
-Rebuild `bin/` symlinks from `agents/`, bootstrap **`shared/auth.json`** from the example if missing, and link each **`agents/<name>/auth.json`** → **`shared/auth.json`**. Called automatically after `dotpi create` / `create-agent`.
+Rebuild `core/bin/` symlinks from `agents/`, bootstrap **`shared/auth.json`** from the example if missing, and link each **`agents/<name>/auth.json`** → **`shared/auth.json`**. Called automatically after `dotpi create` / `create-agent`.

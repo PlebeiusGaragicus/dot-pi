@@ -40,4 +40,4 @@ dotpi create --workspace deepresearch       # new workspace MAS
 dotpi create-agent my-agent                 # new standalone agent
 ```
 
-All configurations are invokable as direct commands after running `dotpi sync` to rebuild bin/ symlinks. Workspace agents (those with `WORKSPACE_AGENT=1` in `bootstrap.sh`) launch in a fresh dated directory under `workspaces/`, support named launches such as `deepresearch -n project-name - research topic`, and can be reopened with `ls`, `resume`, or the global `resume` picker. See the [Usage Guide](usage.md) for details.
+All configurations are invokable as direct commands after running `dotpi sync` to rebuild `core/bin/` symlinks. Workspace agents (those with `WORKSPACE_AGENT=1` in `bootstrap.sh`) launch in a fresh dated directory under `workspaces/`, support named launches such as `deepresearch -n project-name - research topic`, and can be reopened with `ls`, `resume`, or the global `resume` picker. See the [Usage Guide](usage.md) for details.

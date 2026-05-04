@@ -9,7 +9,7 @@ shared/auth.json
 # .tavily.env
 .tts-wpm
 .browser-control/
-bin/
+core/bin/
 .ssh
 google.json
 todo.jsonl
@@ -43,9 +43,9 @@ shared/bin/*
 !shared/bin/.gitkeep
 
 # Typecheck node_modules (devDeps for extension type-checking)
-tests/node_modules/
-utilities/browser-runtime/node_modules/
-utilities/browser-runtime/dist/
+core/tests/node_modules/
+core/utilities/browser-runtime/node_modules/
+core/utilities/browser-runtime/dist/
 
 REFERENCES/*
 IGNORE/

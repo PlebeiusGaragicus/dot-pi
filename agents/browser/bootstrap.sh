@@ -12,8 +12,8 @@ mkdir -p "$WORKSPACE_DIR/.browser-control" "$WORKSPACE_DIR/sessions"
 
 export BROWSER_CONTROL_STATE_DIR="$WORKSPACE_DIR/.browser-control"
 
-B="$HOME/.dot-pi/utilities/browser-runtime/dist/browser-control"
-[ -x "$B" ] || B="bun run $HOME/.dot-pi/utilities/browser-runtime/src/cli.ts"
+B="$HOME/.dot-pi/core/utilities/browser-runtime/dist/browser-control"
+[ -x "$B" ] || B="bun run $HOME/.dot-pi/core/utilities/browser-runtime/src/cli.ts"
 export B
 
 echo "browser bootstrap: state dir: $BROWSER_CONTROL_STATE_DIR"

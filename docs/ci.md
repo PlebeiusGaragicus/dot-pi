@@ -29,7 +29,7 @@ Runs [shellcheck](https://www.shellcheck.net/) on every shell script in the repo
 - `install`
 - `dispatch-agent`
 - `env.sh`
-- `commands/*.sh`
+- `core/commands/*.sh`
 
 shellcheck catches things bash itself silently accepts but that almost certainly mean a bug:
 
@@ -42,7 +42,7 @@ Severity is set to `warning` — only real issues fail the build, not stylistic 
 
 ### 2. `typecheck` — extension TypeScript
 
-Runs `npm ci` and `npx tsc --noEmit` from `tests/` to type-check the TypeScript extensions under `shared/extensions/`.
+Runs `npm ci` and `npx tsc --noEmit` from `core/tests/` to type-check the TypeScript extensions under `shared/extensions/`.
 
 ### 3. `smoke` — entry-script smoke tests
 
@@ -85,16 +85,16 @@ You don't need to wait for the cloud. Each job is one command:
 ```bash
 # shellcheck (install with: brew install shellcheck)
 shellcheck --shell=bash --severity=warning --external-sources \
-  dotpi install dispatch-agent env.sh commands/*.sh
+  dotpi install dispatch-agent env.sh core/commands/*.sh
 
 # smoke tests
 ./dotpi --version
 ./dotpi --help
 bash install --help
-bash -n dotpi install dispatch-agent env.sh commands/*.sh
+bash -n dotpi install dispatch-agent env.sh core/commands/*.sh
 
 # extension typecheck
-(cd tests && npm ci && npx tsc --noEmit)
+(cd core/tests && npm ci && npx tsc --noEmit)
 
 # docs strict build (install with: pip install mkdocs-material)
 mkdocs build --strict

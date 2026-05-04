@@ -17,6 +17,6 @@
     }
   },
   "include": [
-    "../shared/extensions/**/*.ts"
+    "../../shared/extensions/**/*.ts"
   ]
 }

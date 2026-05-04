@@ -9,7 +9,7 @@ For the shared terminal command contract (`agent`, `agent - prompt`, `agent -p`,
 You have pi installed, the repo cloned to `~/.dot-pi`, and your shell configured:
 
 ```bash
-export PATH="$HOME/.dot-pi/bin:$PATH"
+export PATH="$HOME/.dot-pi/core/bin:$PATH"
 source "$HOME/.dot-pi/env.sh"
 ```
 

@@ -80,12 +80,12 @@ else
   _fail "shared/models.json missing"
 fi
 
-# 7. bin/ on PATH
-if echo "$PATH" | tr ':' '\n' | grep -qF "$DOT_PI_DIR/bin" 2>/dev/null ||
-   echo "$PATH" | tr ':' '\n' | grep -qF "$HOME/.dot-pi/bin" 2>/dev/null; then
-  _ok "bin/ is on PATH"
+# 7. core/bin/ on PATH
+if echo "$PATH" | tr ':' '\n' | grep -qF "$DOT_PI_DIR/core/bin" 2>/dev/null ||
+   echo "$PATH" | tr ':' '\n' | grep -qF "$HOME/.dot-pi/core/bin" 2>/dev/null; then
+  _ok "core/bin/ is on PATH"
 else
-  _warn "bin/ not found on PATH — add to your shell RC: export PATH=\"\$HOME/.dot-pi/bin:\$PATH\""
+  _warn "core/bin/ not found on PATH — add to your shell RC: export PATH=\"\$HOME/.dot-pi/core/bin:\$PATH\""
 fi
 
 # 8. Per-agent config checks

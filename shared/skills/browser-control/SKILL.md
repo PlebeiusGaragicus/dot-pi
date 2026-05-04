@@ -52,7 +52,7 @@ Browser skills are deterministic scripts discovered from:
 
 1. `<project>/.browser-control/browser-skills/`
 2. `~/.dot-pi/browser-skills/`
-3. `~/.dot-pi/utilities/browser-runtime/browser-skills/`
+3. `~/.dot-pi/core/utilities/browser-runtime/browser-skills/`
 
 Use a skill when it clearly matches the task:
 

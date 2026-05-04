@@ -473,7 +473,7 @@ if grep -qF "dot-pi" "$_rc" 2>/dev/null; then
 else
   echo "  Shell: not configured yet. Add to $(basename "$_rc"):"
   echo ""
-  echo "       export PATH=\"\$HOME/.dot-pi/bin:\$PATH\""
+  echo "       export PATH=\"\$HOME/.dot-pi/core/bin:\$PATH\""
   echo "       source \"\$HOME/.dot-pi/env.sh\""
   echo ""
   echo "  Then restart your shell and run:  lm"
