@@ -1,8 +1,8 @@
 # Top-Level Agent MAS
 
-This document specifies an experimental multi-agent system style for dot-pi. The goal is to reuse cleaned-up top-level agents as durable capability agents, then compose them with workflow prompts.
+This document specifies an experimental multi-agent system style for dot-pi. The goal is to reuse a small, fixed set of cleaned-up top-level agents as durable capability agents, then compose them with workflow prompts.
 
-This is a design specification, not an implementation record. The existing MAS model remains valid and unchanged.
+This is both the design document and implementation plan for the experiment. The existing MAS model remains valid and unchanged.
 
 ## Summary
 
@@ -15,7 +15,7 @@ The proposed pattern separates durable capability from workflow:
 - A new extension discovers and invokes eligible top-level agents.
 - The existing orchestrator extension remains responsible for the current nested-worker pattern.
 
-In this model, a future general MAS agent could run a `/deepresearch` prompt that asks it to use a search-capable top-level agent, a browser-capable top-level agent, and a writing-capable top-level agent. The workflow prompt supplies the research-specific sequencing and artifact expectations. The workers remain general.
+In this model, the general `mas` agent can run a `/deepresearch` prompt that asks it to use the `web` top-level agent for search and browser-control work, `writer` for prose artifacts, and `ask` for semantic evaluation or final PASS/FAIL checks. The workflow prompt supplies the research-specific sequencing and artifact expectations. The workers remain general.
 
 ## Design Principle
 
@@ -28,6 +28,7 @@ A durable capability is something that remains useful across many workflows:
 - Writing and editing files.
 - Reviewing code.
 - Reading repository context.
+- Chat-only reasoning, judging, classification, and semantic evaluation.
 - Performing OCR or vision-heavy inspection.
 
 A workflow is a task pattern:
@@ -39,7 +40,7 @@ A workflow is a task pattern:
 - PDF reading.
 - Release-note drafting.
 
-The top-level-agent MAS should avoid creating new worker identities just because a workflow has a phase name. Instead of creating a permanent `scout` worker for one research workflow, the MAS should call a general search agent with precise instructions for the scouting phase. Instead of creating a permanent `report-writer` worker for one workflow, it should call a general writing agent with the report contract for that invocation.
+The top-level-agent MAS should avoid creating new worker identities just because a workflow has a phase name. Instead of creating a permanent `collector` worker for one research workflow, the MAS should call `web` with precise instructions for source discovery or browser inspection. Instead of creating a permanent `report-writer` worker for one workflow, it should call `writer` with the report contract for that invocation.
 
 Tool permissions, skills, model choices, context-file behavior, and safety posture must stay structural. They should not be moved into workflow prompts. A prompt can ask a worker to behave like a collector for one task, but it should not grant browser access, filesystem access, or repository context access.
 
@@ -67,14 +68,29 @@ flowchart TD
     WorkflowPrompt --> CodeReview["/code-review"]
     MasAgent --> Extension["Top-level-agent extension"]
     Extension --> Registry["Eligible top-level agent registry"]
-    Registry --> SearchAgent["agents/search"]
-    Registry --> BrowserAgent["agents/browser"]
+    Registry --> AskAgent["agents/ask"]
+    Registry --> ScoutAgent["agents/scout"]
+    Registry --> WebAgent["agents/web"]
     Registry --> WriterAgent["agents/writer"]
     Registry --> CoderAgent["agents/coder"]
-    MasAgent --> Artifacts["Shared workspace artifacts"]
+    MasAgent --> Artifacts["Files in current working directory"]
 ```
 
-The MAS agent owns the user conversation. The workflow prompt tells the MAS how to decompose the task. The extension exposes eligible top-level agents as callable workers. Worker agents run in isolated child contexts and receive specific task instructions from the MAS.
+The MAS agent owns the user conversation. The workflow prompt tells the MAS how to decompose the task. The extension exposes eligible top-level agents as callable workers. Worker agents run in isolated child contexts, inherit the MAS process working directory, and receive specific task instructions from the MAS.
+
+## First-Version Core Workers
+
+The first version should include only the hard-coded core top-level agents:
+
+| Agent | Structural Capability | Expected Worker Uses |
+|-------|-----------------------|----------------------|
+| `ask` | No tools. Chat-only reasoning. | Q/A, semantic evaluation, classification, critique, PASS/FAIL judging. |
+| `scout` | `ls`, `find`, `grep`, `read`. | Read-only repo or directory exploration, codebase summaries, locating relevant files. |
+| `writer` | `ls`, `find`, `grep`, `read`, `write`, `edit`. | Documentation, prose editing, report drafting, artifact cleanup. |
+| `coder` | `ls`, `find`, `grep`, `read`, `write`, `edit`, `bash`. | Code changes, tests, command execution, build/debug loops. |
+| `web` | `ls`, `find`, `grep`, `read`, `bash` plus web/browser skills. | Web search, source extraction, browser-control, screenshots, citation-backed synthesis. |
+
+These are the only workers the experimental `mas` agent should expose at first. Workflow-specific agents such as `reader` and `deepresearch` should not be exposed as workers; their reusable behavior should migrate into prompt templates on `mas`, such as `/deepresearch`.
 
 ## New Extension
 
@@ -104,15 +120,15 @@ The extension should discover top-level agent config roots under:
 agents/
 ```
 
-Discovery should be explicit and conservative. The extension should not blindly expose every top-level agent. A future MAS should have an allowlist, for example:
+Discovery should be explicit and conservative. The extension should not blindly expose every top-level agent. The first implementation should use a hard-coded or MAS-local allowlist containing exactly:
 
 ```json
 {
-  "agents": ["search", "writer", "coder", "ask"]
+  "agents": ["ask", "scout", "writer", "coder", "web"]
 }
 ```
 
-Only allowlisted agents should appear in the MAS catalog. This avoids accidental recursion and prevents partially cleaned-up agents from being invoked as workers.
+Only those agents should appear in the MAS catalog. This avoids accidental recursion, prevents partially cleaned-up agents from being invoked as workers, and keeps the experiment focused on a small set of durable capability boundaries.
 
 The extension should exclude:
 
@@ -126,9 +142,11 @@ Name collisions should be resolved before runtime. If two eligible agents expose
 
 ## Workspace Agent Exclusion
 
-Workspace agents should be excluded from the first version.
+Workspace agents should be excluded from the first version. This is a worker-eligibility rule, not a requirement that users adopt dot-pi workspace agents for `mas`.
 
-Top-level agents normally launch through the dot-pi dispatcher. The dispatcher handles workspace selection, workspace creation, bootstrap sourcing, runtime environment setup, and resume behavior.
+The user chooses the execution directory by launching `mas` from an existing project or by creating and entering a clean directory before launch. The MAS and its workers operate in that current working directory. Workflow prompts may ask workers to create local directories such as `sources/`, `drafts/`, or `reports/`, but the top-level-agent MAS should not depend on the dot-pi workspace-agent lifecycle.
+
+Top-level agents normally launch through the dot-pi dispatcher. The dispatcher handles optional workspace selection, workspace creation, bootstrap sourcing, runtime environment setup, and resume behavior.
 
 A worker invocation from a MAS extension starts a child agent process directly. It does not run the target agent through the dispatcher. That means a workspace agent's launch lifecycle is not available to the child process.
 
@@ -155,14 +173,14 @@ An eligible top-level agent should include this file. The new extension should u
 The descriptor should be concise and operational. Suggested sections:
 
 ```markdown
-# search
+# web
 
 ## Capability
-Find and synthesize live web sources using configured search tools.
+Find, inspect, and synthesize live web sources using configured search and browser-control skills.
 
 ## Use When
 - A workflow needs fresh web source discovery.
-- The MAS needs URLs, titles, relevance notes, or source summaries.
+- The MAS needs URLs, titles, relevance notes, source summaries, screenshots, or targeted page extraction.
 
 ## Inputs
 - A focused research question.
@@ -182,6 +200,18 @@ Find and synthesize live web sources using configured search tools.
 ```
 
 The descriptor is not a replacement for the agent's system prompt. The system prompt defines the worker's behavior. The descriptor tells the MAS when and how to invoke that worker.
+
+Implementation should add these files before the new extension treats any agent as eligible:
+
+```text
+agents/ask/CAPABILITY.md
+agents/scout/CAPABILITY.md
+agents/writer/CAPABILITY.md
+agents/coder/CAPABILITY.md
+agents/web/CAPABILITY.md
+```
+
+Each descriptor should describe direct worker behavior, not launcher usage. Human-facing files such as `README.md`, `USAGE.md`, and `banner.txt` should not be parsed to build the MAS catalog.
 
 ## Workflow Prompts
 
@@ -204,10 +234,10 @@ For example, a future `/deepresearch` prompt might specify:
 
 Use top-level capability agents.
 
-1. Ask the search-capable agent to find source candidates for the user's topic.
-2. Ask the browser-capable agent to inspect selected URLs and save source notes.
-3. Ask the writing-capable agent to synthesize the saved notes into `report.md`.
-4. Ask a review-capable agent to check source coverage and factual consistency.
+1. Ask `web` to find source candidates for the user's topic.
+2. Ask `web` to inspect selected URLs and save source notes when an artifact is needed.
+3. Ask `writer` to synthesize the saved notes into `report.md`.
+4. Ask `ask` with a judge persona or inline judge contract to check source coverage and factual consistency.
 5. Read the final artifact and summarize the result to the user.
 ```
 
@@ -229,6 +259,8 @@ The MAS should pass explicit task instructions to each worker. Instructions shou
 - Expected output format.
 - Failure conditions.
 - Whether the answer should be concise or artifact-oriented.
+
+The worker process should inherit the MAS current working directory and the runtime environment needed by the target agent, including web/browser environment variables such as `$B` when calling `web`. The extension should set `PI_IS_SUBAGENT=1` for every worker invocation.
 
 The extension should capture worker output in a structured result that includes:
 
@@ -338,7 +370,7 @@ If promoted to files, contracts should live with the worker they constrain:
 agents/ask/contracts/pass-fail-judge.md
 agents/ask/contracts/semantic-evaluator.md
 agents/web/contracts/source-leads.md
-agents/browser/contracts/source-capture.md
+agents/web/contracts/source-capture.md
 agents/writer/contracts/research-report.md
 ```
 
@@ -350,7 +382,7 @@ The first implementation should prefer inline workflow guidance. Contract files 
 
 ## Artifact Handoffs
 
-The MAS root owns the shared workspace. Workers may contribute artifacts only when their structural permissions allow it and the task explicitly asks for it.
+The MAS root owns the current working directory as the shared artifact area. Workers may contribute artifacts only when their structural permissions allow it and the task explicitly asks for it.
 
 Large handoffs should use files instead of long return text. This keeps the parent context small and makes failures inspectable.
 
@@ -360,9 +392,9 @@ Recommended conventions:
 - `drafts/` for intermediate writing.
 - `reports/` or a named root file for final deliverables.
 - `screenshots/` for browser evidence.
-- `sessions/` for run logs.
+- `sessions/` for optional run logs when a workflow chooses to create them.
 
-The exact directories should be chosen by each workflow prompt or by the MAS bootstrap. Worker agents should not assume workflow-specific directories unless the invocation gives them.
+The exact directories should be chosen by each workflow prompt. Worker agents should not assume workflow-specific directories unless the invocation gives them.
 
 ## Subprocess-Aware Extensions
 
@@ -376,7 +408,7 @@ Any extension that launches a child agent should set this environment variable f
 
 This is especially important for tools that require live user input. A worker agent cannot pause and ask the user to choose from an interactive prompt because the parent MAS owns the user conversation. The child process usually runs with piped IO and returns structured output to the parent.
 
-The `questionnaire` tool is the motivating example. It is useful in an interactive top-level agent, but it should not be available to a worker agent. An extension like `questionnaire` should gate registration:
+The `questionnaire` tool is the motivating example. It is useful in an interactive top-level `writer` or `coder` session, and direct-use agents may include `questionnaire` in their `pi-args` `--tools` allowlist. The same tool should not be available when those agents are invoked as workers. The best first-version behavior is registration-time suppression in the extension:
 
 ```ts
 export default function questionnaire(pi: ExtensionAPI) {
@@ -390,6 +422,12 @@ export default function questionnaire(pi: ExtensionAPI) {
 ```
 
 Execution-time checks such as `ctx.hasUI` are still useful as a fallback, but they are not sufficient by themselves. If the tool is registered, the model may still see it and waste a turn trying to call it. Registration-time suppression is the cleaner behavior for subprocesses.
+
+This allows one top-level agent config to serve both direct interactive use and MAS worker use:
+
+- Direct `writer` or `coder`: `questionnaire` may be listed in `--tools`, registered by the extension, and visible to the model.
+- Worker `writer` or `coder`: the top-level-agent orchestrator sets `PI_IS_SUBAGENT=1`; the extension does not register `questionnaire`; the model cannot see or call it even if the direct-use `pi-args` allowlist contains the name.
+- Prompts for `writer` and `coder` should phrase questionnaire use as direct-interactive behavior only. In worker mode they should complete the delegated task or return a concise blocker instead of trying to ask the user.
 
 This convention applies beyond questionnaires:
 
@@ -405,11 +443,12 @@ Agent prompts should also account for this distinction. A direct-use top-level a
 
 The top-level-agent MAS must preserve structural boundaries:
 
-- A search-only agent should not gain write access because a prompt asks it to write.
-- A writer should not browse the web unless its config already permits it.
+- `ask` should not gain read access because a prompt asks it to inspect files.
+- `scout` should not gain write access because a prompt asks it to save notes.
+- `writer` should not browse the web unless its config already permits it.
 - A coding agent may load repository context when that is its intended role.
 - A non-coding research agent may disable repository context to avoid instruction leakage.
-- A browser-capable agent should keep browser safety rules in its own prompt and tools.
+- `web` should keep search, browser, citation, and external-side-effect safety rules in its own prompt and skills.
 
 Workflow prompts can narrow behavior but should not be trusted to create security boundaries.
 
@@ -462,6 +501,7 @@ Each eligible agent should have:
 - Clear context-file behavior.
 - No workspace requirement.
 - No assumptions that it is always speaking directly to a human.
+- Subprocess-safe extensions that suppress interactive tools and UI-only behavior when `PI_IS_SUBAGENT=1`.
 
 Direct-user friendliness is still useful, but worker use requires stricter input and output contracts.
 
@@ -471,24 +511,26 @@ The main risks are:
 
 - A direct-use top-level agent may ask clarifying questions when a worker should return a bounded result.
 - A writing or coding agent may make edits when the MAS expected analysis only.
-- A search agent may return a narrative answer when the workflow needs a parseable source list.
-- A browser agent may depend on dispatcher bootstrap that does not run in child invocation.
-- A worker may load repo context files that are unrelated to the MAS workspace.
+- `web` may return a narrative answer when the workflow needs a parseable source list.
+- `web` may depend on dispatcher-provided browser environment that must be inherited by the child process.
+- A worker may load repo context files that are unrelated to the MAS current working directory.
 - The MAS may select an overpowered worker when a safer limited worker exists.
+- A direct-use `questionnaire` instruction may leak into worker behavior unless the prompt and extension both account for subprocess mode.
 
 The design answers these risks with allowlists, capability descriptors, workspace exclusion, structural tool boundaries, and explicit workflow prompts.
 
-## Rollout Plan
+## Implementation Plan
 
-1. Write and review this specification.
-2. Clean up top-level agents and decide which are eligible for worker use.
-3. Add capability descriptors to eligible non-workspace agents.
-4. Implement the new extension separately from the existing orchestrator.
-5. Create an experimental general MAS agent that loads the new extension.
-6. Add one or two workflow prompts, starting with a small deep research workflow.
-7. Run smoke tests with simple single-worker calls.
-8. Run small multi-worker workflows and inspect artifacts.
-9. Decide whether any existing workflow-specific MAS should migrate.
+1. Update this specification until the first-version worker set and safety rules are stable.
+2. Add `CAPABILITY.md` to `ask`, `scout`, `writer`, `coder`, and `web`.
+3. Clean the five core agents for worker use: prompts, `pi-args`, skills, model defaults, context-file behavior, and subprocess-safe extensions.
+4. Make direct-use interactive tools such as `questionnaire` available to `writer` and `coder` only when not running with `PI_IS_SUBAGENT=1`.
+5. Implement `shared/extensions/top-level-agent-orchestrator/` separately from the existing nested-worker orchestrator.
+6. Configure `agents/mas/` with the new extension, an explicit core-agent allowlist, and a clear `SYSTEM.md`.
+7. Add workflow prompts to `agents/mas/prompts/`, starting with `/deepresearch`.
+8. Run smoke tests with each single worker: `ask`, `scout`, `writer`, `coder`, and `web`.
+9. Run small multi-worker workflows and inspect final artifacts, intermediate files, and worker outputs.
+10. Decide whether existing workflow-specific MAS agents should remain, be deprecated, or be reduced to `mas` prompt templates.
 
 ## Non-Goals
 
@@ -497,7 +539,8 @@ The design answers these risks with allowlists, capability descriptors, workspac
 - Do not make workspace top-level agents eligible in the first version.
 - Do not treat prompt instructions as a substitute for tool restrictions.
 - Do not auto-expose every top-level agent.
-- Do not migrate existing workflows before the top-level agents are cleaned up.
+- Do not expose workflow-specific top-level agents such as `reader` or `deepresearch` as workers.
+- Do not migrate existing workflows before the five core top-level agents are cleaned up.
 
 ## Open Design Questions
 
@@ -506,4 +549,4 @@ The design answers these risks with allowlists, capability descriptors, workspac
 - Should capability descriptors support structured frontmatter?
 - Should the extension support per-worker timeout and budget controls?
 - Should worker outputs include machine-readable artifact manifests?
-- Should a future version support dispatcher-mediated invocation for workspace agents?
+- Should `coder` load repository context files when invoked as a worker, or should context-file behavior differ between direct and subprocess use?
