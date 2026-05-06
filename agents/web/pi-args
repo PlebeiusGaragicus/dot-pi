@@ -1,5 +1,5 @@
 --model
 $DEFAULT_FAST_MODEL
 --tools
-bash
+ls,read,find,grep,bash
 --no-context-files

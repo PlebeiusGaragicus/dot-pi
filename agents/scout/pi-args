@@ -1,6 +1,6 @@
 --model
 $DEFAULT_FAST_MODEL
 --tools
-read,ls,grep,find
+ls,find,grep,read
 --no-skills
 --no-context-files

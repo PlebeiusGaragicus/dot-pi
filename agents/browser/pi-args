@@ -1,6 +1,0 @@
---model
-$DEFAULT_FAST_MODEL
---tools
-read,ls,bash
-# Disable repo context files for this browsing-focused agent.
---no-context-files

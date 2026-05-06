@@ -1,6 +1,7 @@
 --model
 $DEFAULT_AGENTIC_MODEL
-# --tools
-# read,bash,edit,write,grep,find,ls
+--tools
+ls,find,grep,read,write,edit,bash
 # NOTE: we DO want "context files" for codebases (AGENTS.md, CLAUDE.md, etc.)
+# TODO: ... but only when dispatched directly, not when invoked as a subagent.
 # --no-context-files
