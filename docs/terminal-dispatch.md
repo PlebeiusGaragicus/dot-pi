@@ -1,6 +1,6 @@
 # Terminal Dispatch
 
-`dotpi sync` creates shell commands in `core/bin/` such as `lm`, `browser`, and `deepresearch`. Each command is a symlink to `dispatch-agent`; the symlink name selects `agents/<name>/` as `PI_CODING_AGENT_DIR`, loads that agent's `pi-args`, sources `bootstrap.sh` when present, and then invokes `pi`.
+`dotpi sync` creates shell commands in `core/bin/` such as `lm`, `browser`, and `deepresearch`. Each **agent** command is a symlink to `dispatch-agent`; the symlink name selects `agents/<name>/` as `PI_CODING_AGENT_DIR`, loads that agent's `pi-args`, sources `bootstrap.sh` when present, and then invokes `pi`. **`core/bin/todo`** is different: it points at **`core/utilities/todo/todo`** (the JSONL todo CLI), unless an agent config named `todo` exists.
 
 This page documents the terminal contract shared by top-level standalone agents and MAS launchers.
 

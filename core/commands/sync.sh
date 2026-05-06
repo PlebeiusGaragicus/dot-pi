@@ -103,9 +103,13 @@ for d in "$DOT_PI_DIR"/agents/*/; do
     done
   fi
   link="$BIN_DIR/$name"
-  if [ ! -L "$link" ]; then
-    ln -sf ../../dispatch-agent "$link"
-    added=$((added + 1))
+  if [ "$name" = "todo" ]; then
+    : # core/bin/todo is set below (utility vs agents/todo dispatcher)
+  else
+    if [ ! -L "$link" ]; then
+      added=$((added + 1))
+    fi
+    ln -sfn ../../dispatch-agent "$link"
   fi
 done
 
@@ -117,6 +121,19 @@ fi
 if [ ! -L "$BIN_DIR/dotpi" ]; then
   ln -sf ../../dotpi "$BIN_DIR/dotpi"
   added=$((added + 1))
+fi
+
+# core/bin/todo: agents/todo reserves the name for dispatch-agent; otherwise JSONL todo CLI
+if [ -d "$DOT_PI_DIR/agents/todo" ]; then
+  if [ ! -L "$BIN_DIR/todo" ]; then
+    added=$((added + 1))
+  fi
+  ln -sfn ../../dispatch-agent "$BIN_DIR/todo"
+else
+  if [ ! -L "$BIN_DIR/todo" ]; then
+    added=$((added + 1))
+  fi
+  ln -sfn ../utilities/todo/todo "$BIN_DIR/todo"
 fi
 
 # Remove stale symlinks (point to dispatch-agent/dotpi but the agent no longer exists)

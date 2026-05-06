@@ -51,16 +51,16 @@ After a successful **`todo new`**, **`todo edit`**, **`todo finish`**, or **`tod
 
 ## install
 
-Create `~/.local/bin` if needed, symlink this repo’s `todo` script there, and ensure that directory is on your `PATH` (many shells include it by default; otherwise add `export PATH="$HOME/.local/bin:$PATH"` to your shell rc).
+**Recommended:** put dot-pi’s `core/bin` on your `PATH` (same as agent commands), then run `dotpi sync`. That creates `core/bin/todo` → `core/utilities/todo/todo` unless you have an agent config directory literally named `agents/todo` (that name reserves `core/bin/todo` for the dispatcher).
 
-If this repository lives at `~/.dot-pi`, run:
+**Manual:** create `~/.local/bin` if needed, symlink this repo’s `todo` script there, and ensure that directory is on your `PATH`:
 
 ```sh
 mkdir -p ~/.local/bin
 ln -sf "$HOME/.dot-pi/core/utilities/todo/todo" "$HOME/.local/bin/todo"
 ```
 
-If the repo is elsewhere, replace the first path with the absolute path to `core/utilities/todo/todo` inside your checkout.
+If the repo is elsewhere, replace the path with the absolute path to `core/utilities/todo/todo` inside your checkout.
 
 Check:
 
