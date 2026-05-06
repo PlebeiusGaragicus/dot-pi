@@ -1,7 +1,7 @@
 ---
-name: todo-cli
+name: todo
 description: Use bash for the `todo` cli utility for task lists management
-disable-model-invocation: false
+disable-model-invocation: true
 ---
 
 # Todo CLI
