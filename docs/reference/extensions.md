@@ -28,7 +28,7 @@ Current common extensions:
 
 Subagents are not interactive, so they do not get the top-level common bundle. `dotpi sync` wires only `shared/extensions-subagents/` into subagent config roots. For reusable subagents, the canonical root is `subagents/<name>/`, and MAS configs link those directories into `agents/<mas>/agents/`. MAS-specific local subagents can live directly under `agents/<mas>/agents/<name>/`.
 
-Specialized extensions stay out of the default bundles. Examples include `agent-orchestrator`, `agent-prompt`, `tavily`, `moods`, `plan-mode`, `questionnaire`, `bash-guardrails`, `auto-theme`, and `theme-cycler`.
+Specialized extensions stay out of the default bundles. Examples include `agent-orchestrator`, `agent-prompt`, `tavily`, `personas`, `plan-mode`, `questionnaire`, `bash-guardrails`, `auto-theme`, and `theme-cycler`.
 
 ### Repo-root service credentials
 

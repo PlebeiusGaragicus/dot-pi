@@ -239,6 +239,57 @@ The extension should capture worker output in a structured result that includes:
 - Usage statistics when available.
 - Artifact paths returned by the worker, if any.
 
+## Invocation Personas
+
+Some workers need a reusable voice, stance, or reasoning style without making the MAS pass a long prompt on every invocation. This should be handled with named personas local to the worker agent.
+
+Personas live under the worker config root:
+
+```text
+agents/ask/personas/chat.md
+agents/ask/personas/plato.md
+```
+
+A persona file is a system-prompt overlay with frontmatter:
+
+```markdown
+---
+description: Direct and sharp; anti-slop, real opinions
+mode: replace
+---
+
+You are a conversational partner running in chat-only mode...
+```
+
+The `mode` field controls prompt composition:
+
+- `append`: preserve the base system prompt and append the persona block.
+- `prepend`: put the persona block before the base system prompt.
+- `replace`: replace the base system prompt entirely.
+
+If `personas/helpful.md` exists, it is the default persona. Agents that want a neutral baseline should encode that baseline as `helpful` rather than relying on a persona-less or "off" state.
+
+The default should be `append`, because capability agents often have safety, tool, or task instructions in their base prompt that must remain active. `replace` is appropriate for tiny chat-only agents such as `ask`, where the static prompt exists mainly to prevent pi from injecting its default system prompt.
+
+The personas extension should support two activation paths:
+
+- `/persona <name>` for interactive top-level use.
+- `--persona <name>` for subprocess and MAS use.
+
+The MAS should invoke a persona by name, not by passing its full text. For example:
+
+```json
+{
+  "agent": "ask",
+  "persona": "chat",
+  "task": "Evaluate whether this argument is persuasive: ..."
+}
+```
+
+This keeps orchestration prompts short while preserving traceability. The selected persona remains auditable in the worker's config directory, and the MAS only decides when a persona is appropriate.
+
+Personas are not capabilities. They should not be used to grant tools, browser access, repository context, or filesystem permissions. If persona frontmatter can alter tools or skills, that behavior must remain explicit and should be treated as part of the worker's structural contract.
+
 ## Artifact Handoffs
 
 The MAS root owns the shared workspace. Workers may contribute artifacts only when their structural permissions allow it and the task explicitly asks for it.
@@ -254,6 +305,43 @@ Recommended conventions:
 - `sessions/` for run logs.
 
 The exact directories should be chosen by each workflow prompt or by the MAS bootstrap. Worker agents should not assume workflow-specific directories unless the invocation gives them.
+
+## Subprocess-Aware Extensions
+
+The new top-level-agent extension should preserve the existing subprocess convention used by nested-agent orchestration:
+
+```text
+PI_IS_SUBAGENT=1
+```
+
+Any extension that launches a child agent should set this environment variable for the child process. Any extension that provides interactive or parent-only behavior should check it before registering tools, commands, hooks, prompt augmentation, or UI affordances that do not make sense in a worker process.
+
+This is especially important for tools that require live user input. A worker agent cannot pause and ask the user to choose from an interactive prompt because the parent MAS owns the user conversation. The child process usually runs with piped IO and returns structured output to the parent.
+
+The `questionnaire` tool is the motivating example. It is useful in an interactive top-level agent, but it should not be available to a worker agent. An extension like `questionnaire` should gate registration:
+
+```ts
+export default function questionnaire(pi: ExtensionAPI) {
+	if (process.env.PI_IS_SUBAGENT === "1") return;
+
+	pi.registerTool({
+		name: "questionnaire",
+		// ...
+	});
+}
+```
+
+Execution-time checks such as `ctx.hasUI` are still useful as a fallback, but they are not sufficient by themselves. If the tool is registered, the model may still see it and waste a turn trying to call it. Registration-time suppression is the cleaner behavior for subprocesses.
+
+This convention applies beyond questionnaires:
+
+- UI-only commands should skip registration or no-op when invoked as a worker.
+- Tools that request approval, confirmation, or free-form user input should not be exposed to worker agents.
+- Prompt augmentation meant for an interactive parent should not be injected into child agents.
+- Status widgets, notifications, speech, and other user-facing affordances should check both `PI_IS_SUBAGENT` and UI availability.
+- Extensions that are safe in subprocesses should document that assumption.
+
+Agent prompts should also account for this distinction. A direct-use top-level agent may ask clarifying questions, but the same agent invoked as a worker should complete the delegated task or return a concise blocker. If a prompt tells an agent to use an interactive tool at the start of every task, that prompt must be revised before the agent is eligible for worker use.
 
 ## Structural Boundaries
 

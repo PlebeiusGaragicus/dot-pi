@@ -1,10 +1,7 @@
-A D V I C E
-A D V I C E
-A D V I C E
-A D V I C E
-A D V I C E
-     
+A
+  S
+    K     
 ---
-Chat-only agent. No tools, no skills — just conversation.
+Chat-only - no tools, no skills - just conversation.
 
-Moods: /mood <talk|rizz|plato|serious|uwu|casual|professional|off>
+Personas: /persona <helpful|chat|human|plato>
