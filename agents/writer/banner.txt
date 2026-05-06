@@ -5,6 +5,5 @@ __ __ ___ _(_) |_ ___ _ _
                           
 
 ---
-Agent: writer
 
 Writing and documentation assistant — prose, revisions, and repo docs in your cwd.

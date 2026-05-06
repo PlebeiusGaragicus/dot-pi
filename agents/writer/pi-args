@@ -1,6 +1,6 @@
 --model
 $DEFAULT_AGENTIC_MODEL
+# NOTE: we want all tools for this agent.
 # --tools
 # read,bash,edit,write,grep,find,ls
-# NOTE: we DO want "context files" for codebases (AGENTS.md, CLAUDE.md, etc.)
 # --no-context-files

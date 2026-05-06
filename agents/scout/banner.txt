@@ -1,0 +1,8 @@
+S C O U T              
+S C O U T              
+S C O U T              
+S C O U T
+
+---
+
+read-only agent for exploring the filesystem.

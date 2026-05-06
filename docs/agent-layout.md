@@ -39,7 +39,7 @@ agents/example-mas/
 │   ├── say -> ../../../shared/extensions-common/say
 │   └── model-default -> ../../../shared/extensions-common/model-default
 ├── prompts/
-│   ├── help.md -> ../../../shared/prompts/help.md
+│   ├── introduction.md -> ../../../shared/prompts/introduction.md
 │   └── research-and-write.md
 ├── skills/
 │   └── tavily-search -> ../../../shared/skills/tavily-search
@@ -226,7 +226,7 @@ Standalone agents do not need this directory.
 
 ### `prompts/`
 
-Prompt templates invoked inside pi with `/template-name`. Scaffolds link `prompts/help.md` to `shared/prompts/help.md`; you can add workflow-specific templates beside it.
+Prompt templates invoked inside pi with `/template-name`. Scaffolds link `prompts/introduction.md` to `shared/prompts/introduction.md` (shared “explain yourself / help” template); you can add workflow-specific templates beside it.
 
 Prompt templates are useful for stable workflows such as research-write-edit chains, fixed implementation/review loops, or repeatable report generation.
 
@@ -355,7 +355,7 @@ agents/example-standalone/
 │   ├── save -> ../../../shared/extensions-common/save
 │   └── model-default -> ../../../shared/extensions-common/model-default
 ├── prompts/
-│   └── help.md -> ../../../shared/prompts/help.md
+│   └── introduction.md -> ../../../shared/prompts/introduction.md
 ├── skills/
 └── themes/
 ```

@@ -19,7 +19,7 @@ fi
 echo "Creating multi-agent system '$mas_name'..."
 mkdir -p "$mas_dir/extensions" "$mas_dir/agents" "$mas_dir/prompts" "$mas_dir/skills" "$mas_dir/sessions"
 
-ln -sf "../../../shared/prompts/help.md" "$mas_dir/prompts/help.md"
+ln -sf "../../../shared/prompts/introduction.md" "$mas_dir/prompts/introduction.md"
 
 link_extension_bundle "$SHARED_DIR/extensions-common" "$mas_dir/extensions" "../../../shared/extensions-common"
 ln -sfn "../../../shared/extensions/agent-orchestrator" "$mas_dir/extensions/agent-orchestrator"
@@ -197,7 +197,7 @@ echo "  $mas_dir/"
 echo "    extensions/          (common bundle plus MAS-specific agent-orchestrator)"
 echo "    agents/              (add or link subagent config directories here)"
 echo "    USAGE.md             (man-style text for mas help / -h / --help)"
-echo "    prompts/             (add workflow prompt templates here)"
+echo "    prompts/             (shared introduction.md symlinked; add workflow templates here)"
 echo "    skills/              (empty — use dotpi link-skill $mas_name <skill>)"
 echo "    themes/              (individual themes symlinked from shared)"
 echo "    bin/                 (symlinked to shared/bin, gitignored contents)"

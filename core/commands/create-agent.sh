@@ -19,7 +19,7 @@ fi
 echo "Creating standalone agent '$agent_name'..."
 mkdir -p "$agent_dir/extensions/$agent_name" "$agent_dir/skills" "$agent_dir/sessions" "$agent_dir/prompts"
 
-ln -sf "../../../shared/prompts/help.md" "$agent_dir/prompts/help.md"
+ln -sf "../../../shared/prompts/introduction.md" "$agent_dir/prompts/introduction.md"
 
 link_extension_bundle "$SHARED_DIR/extensions-common" "$agent_dir/extensions" "../../../shared/extensions-common"
 
@@ -199,7 +199,7 @@ echo "Directory layout:"
 echo "  $agent_dir/"
 echo "    extensions/              ($agent_name/ plus common extension bundle)"
 echo "    skills/                  (empty — use dotpi link-skill $agent_name <skill>)"
-echo "    prompts/                 (shared help.md symlinked; add agent-specific prompts here)"
+echo "    prompts/                 (shared introduction.md symlinked; add agent-specific prompts here)"
 echo "    USAGE.md                 (man-style text for agent help / -h / --help)"
 echo "    themes/                  (individual themes symlinked from shared)"
 echo "    bin/                     (symlinked to shared/bin, gitignored contents)"

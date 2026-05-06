@@ -1,2 +1,2 @@
 
-Read and follow your skills, as needed.
+Proactively read your skills for instructions.

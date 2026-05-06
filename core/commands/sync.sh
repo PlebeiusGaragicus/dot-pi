@@ -71,6 +71,12 @@ done
 for d in "$DOT_PI_DIR"/agents/*/; do
   [ -d "$d" ] || continue
   name=$(basename "$d")
+  mkdir -p "$d/prompts"
+  ln -sfn ../../../shared/prompts/introduction.md "$d/prompts/introduction.md"
+  # Legacy prompts/help.md (removed); drop stale symlinks or old copies
+  if [ -L "$d/prompts/help.md" ] || [ -f "$d/prompts/help.md" ]; then
+    rm -f "$d/prompts/help.md"
+  fi
   ln -sf ../../shared/auth.json "$d/auth.json"
   link_extension_bundle "$SHARED_DIR/extensions-common" "$d/extensions" "../../../shared/extensions-common"
   if [ -e "$d/extensions/agent-orchestrator/index.ts" ]; then
