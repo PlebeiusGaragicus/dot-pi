@@ -1,66 +1,72 @@
 ---
 name: arxiv-search
-description: Search papers via arXiv
+description: Search and fetch arXiv papers using local scripts. Use for academic paper discovery, arXiv paper lookup, and reading arXiv HTML papers for synthesis or review.
 disable-model-invocation: false
 ---
 
-## Step 1 - search arXiv
+# arXiv CLI
 
-URL-encode the user's query into `<Q>` (spaces -> `+`, `:` -> `%3A`). Default `<SORT>=relevance`; use `submittedDate` or `lastUpdatedDate` instead if the user asks for "recent" or "latest".
+Use the scripts in `scripts/` for arXiv search and HTML paper fetches. They use only standard Python plus `pandoc` for HTML-to-text conversion.
 
-Run this command verbatim. Substitute only `<Q>` and `<SORT>`. Do not modify the User-Agent, the URL, the flags, or the output paths:
+Run commands from this skill directory unless you provide an absolute script path. The scripts print readable text by default, support `--json` where useful, and print specific `Error:` lines to stderr on failure.
+
+## Commands
+
+Always invoke scripts by path from this skill directory:
 
 ```bash
-curl -fsSL -A "pi-search-agent" \
-  "http://export.arxiv.org/api/query?search_query=<Q>&start=0&max_results=25&sortBy=<SORT>&sortOrder=descending" \
-  -o /tmp/arxiv-search.xml
-python3 - <<'PY' > /tmp/arxiv-search.txt
-import xml.etree.ElementTree as ET
-ns = {"a": "http://www.w3.org/2005/Atom"}
-root = ET.parse("/tmp/arxiv-search.xml").getroot()
-entries = root.findall("a:entry", ns)
-if not entries:
-    print("NO_RESULTS")
-for e in entries:
-    aid = e.find("a:id", ns).text.rsplit("/", 1)[-1]
-    title = " ".join(e.find("a:title", ns).text.split())
-    authors = ", ".join(a.find("a:name", ns).text for a in e.findall("a:author", ns))
-    pub = e.find("a:published", ns).text[:10]
-    summ = " ".join(e.find("a:summary", ns).text.split())
-    print(f"[{aid}] {pub} - {title}\n  {authors}\n  {summ}\n")
-PY
+python3 scripts/arxiv-search.py "ti:rotary AND abs:position AND cat:cs.LG" --num 10
+python3 scripts/arxiv-search.py "abs:\"rotary position embedding\" AND cat:cs.CL" --sort submittedDate
+python3 scripts/arxiv-fetch.py 2104.09864 --max-chars 12000
 ```
 
-## Step 1b - tool output
+## Search
 
-The bash block above writes results to `/tmp/arxiv-search.txt` and prints **nothing on stdout**. If the shell tool reports `(no output)` or empty stdout, **treat that as success** and proceed to Step 2 by reading `/tmp/arxiv-search.txt`. **Do not** re-run Step 1 with the same `<Q>` to "fix" the empty stdout - that just repeats work and risks rate limiting.
+Use `arxiv-search.py` first to find candidate papers:
 
-The only failure signal is a non-zero exit from `curl` or `python3` (e.g. network error, malformed XML). In that case, surface the error to the user and stop.
+```bash
+python3 scripts/arxiv-search.py "retrieval augmented generation" --num 8
+python3 scripts/arxiv-search.py "ti:transformer AND cat:cs.CL" --sort relevance
+python3 scripts/arxiv-search.py "cat:cs.LG AND abs:diffusion" --sort submittedDate
+```
 
-## Step 2 - present results
+Options:
 
-Use the `Read` tool on `/tmp/arxiv-search.txt` (preferred over piping through bash). If it contains `NO_RESULTS`, tell the user no papers matched and suggest broadening the query (drop field prefixes, remove `AND` clauses, try synonyms).
+- `--num N`: result count, default 10, max 50.
+- `--sort SORT`: `relevance`, `submittedDate`, or `lastUpdatedDate`; default `relevance`. Use `submittedDate` for recent/latest requests.
+- `--json`: print parsed results as JSON.
 
-Otherwise show the user a numbered list of candidates with:
+Build precise queries. arXiv field prefixes include `ti:` (title), `au:` (author), `abs:` (abstract), `cat:` (category, e.g. `cs.LG`, `cs.CL`, `stat.ML`), and `all:` (everything). Combine terms with `AND`, `OR`, and `ANDNOT`.
 
-- arXiv id
-- publication date
-- title
-- first 1-2 authors et al.
-- a 1-sentence gloss of the abstract
+Avoid naked `all:` plus wide `OR` for ambiguous terms. For short tokens like RoPE, MoE, or RAG, restrict to `ti:` or `abs:` and add `cat:` constraints. If the user provides an arXiv id, use `id:<id>` rather than broad search.
 
-Then **answer the user's actual question in the same turn**, using the candidates as evidence. If the user asked "where did X come from?", "what is the SOTA?", or any comparative/historical question, the list alone is not an answer - identify the seminal paper and the most relevant recent ones, and explain in prose. Only stop at the list when the user explicitly asked for a search/listing.
+## Fetch
 
-Do not auto-fetch full papers - wait for the user to pick one to dig into. When they do, hand off to the `arxiv-fetch` skill with the chosen id.
+Use `arxiv-fetch.py` after search when one paper is worth reading more deeply:
 
-## Notes
+```bash
+python3 scripts/arxiv-fetch.py 1706.03762 --max-chars 20000
+python3 scripts/arxiv-fetch.py https://arxiv.org/abs/2104.09864 --output /tmp/arxiv-2104.09864.txt
+```
 
-- arXiv field prefixes for `search_query`: `ti:` (title), `au:` (author), `abs:` (abstract), `cat:` (category, e.g. `cs.LG`, `cs.CL`, `stat.ML`), `all:` (everything). Combine with `AND`, `OR`, `ANDNOT` (URL-encode spaces as `+`).
-- **Build precise queries.** Avoid naked `all:` plus wide `OR` for ambiguous tokens - they pull in unrelated domains (e.g. searching for "RoPE" returns lifting ropes, flux ropes, positional games). Prefer `ti:`, `abs:`, and `cat:` combined with `AND`. Concrete patterns:
-  - `ti:rotary+AND+abs:position+AND+cat:cs.LG`
-  - `abs:%22rotary+position+embedding%22+AND+cat:cs.CL`
-- **Acronym trap.** For short tokens (RoPE, MoE, RAG, etc.), restrict to `ti:` or `abs:` - or wrap as a quoted phrase - and constrain by `cat:` so hits stay in the right field.
-- **Known id shortcut.** If the user already gave (or you have already identified) an arXiv id, skip broad search and use `id:<id>` once as `<Q>`. Do not loop the same `id:` lookup.
-- **One query per user message.** Run Step 1 at most once for the same intent in the same turn; never repeat the same `search_query` URL. If results are already cached in `/tmp/arxiv-search.txt`, reuse them. Only re-search if the user changes the query.
-- Be polite: arXiv asks for ~1 req/sec at most; never poll.
-- The cached file `/tmp/arxiv-search.xml` is the raw Atom response if you need to re-parse it; `/tmp/arxiv-search.txt` is the rendered list.
+Options:
+
+- `--max-chars N`: max text characters in readable stdout, default 20000.
+- `--output PATH`: write the full converted text to a file and print a short status line.
+
+Never fetch the PDF. If the script says the paper has no arXiv HTML version, tell the user and stop unless they ask for another retrieval path.
+
+## Workflow
+
+1. Search with 5-10 results unless the task clearly needs broader coverage.
+2. Answer the user's actual question in the same turn using the search results when possible; do not return only a list unless they asked for one.
+3. Fetch full paper text only after a specific candidate is selected or clearly necessary.
+4. For paper-specific answers, cite paper section headings. Quote sparingly; prefer paraphrase with section references.
+5. Run at most one equivalent search per user message. Re-search only when the query changes.
+6. Be polite: arXiv asks for about 1 request per second at most; never poll.
+
+## Failure Handling
+
+- If a script exits nonzero, read stderr before retrying.
+- If search returns no results, suggest broadening the query by dropping field prefixes, removing `AND` clauses, or trying synonyms.
+- If output is too verbose, retry with fewer results or a lower `--max-chars` value.
