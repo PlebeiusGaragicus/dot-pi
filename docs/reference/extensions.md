@@ -32,7 +32,7 @@ Specialized extensions stay out of the default bundles. Examples include `agent-
 
 ### Repo-root service credentials
 
-Extensions that support repo-local API keys use files named **`.service-name.env`** next to `env.sh`, for example `.exa.env` and `.tavily.env`. Environment variables for the same keys always win when set. These files are gitignored.
+Extensions that support repo-local API keys use files named **`.service-name.env`** at the dot-pi repo root, for example `.exa.env` and `.tavily.env`. Environment variables for the same keys always win when set. These files are gitignored.
 
 ## Extension Structure
 

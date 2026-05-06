@@ -22,7 +22,7 @@ export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
 
 The `${VAR:-...}` form is intentional: inline environment variables keep priority over the file.
 
-`model-defaults` is not sourced by `env.sh`. It is loaded at agent launch time by `dispatch-agent` and, for subagents, by `agent-orchestrator`, after the current agent config root is known. That allows agent-local `.model` files to override repo defaults without masking true inline environment overrides.
+`model-defaults` is loaded at agent launch time by `dispatch-agent` and, for subagents, by `agent-orchestrator`, after the current agent config root is known. That allows agent-local `.model` files to override repo defaults without masking true inline environment overrides.
 
 ### Agent `.model`
 

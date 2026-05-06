@@ -5,23 +5,10 @@ import process from "node:process";
 export const API_BASE = "https://api.exa.ai";
 
 export function findDotPiRoot() {
-	let dir = process.cwd();
-	for (let i = 0; i < 8; i++) {
-		if (fs.existsSync(path.join(dir, "env.sh"))) return dir;
-		const parent = path.dirname(dir);
-		if (parent === dir) break;
-		dir = parent;
+	if (!process.env.DOT_PI_DIR) {
+		throw new Error("DOT_PI_DIR is not set; run this skill through dispatch-agent.");
 	}
-
-	let scriptDir = path.dirname(new URL(import.meta.url).pathname);
-	for (let i = 0; i < 8; i++) {
-		if (fs.existsSync(path.join(scriptDir, "env.sh"))) return scriptDir;
-		const parent = path.dirname(scriptDir);
-		if (parent === scriptDir) break;
-		scriptDir = parent;
-	}
-
-	return process.cwd();
+	return process.env.DOT_PI_DIR;
 }
 
 export function loadExaKey() {

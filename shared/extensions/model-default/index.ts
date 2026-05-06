@@ -16,14 +16,10 @@ type Role = (typeof ROLES)[number];
 type CommandContext = Parameters<Parameters<ExtensionAPI["registerCommand"]>[1]["handler"]>[1];
 
 function findDotPiRoot(): string {
-	let dir = getAgentDir();
-	for (let i = 0; i < 6; i++) {
-		if (fs.existsSync(path.join(dir, "dotpi"))) return dir;
-		const parent = path.dirname(dir);
-		if (parent === dir) break;
-		dir = parent;
+	if (!process.env.DOT_PI_DIR) {
+		throw new Error("DOT_PI_DIR is not set; run this extension through dispatch-agent.");
 	}
-	return path.dirname(getAgentDir());
+	return process.env.DOT_PI_DIR;
 }
 
 function readModels(): string[] {

@@ -137,9 +137,10 @@ assert_contains "$CAPTURE_OUT" "Workspaces for browser:" "browser picker resume 
 assert_contains "$CAPTURE_OUT" "Resuming: $FIXTURE/agents/browser/workspaces/2026-04-29-000000--prefix" "browser picker resume prompt"
 assert_contains "$CAPTURE_OUT" $'\tcontinue from picker' "browser picker resume prompt"
 
-# --- Skill bootstrap tests ---
+# --- Skills do not run launch-time bootstraps ---
 
-# Create an in-situ agent with a skill that has scripts/bootstrap.sh
+# Create an in-situ agent with a skill that has scripts/bootstrap.sh.
+# Skill scripts are normal skill assets and must not be sourced at launch.
 mkdir -p "$FIXTURE/agents/searcher/skills/test-skill/scripts"
 ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/searcher"
 
@@ -150,8 +151,8 @@ $DEFAULT_FAST_MODEL
 EOF
 
 cat > "$FIXTURE/agents/searcher/skills/test-skill/scripts/bootstrap.sh" <<'EOF'
-export SKILL_BOOTSTRAP_SENTINEL="test-skill-ran"
-echo "skill bootstrap: test-skill loaded"
+echo "skill bootstrap should not run"
+return 1
 EOF
 
 cat > "$FIXTURE/agents/searcher/skills/test-skill/SKILL.md" <<'EOF'
@@ -162,81 +163,18 @@ description: Smoke test skill
 # Test Skill
 EOF
 
-run_capture "skill bootstrap runs" "$FIXTURE/core/bin/searcher"
-assert_contains "$CAPTURE_OUT" "PI_CODING_AGENT_DIR=$FIXTURE/agents/searcher" "skill bootstrap agent"
-# Check bootstrap log recorded the skill
-BOOTSTRAP_LOG="$FIXTURE/agents/searcher/sessions/bootstrap.log"
-[ -f "$BOOTSTRAP_LOG" ] || fail "skill bootstrap: bootstrap.log not created"
-LOG_CONTENT=$(cat "$BOOTSTRAP_LOG")
-assert_contains "$LOG_CONTENT" "bootstrap start: skill test-skill" "skill bootstrap log start"
-assert_contains "$LOG_CONTENT" "bootstrap end: skill test-skill status=0" "skill bootstrap log end"
-assert_contains "$LOG_CONTENT" "skill bootstrap: test-skill loaded" "skill bootstrap output"
-
-# Skill bootstrap + agent bootstrap: agent runs first, skill second
 cat > "$FIXTURE/agents/searcher/bootstrap.sh" <<'EOF'
 export AGENT_BOOTSTRAP_SENTINEL="agent-ran"
 echo "agent bootstrap: searcher loaded"
 EOF
 
-run_capture "agent+skill bootstrap order" "$FIXTURE/core/bin/searcher"
+run_capture "skill bootstrap ignored" "$FIXTURE/core/bin/searcher"
+assert_contains "$CAPTURE_OUT" "PI_CODING_AGENT_DIR=$FIXTURE/agents/searcher" "skill bootstrap ignored agent"
 BOOTSTRAP_LOG="$FIXTURE/agents/searcher/sessions/bootstrap.log"
+[ -f "$BOOTSTRAP_LOG" ] || fail "skill bootstrap ignored: bootstrap.log not created"
 LOG_CONTENT=$(cat "$BOOTSTRAP_LOG")
-assert_contains "$LOG_CONTENT" "bootstrap start: agent searcher" "agent+skill: agent logged"
-assert_contains "$LOG_CONTENT" "bootstrap start: skill test-skill" "agent+skill: skill logged"
-
-# Multiple skills sorted by name
-mkdir -p "$FIXTURE/agents/searcher/skills/alpha-skill/scripts"
-cat > "$FIXTURE/agents/searcher/skills/alpha-skill/scripts/bootstrap.sh" <<'EOF'
-echo "skill bootstrap: alpha loaded"
-EOF
-
-mkdir -p "$FIXTURE/agents/searcher/skills/zeta-skill/scripts"
-cat > "$FIXTURE/agents/searcher/skills/zeta-skill/scripts/bootstrap.sh" <<'EOF'
-echo "skill bootstrap: zeta loaded"
-EOF
-
-run_capture "multi-skill bootstrap order" "$FIXTURE/core/bin/searcher"
-BOOTSTRAP_LOG="$FIXTURE/agents/searcher/sessions/bootstrap.log"
-LOG_CONTENT=$(cat "$BOOTSTRAP_LOG")
-# alpha before test-skill before zeta (sorted)
-alpha_pos=$(printf '%s' "$LOG_CONTENT" | grep -n "skill alpha-skill" | head -1 | cut -d: -f1)
-test_pos=$(printf '%s' "$LOG_CONTENT" | grep -n "skill test-skill" | head -1 | cut -d: -f1)
-zeta_pos=$(printf '%s' "$LOG_CONTENT" | grep -n "skill zeta-skill" | head -1 | cut -d: -f1)
-[ "$alpha_pos" -lt "$test_pos" ] || fail "multi-skill order: alpha should come before test-skill"
-[ "$test_pos" -lt "$zeta_pos" ] || fail "multi-skill order: test-skill should come before zeta"
-
-# Failure path: skill bootstrap returning non-zero stops launch
-mkdir -p "$FIXTURE/agents/failtest/skills/bad-skill/scripts"
-ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/failtest"
-cat > "$FIXTURE/agents/failtest/pi-args" <<'EOF'
---no-context-files
-EOF
-
-cat > "$FIXTURE/agents/failtest/skills/bad-skill/scripts/bootstrap.sh" <<'EOF'
-echo "bad-skill: about to fail"
-return 1
-EOF
-
-set +e
-output=$(DOT_PI_DIR="$FIXTURE" DOTPI_DISPATCH_CAPTURE_PI=1 "$FIXTURE/core/bin/failtest" < /dev/null 2>&1)
-status=$?
-set -e
-[ "$status" -ne 0 ] || fail "failing skill bootstrap: expected non-zero exit"
-assert_contains "$output" "Bootstrap failed" "failing skill bootstrap message"
-assert_contains "$output" "bad-skill" "failing skill bootstrap names skill"
-
-# Skills without scripts/bootstrap.sh are silently skipped
-mkdir -p "$FIXTURE/agents/searcher/skills/no-bootstrap-skill"
-cat > "$FIXTURE/agents/searcher/skills/no-bootstrap-skill/SKILL.md" <<'EOF'
----
-name: no-bootstrap-skill
-description: Skill with no bootstrap
----
-EOF
-
-run_capture "skill without bootstrap skipped" "$FIXTURE/core/bin/searcher"
-BOOTSTRAP_LOG="$FIXTURE/agents/searcher/sessions/bootstrap.log"
-LOG_CONTENT=$(cat "$BOOTSTRAP_LOG")
-assert_not_contains "$LOG_CONTENT" "no-bootstrap-skill" "skill without bootstrap not logged"
+assert_contains "$LOG_CONTENT" "bootstrap start: agent searcher" "skill bootstrap ignored: agent logged"
+assert_not_contains "$LOG_CONTENT" "skill test-skill" "skill bootstrap ignored: skill not logged"
+assert_not_contains "$LOG_CONTENT" "skill bootstrap should not run" "skill bootstrap ignored: script output absent"
 
 echo "dispatch-agent smoke: ok"

@@ -19,10 +19,9 @@ SYNOPSIS
 
 DESCRIPTION
        browser launches pi with this agent’s config inside a dated
-       workspace under agents/browser/workspaces/.  Bootstrap prepares state,
-       exports $B (browser-runtime binary or source fallback), sets
-       BROWSER_CONTROL_STATE_DIR, runs $B status, and logs to
-       bootstrap.log.
+       workspace under agents/browser/workspaces/.  Dispatch prepares $B
+       (browser-runtime binary or source fallback). Bootstrap creates browser
+       state directories, runs $B status, and logs to bootstrap.log.
 
        Pi and bash tool calls inherit $B; the agent should run
        $B <subcommand> without re-exporting the path each time unless
@@ -71,13 +70,13 @@ FILES
               Pi session JSONL when the launcher passes --session-dir.
 
 ENVIRONMENT
-       $B     Set by bootstrap before pi starts: path to the compiled
+       $B     Set by dispatch before pi starts: path to the compiled
               browser-control binary, or bun run …/cli.ts fallback.
               Inherited by the agent; use $B in bash as-is.
 
        BROWSER_CONTROL_STATE_DIR
-              Set by bootstrap to <workspace>/.browser-control/.
-              Writable state directory for browser-control.
+              Optional override. Normally unset; browser-control resolves
+              workspace state to <workspace>/.browser-control/.
 
 EXAMPLES
        browser - open https://example.org and summarize it

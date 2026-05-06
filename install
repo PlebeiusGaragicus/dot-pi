@@ -193,7 +193,6 @@ do_install() {
         echo ""
         echo "$(green '# dot-pi — pi agent launcher')"
         echo "$(green "export PATH=\"\$HOME/.dot-pi/core/bin:\$PATH\"")"
-        echo "$(green "source \"\$HOME/.dot-pi/env.sh\"")"
         echo ""
       fi
       echo "    To update:         $DOT_PI_HOME/install --force-rebase"
@@ -266,7 +265,6 @@ do_install() {
     echo ""
     echo "$(green '# dot-pi — pi agent launcher')"
     echo "$(green "export PATH=\"\$HOME/.dot-pi/core/bin:\$PATH\"")"
-    echo "$(green "source \"\$HOME/.dot-pi/env.sh\"")"
     echo ""
   fi
   echo ""

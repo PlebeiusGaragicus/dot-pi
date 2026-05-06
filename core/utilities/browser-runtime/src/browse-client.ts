@@ -1,6 +1,5 @@
 import * as fs from 'fs';
-import * as path from 'path';
-import * as cp from 'child_process';
+import { resolveConfig } from './config.js';
 
 export interface BrowseClientOptions {
   port?: number;
@@ -70,14 +69,5 @@ export class BrowseClient {
 export const browse = new BrowseClient();
 
 function defaultStateFile(): string {
-  try {
-    const proc = cp.spawnSync('git', ['rev-parse', '--show-toplevel'], {
-      encoding: 'utf-8',
-      timeout: 2000,
-    });
-    const root = proc.status === 0 ? proc.stdout.trim() : process.cwd();
-    return path.join(root, '.browser-control', 'browse.json');
-  } catch {
-    return path.join(process.cwd(), '.browser-control', 'browse.json');
-  }
+  return resolveConfig().stateFile;
 }

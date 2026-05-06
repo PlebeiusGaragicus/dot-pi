@@ -16,7 +16,7 @@
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { getAgentDir, getMarkdownTheme } from "@mariozechner/pi-coding-agent";
+import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
 import { Type } from "typebox";
 import * as fs from "node:fs";
@@ -28,12 +28,10 @@ const STATUS_KEY = "tavily-usage";
 const TAVILY_KEY_FILE = ".tavily.env";
 
 function findDotPiRoot(): string {
-    let dir = getAgentDir();
-    for (let i = 0; i < 5; i++) {
-        if (fs.existsSync(path.join(dir, "env.sh"))) return dir;
-        dir = path.dirname(dir);
+    if (!process.env.DOT_PI_DIR) {
+        throw new Error("DOT_PI_DIR is not set; run this extension through dispatch-agent.");
     }
-    return path.dirname(getAgentDir());
+    return process.env.DOT_PI_DIR;
 }
 
 function loadTavilyKey(): string | null {

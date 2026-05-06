@@ -1,6 +1,6 @@
 # collector
 
-Fetches one URL with a headless browser, extracts the main content, saves cleaned markdown to `sources/`, and saves a screenshot to `screenshots/`.
+Fetches one URL with browser-control (`$B`), extracts the main content, saves cleaned markdown to `sources/`, and saves a screenshot to `screenshots/`.
 
 ## Use When
 
@@ -31,4 +31,3 @@ Returns a `### Collected` confirmation with file path, screenshot path, title, U
 
 - Run multiple collectors in parallel for speed.
 - Continue the workflow if one collector fails, but note the failed URL.
-

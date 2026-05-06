@@ -26,10 +26,39 @@ import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.js";
 
 const MODEL_DEFAULT_ALIASES = ["DEFAULT_AGENTIC_MODEL", "DEFAULT_FAST_MODEL", "DEFAULT_VLM_MODEL"] as const;
 
-const MAX_PARALLEL_TASKS = 8;
-const COLLAPSED_ITEM_COUNT = 10;
+const MAX_PARALLEL_TASKS = 20;
 const DEFAULT_RESOURCE_POOL = "local";
 const DEFAULT_LOCAL_PROVIDERS = ["lmstudio"];
+
+function termRows(): number {
+	return process.stdout.rows || 24;
+}
+
+function termCols(): number {
+	return process.stdout.columns || 80;
+}
+
+function scaleByRows(min: number, max: number): number {
+	const rows = termRows();
+	const t = Math.min(1, Math.max(0, (rows - 24) / 56));
+	return Math.round(min + t * (max - min));
+}
+
+function getCollapsedItemCount(): number {
+	return scaleByRows(10, 30);
+}
+
+function getCollapsedTextLines(): number {
+	return scaleByRows(3, 12);
+}
+
+function getCollapsedPerAgentItems(): number {
+	return scaleByRows(5, 15);
+}
+
+function getPreviewWidth(): number {
+	return Math.max(40, termCols() - 20);
+}
 
 function formatTokens(count: number): string {
 	if (count < 1000) return count.toString();
@@ -113,10 +142,12 @@ function formatToolCall(
 		return p.startsWith(home) ? `~${p.slice(home.length)}` : p;
 	};
 
+	const previewWidth = getPreviewWidth();
+
 	switch (toolName) {
 		case "bash": {
 			const command = (args.command as string) || "...";
-			const preview = command.length > 60 ? `${command.slice(0, 60)}...` : command;
+			const preview = command.length > previewWidth ? `${command.slice(0, previewWidth)}...` : command;
 			return themeFg("muted", "$ ") + themeFg("toolOutput", preview);
 		}
 		case "read": {
@@ -165,7 +196,8 @@ function formatToolCall(
 		}
 		default: {
 			const argsStr = JSON.stringify(args);
-			const preview = argsStr.length > 50 ? `${argsStr.slice(0, 50)}...` : argsStr;
+			const defaultPreviewWidth = Math.max(30, previewWidth - 10);
+			const preview = argsStr.length > defaultPreviewWidth ? `${argsStr.slice(0, defaultPreviewWidth)}...` : argsStr;
 			return themeFg("accent", toolName) + themeFg("dim", ` ${preview}`);
 		}
 	}
@@ -273,8 +305,8 @@ function loadEnvFile(filePath: string, env: Record<string, string>): void {
 	}
 }
 
-function modelEnvForAgent(agentDir: string): Record<string, string> {
-	const root = findDotPiRoot(agentDir);
+function modelEnvForAgent(): Record<string, string> {
+	const root = findDotPiRoot();
 	const env = { ...process.env } as Record<string, string>;
 	loadEnvFile(path.join(root, "model-defaults"), env);
 	return env;
@@ -328,7 +360,7 @@ function readPiArgs(agentDir: string): string[] {
 
 	const args: string[] = [];
 	try {
-		const env = modelEnvForAgent(agentDir);
+		const env = modelEnvForAgent();
 		const inlineAliases = inlineDefaultAliases();
 		const lines = fs.readFileSync(piArgsPath, "utf-8").split(/\r?\n/);
 		for (const rawLine of lines) {
@@ -344,18 +376,15 @@ function readPiArgs(agentDir: string): string[] {
 	}
 }
 
-function findDotPiRoot(startDir: string): string {
-	let current = startDir;
-	while (true) {
-		if (fs.existsSync(path.join(current, "dotpi"))) return current;
-		const parent = path.dirname(current);
-		if (parent === current) return startDir;
-		current = parent;
+function findDotPiRoot(): string {
+	if (!process.env.DOT_PI_DIR) {
+		throw new Error("DOT_PI_DIR is not set; run this extension through dispatch-agent.");
 	}
+	return process.env.DOT_PI_DIR;
 }
 
-function readDefaultProvider(agentDir: string): string | null {
-	const settingsPath = path.join(findDotPiRoot(agentDir), "shared", "settings.json");
+function readDefaultProvider(): string | null {
+	const settingsPath = path.join(findDotPiRoot(), "shared", "settings.json");
 	try {
 		const settings = JSON.parse(fs.readFileSync(settingsPath, "utf-8")) as { defaultProvider?: unknown };
 		return typeof settings.defaultProvider === "string" && settings.defaultProvider ? settings.defaultProvider : null;
@@ -381,16 +410,16 @@ function getProviderFromModel(model: string | null): string | null {
 	return model.slice(0, slashIndex);
 }
 
-function resolveModelProvider(agentDir: string, piArgs: string[]): string | null {
-	return getProviderFromModel(getModelArg(piArgs)) ?? readDefaultProvider(agentDir);
+function resolveModelProvider(piArgs: string[]): string | null {
+	return getProviderFromModel(getModelArg(piArgs)) ?? readDefaultProvider();
 }
 
 function sanitizeProvider(provider: string): string {
 	return provider.trim().replace(/[^A-Za-z0-9_.-]/g, "");
 }
 
-function readLocalProviders(agentDir: string): Set<string> {
-	const configPath = path.join(findDotPiRoot(agentDir), "local-providers.conf");
+function readLocalProviders(): Set<string> {
+	const configPath = path.join(findDotPiRoot(), "local-providers.conf");
 	if (!fs.existsSync(configPath)) return new Set(DEFAULT_LOCAL_PROVIDERS);
 
 	const providers = new Set<string>();
@@ -408,8 +437,8 @@ function readLocalProviders(agentDir: string): Set<string> {
 	return providers;
 }
 
-function readResourcePoolLimits(agentDir: string): Record<string, number> {
-	const root = findDotPiRoot(agentDir);
+function readResourcePoolLimits(): Record<string, number> {
+	const root = findDotPiRoot();
 	const configPath = path.join(root, "agent-orchestrator.conf");
 	const limits: Record<string, number> = { default: 1, local: 1 };
 	if (!fs.existsSync(configPath)) return limits;
@@ -482,9 +511,9 @@ async function acquireResourcePoolSlot(pool: string, limits: Record<string, numb
 }
 
 async function acquireProviderSlot(agentDir: string, piArgs: string[]): Promise<() => void> {
-	const provider = resolveModelProvider(agentDir, piArgs);
-	if (!provider || !readLocalProviders(agentDir).has(provider)) return () => {};
-	return acquireResourcePoolSlot(DEFAULT_RESOURCE_POOL, readResourcePoolLimits(getAgentDir()));
+	const provider = resolveModelProvider(piArgs);
+	if (!provider || !readLocalProviders().has(provider)) return () => {};
+	return acquireResourcePoolSlot(DEFAULT_RESOURCE_POOL, readResourcePoolLimits());
 }
 
 function buildUsageCatalog(agents: AgentConfig[]): string | null {
@@ -924,12 +953,13 @@ export default function (pi: ExtensionAPI) {
 					}),
 				);
 
-				const successCount = results.filter((r) => r.exitCode === 0).length;
-				const summaries = results.map((r) => {
-					const output = getFinalOutput(r.messages);
-					const preview = output.slice(0, 100) + (output.length > 100 ? "..." : "");
-					return `[${r.agent}] ${r.exitCode === 0 ? "completed" : "failed"}: ${preview || "(no output)"}`;
-				});
+			const successCount = results.filter((r) => r.exitCode === 0).length;
+			const summaryPreviewWidth = getPreviewWidth();
+			const summaries = results.map((r) => {
+				const output = getFinalOutput(r.messages);
+				const preview = output.slice(0, summaryPreviewWidth) + (output.length > summaryPreviewWidth ? "..." : "");
+				return `[${r.agent}] ${r.exitCode === 0 ? "completed" : "failed"}: ${preview || "(no output)"}`;
+			});
 				return {
 					content: [
 						{
@@ -1029,21 +1059,22 @@ export default function (pi: ExtensionAPI) {
 
 			const mdTheme = getMarkdownTheme();
 
-			const renderDisplayItems = (items: DisplayItem[], limit?: number) => {
-				const toShow = limit ? items.slice(-limit) : items;
-				const skipped = limit && items.length > limit ? items.length - limit : 0;
-				let text = "";
-				if (skipped > 0) text += theme.fg("muted", `... ${skipped} earlier items\n`);
-				for (const item of toShow) {
-					if (item.type === "text") {
-						const preview = expanded ? item.text : item.text.split("\n").slice(0, 3).join("\n");
-						text += `${theme.fg("toolOutput", preview)}\n`;
-					} else {
-						text += `${theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme))}\n`;
-					}
+		const renderDisplayItems = (items: DisplayItem[], limit?: number) => {
+			const toShow = limit ? items.slice(-limit) : items;
+			const skipped = limit && items.length > limit ? items.length - limit : 0;
+			const collapsedLines = getCollapsedTextLines();
+			let text = "";
+			if (skipped > 0) text += theme.fg("muted", `... ${skipped} earlier items\n`);
+			for (const item of toShow) {
+				if (item.type === "text") {
+					const preview = expanded ? item.text : item.text.split("\n").slice(0, collapsedLines).join("\n");
+					text += `${theme.fg("toolOutput", preview)}\n`;
+				} else {
+					text += `${theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme))}\n`;
 				}
-				return text.trimEnd();
-			};
+			}
+			return text.trimEnd();
+		};
 
 			if (details.mode === "single" && details.results.length === 1) {
 				const r = details.results[0];
@@ -1094,10 +1125,11 @@ export default function (pi: ExtensionAPI) {
 				if (isError && r.stopReason) text += ` ${theme.fg("error", `[${r.stopReason}]`)}`;
 				if (isError && r.errorMessage) text += `\n${theme.fg("error", `Error: ${r.errorMessage}`)}`;
 				else if (displayItems.length === 0) text += `\n${theme.fg("muted", "(no output)")}`;
-				else {
-					text += `\n${renderDisplayItems(displayItems, COLLAPSED_ITEM_COUNT)}`;
-					if (displayItems.length > COLLAPSED_ITEM_COUNT) text += `\n${theme.fg("muted", "(Ctrl+O to expand)")}`;
-				}
+			else {
+				const itemLimit = getCollapsedItemCount();
+				text += `\n${renderDisplayItems(displayItems, itemLimit)}`;
+				if (displayItems.length > itemLimit) text += `\n${theme.fg("muted", "(Ctrl+O to expand)")}`;
+			}
 				const usageStr = formatUsageStats(r.usage, r.model);
 				if (usageStr) text += `\n${theme.fg("dim", usageStr)}`;
 				return new Text(text, 0, 0);
@@ -1179,19 +1211,20 @@ export default function (pi: ExtensionAPI) {
 					return container;
 				}
 
-				// Collapsed view
-				let text =
-					icon +
-					" " +
-					theme.fg("toolTitle", theme.bold("chain ")) +
-					theme.fg("accent", `${successCount}/${details.results.length} steps`);
-				for (const r of details.results) {
-					const rIcon = r.exitCode === 0 ? theme.fg("success", "✓") : theme.fg("error", "✗");
-					const displayItems = getDisplayItems(r.messages);
-					text += `\n\n${theme.fg("muted", `─── Step ${r.step}: `)}${theme.fg("accent", r.agent)} ${rIcon}`;
-					if (displayItems.length === 0) text += `\n${theme.fg("muted", "(no output)")}`;
-					else text += `\n${renderDisplayItems(displayItems, 5)}`;
-				}
+			// Collapsed view
+			const perAgentItems = getCollapsedPerAgentItems();
+			let text =
+				icon +
+				" " +
+				theme.fg("toolTitle", theme.bold("chain ")) +
+				theme.fg("accent", `${successCount}/${details.results.length} steps`);
+			for (const r of details.results) {
+				const rIcon = r.exitCode === 0 ? theme.fg("success", "✓") : theme.fg("error", "✗");
+				const displayItems = getDisplayItems(r.messages);
+				text += `\n\n${theme.fg("muted", `─── Step ${r.step}: `)}${theme.fg("accent", r.agent)} ${rIcon}`;
+				if (displayItems.length === 0) text += `\n${theme.fg("muted", "(no output)")}`;
+				else text += `\n${renderDisplayItems(displayItems, perAgentItems)}`;
+			}
 				const usageStr = formatUsageStats(aggregateUsage(details.results));
 				if (usageStr) text += `\n\n${theme.fg("dim", `Total: ${usageStr}`)}`;
 				text += `\n${theme.fg("muted", "(Ctrl+O to expand)")}`;
@@ -1264,21 +1297,22 @@ export default function (pi: ExtensionAPI) {
 					return container;
 				}
 
-				// Collapsed view (or still running)
-				let text = `${icon} ${theme.fg("toolTitle", theme.bold("parallel "))}${theme.fg("accent", status)}`;
-				for (const r of details.results) {
-					const rIcon =
-						r.exitCode === -1
-							? theme.fg("warning", "⏳")
-							: r.exitCode === 0
-								? theme.fg("success", "✓")
-								: theme.fg("error", "✗");
-					const displayItems = getDisplayItems(r.messages);
-					text += `\n\n${theme.fg("muted", "─── ")}${theme.fg("accent", r.agent)} ${rIcon}`;
-					if (displayItems.length === 0)
-						text += `\n${theme.fg("muted", r.exitCode === -1 ? "(running...)" : "(no output)")}`;
-					else text += `\n${renderDisplayItems(displayItems, 5)}`;
-				}
+			// Collapsed view (or still running)
+			const perAgentItemsP = getCollapsedPerAgentItems();
+			let text = `${icon} ${theme.fg("toolTitle", theme.bold("parallel "))}${theme.fg("accent", status)}`;
+			for (const r of details.results) {
+				const rIcon =
+					r.exitCode === -1
+						? theme.fg("warning", "⏳")
+						: r.exitCode === 0
+							? theme.fg("success", "✓")
+							: theme.fg("error", "✗");
+				const displayItems = getDisplayItems(r.messages);
+				text += `\n\n${theme.fg("muted", "─── ")}${theme.fg("accent", r.agent)} ${rIcon}`;
+				if (displayItems.length === 0)
+					text += `\n${theme.fg("muted", r.exitCode === -1 ? "(running...)" : "(no output)")}`;
+				else text += `\n${renderDisplayItems(displayItems, perAgentItemsP)}`;
+			}
 				if (!isRunning) {
 					const usageStr = formatUsageStats(aggregateUsage(details.results));
 					if (usageStr) text += `\n\n${theme.fg("dim", `Total: ${usageStr}`)}`;

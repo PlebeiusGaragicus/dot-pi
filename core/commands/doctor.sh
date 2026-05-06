@@ -24,11 +24,11 @@ else
   _fail "pi not found on PATH"
 fi
 
-# 2. env.sh sourced
-if [ "${DOT_PI_INSTALLED:-}" = "1" ]; then
-  _ok "env.sh sourced (DOT_PI_INSTALLED=1)"
+# 2. dot-pi root resolved
+if [ -n "${DOT_PI_DIR:-}" ] && [ -f "$DOT_PI_DIR/dotpi" ] && [ -f "$DOT_PI_DIR/dispatch-agent" ]; then
+  _ok "DOT_PI_DIR resolved: $DOT_PI_DIR"
 else
-  _warn "env.sh not sourced — DOT_PI_INSTALLED is not set"
+  _fail "DOT_PI_DIR does not point at a valid dot-pi checkout"
 fi
 
 # 3. model-defaults exists

@@ -15,18 +15,18 @@ Deepresearch owns its top-level prompt in `SYSTEM.md`. Subagents are imported th
 | Field | Value |
 |-------|-------|
 | Tools | bash, read, ls |
-| Skills | tavily |
+| Skills | tavily-search, exa-search |
 
-Searches the web via the Tavily API for high-quality sources on a research topic. Returns a numbered list of URLs with titles and relevance notes. Formulates multiple search queries to cover different angles.
+Searches the web via Tavily and Exa for high-quality sources on a research topic. Uses Tavily for broad/current/news discovery and Exa for semantic/academic/technical source finding. Returns a deduplicated, ranked list of URLs with titles and relevance notes. Formulates multiple search queries across both providers to cover different angles.
 
 ### collector
 
 | Field | Value |
 |-------|-------|
 | Tools | bash, write, read, ls |
-| Skills | playwright |
+| Skills | browser-control |
 
-Fetches a single URL via headless browser (`playwright-cli`), strips boilerplate and ads, and saves cleaned content to `sources/<slug>.md` with YAML frontmatter. Takes a screenshot to `screenshots/<slug>.png`. Deployed in parallel -- one instance per URL from the scout's list. Each instance gets a unique collector number to avoid browser session collisions.
+Fetches a single URL via browser-control (`$B`), strips boilerplate and ads, and saves cleaned content to `sources/<slug>.md` with YAML frontmatter. Takes a screenshot to `screenshots/<slug>.png`. Deployed in parallel -- one instance per URL from the scout's list. Each instance gets a unique collector number.
 
 ### writer
 
@@ -35,7 +35,7 @@ Fetches a single URL via headless browser (`playwright-cli`), strips boilerplate
 | Tools | read, find, ls, write |
 | Skills | none (`no-skills: true`) |
 
-Reads all files in `sources/` and synthesizes them into a structured research report with inline source references. Saves the draft to `drafts/report.md`. Follows a strict template: title, executive summary, subsections with citations, and a sources list with screenshot references.
+Reads all files in `sources/` and synthesizes them into a structured research report with inline source references. Saves the report to `report.md`. Follows a strict template: title, executive summary, subsections with citations, and a sources list with screenshot references.
 
 ### editor
 
@@ -44,15 +44,15 @@ Reads all files in `sources/` and synthesizes them into a structured research re
 | Tools | read, find, ls, write |
 | Skills | none (`no-skills: true`) |
 
-Reviews the draft against source files for accuracy, completeness, and structure. Verifies citations, checks screenshot references, and produces the final report at `report.md` in the workspace root.
+Reviews the report against source files for accuracy, completeness, and structure. Verifies citations, checks screenshot references, and produces the final polished report at `report.md` in the workspace root.
 
 ## Workflow
 
 The standard pipeline runs four steps:
 
-1. **scout** (single) -- searches for sources on the topic
-2. **collector** (parallel) -- fetches and cleans each source URL, saves to `sources/` and `screenshots/`
-3. **writer** (single) -- synthesizes all sources into `drafts/report.md`
+1. **scout** (single) -- searches for sources on the topic via Tavily and Exa
+2. **collector** (parallel) -- fetches and cleans each source URL via browser-control, saves to `sources/` and `screenshots/`
+3. **writer** (single) -- synthesizes all sources into `report.md`
 4. **editor** (single) -- reviews and produces final `report.md`
 
 ## Workspace Structure
@@ -63,7 +63,7 @@ Each run creates a dated directory under `agents/deepresearch/workspaces/`:
 agents/deepresearch/workspaces/2026-04-12-141259/
 ├── sources/          # Cleaned source files (markdown + YAML frontmatter)
 ├── screenshots/      # Page screenshots (PNG)
-├── drafts/           # Intermediate report draft
+├── .browser-control/ # Browser-control state resolved from the workspace path
 ├── sessions/         # Session logs (orchestrator + all subagents)
 └── report.md         # Final deliverable
 ```

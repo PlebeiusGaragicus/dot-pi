@@ -28,8 +28,8 @@ Runs [shellcheck](https://www.shellcheck.net/) on every shell script in the repo
 - `dotpi`
 - `install`
 - `dispatch-agent`
-- `env.sh`
 - `core/commands/*.sh`
+- `core/dispatch/*.sh`
 
 shellcheck catches things bash itself silently accepts but that almost certainly mean a bug:
 
@@ -85,13 +85,13 @@ You don't need to wait for the cloud. Each job is one command:
 ```bash
 # shellcheck (install with: brew install shellcheck)
 shellcheck --shell=bash --severity=warning --external-sources \
-  dotpi install dispatch-agent env.sh core/commands/*.sh
+  dotpi install dispatch-agent core/commands/*.sh core/dispatch/*.sh
 
 # smoke tests
 ./dotpi --version
 ./dotpi --help
 bash install --help
-bash -n dotpi install dispatch-agent env.sh core/commands/*.sh
+bash -n dotpi install dispatch-agent core/commands/*.sh core/dispatch/*.sh
 
 # extension typecheck
 (cd core/tests && npm ci && npx tsc --noEmit)

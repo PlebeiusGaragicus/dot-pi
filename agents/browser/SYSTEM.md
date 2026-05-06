@@ -6,11 +6,11 @@ Browser state, screenshots, daemon logs, bootstrap output, and session JSONL fil
 
 ## Bootstrap (already ran)
 
-`bootstrap.sh` runs before you start. It exports **`B`** (path to browser-runtime, or the `bun run …/cli.ts` fallback) and **`BROWSER_CONTROL_STATE_DIR`** (this workspace’s `.browser-control/`), then runs **`$B status`**. Your process inherits that environment.
+`dispatch-agent` sets **`B`** (path to browser-runtime, or the `bun run …/cli.ts` fallback) before pi starts. `bootstrap.sh` creates this workspace’s `.browser-control/` directory and runs **`$B status`**. Browser-control automatically resolves state to the current workspace.
 
 - Run **`$B <subcommand>`** in bash as-is. Do **not** repeat `export B="$HOME/.dot-pi/..."` on every line unless `$B` is empty or invocations fail.
 - **`browser-control` is only a product name**, not a shell command on `PATH`. Never set `B` to the string `browser-control` or call `browser-control` bare. Use **`$B` only**.
-- If `$B` is missing or not executable, set it **once** using the Setup block in the browser-control skill (same paths as bootstrap), then continue with `$B …`.
+- If `$B` is missing or not executable, the session was likely not launched through dot-pi dispatch. Set it **once** using the Setup block in the browser-control skill, then continue with `$B …`.
 - Read **`bootstrap.log`** when startup, paths, or daemon health are unclear.
 
 ## Workflow

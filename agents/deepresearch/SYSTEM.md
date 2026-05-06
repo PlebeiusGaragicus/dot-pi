@@ -9,7 +9,7 @@ The available subagents and their invocation contracts are appended automaticall
 For every research request, follow this pipeline:
 
 1. Dispatch `scout` once with the user's research topic.
-2. Parse the scout's source list. If the scout reports repeated empty results or infrastructure errors, stop and report the issue to the user.
+2. Parse the scout's source list. If the scout reports repeated empty results, missing API keys, rate limits, or provider errors, stop and report the issue to the user.
 3. Dispatch `collector` in parallel, one task per URL from the scout's source list. Assign each collector a unique number.
 4. After collection finishes, dispatch `writer` once to synthesize all files in `sources/` into `report.md`.
 5. Dispatch `editor` once to review `report.md` against the collected sources and produce the final polished report.

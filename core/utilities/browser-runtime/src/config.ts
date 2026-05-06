@@ -17,7 +17,28 @@ export interface ServerState {
   serverPath: string;
 }
 
-export function resolveProjectRoot(cwd = process.cwd()): string {
+function findDotPiWorkspaceRoot(cwd: string): string | null {
+  let current = path.resolve(cwd);
+  while (true) {
+    const workspaceName = path.basename(current);
+    const workspacesDir = path.dirname(current);
+    const agentDir = path.dirname(workspacesDir);
+    const agentsDir = path.dirname(agentDir);
+    if (
+      workspaceName &&
+      path.basename(workspacesDir) === 'workspaces' &&
+      path.basename(agentsDir) === 'agents'
+    ) {
+      return current;
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) return null;
+    current = parent;
+  }
+}
+
+function resolveGitRoot(cwd: string): string | null {
   try {
     const proc = cp.spawnSync('git', ['rev-parse', '--show-toplevel'], {
       cwd,
@@ -31,7 +52,12 @@ export function resolveProjectRoot(cwd = process.cwd()): string {
   } catch {
     // Fall back to cwd below.
   }
-  return cwd;
+  return null;
+}
+
+export function resolveProjectRoot(cwd = process.cwd()): string {
+  if (process.env.WORKSPACE_DIR) return path.resolve(process.env.WORKSPACE_DIR);
+  return findDotPiWorkspaceRoot(cwd) ?? resolveGitRoot(cwd) ?? cwd;
 }
 
 export function resolveConfig(cwd = process.cwd()): RuntimeConfig {

@@ -23,7 +23,6 @@ jobs:
             dotpi \
             install \
             dispatch-agent \
-            env.sh \
             core/commands/*.sh
 
   typecheck:
@@ -92,8 +91,8 @@ jobs:
           bash -n dotpi
           bash -n install
           bash -n dispatch-agent
-          bash -n env.sh
           for f in core/commands/*.sh; do bash -n "$f"; done
+          for f in core/dispatch/*.sh; do bash -n "$f"; done
 
   gitignore-guard:
     name: gitignore vs tracked guard

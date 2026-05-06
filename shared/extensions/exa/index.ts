@@ -10,19 +10,16 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
 const EXA_KEY_FILE = ".exa.env";
 
 function findDotPiRoot(): string {
-	let dir = getAgentDir();
-	for (let i = 0; i < 5; i++) {
-		if (fs.existsSync(path.join(dir, "env.sh"))) return dir;
-		dir = path.dirname(dir);
+	if (!process.env.DOT_PI_DIR) {
+		throw new Error("DOT_PI_DIR is not set; run this extension through dispatch-agent.");
 	}
-	return path.dirname(getAgentDir());
+	return process.env.DOT_PI_DIR;
 }
 
 function loadExaKey(): string | null {

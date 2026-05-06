@@ -8,7 +8,7 @@ Direct Tavily REST-API access via a structured `tavily_search` tool. Avoids havi
 
 ## Configuration
 
-Store API keys at the **dot-pi repo root** (directory containing `env.sh`), using the **`.service-name.env`** convention:
+Store API keys at the **dot-pi repo root** (directory containing `dotpi`), using the **`.service-name.env`** convention:
 
 - `.tavily.env` — `TAVILY_API_KEY=...`, written by `/tavily-api-key`
 - Or set `TAVILY_API_KEY` in the environment (takes precedence over the file).

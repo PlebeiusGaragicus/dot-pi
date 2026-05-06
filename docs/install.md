@@ -32,7 +32,6 @@ The installer prints the two lines to add to your shell config. If you installed
 
 ```bash
 export PATH="$HOME/.dot-pi/core/bin:$PATH"
-source "$HOME/.dot-pi/env.sh"
 ```
 
 Then reload your shell:
@@ -43,7 +42,7 @@ source ~/.zshrc  # or source ~/.bashrc
 
 This puts all MAS and standalone agent commands on your PATH (e.g. `deepresearch`, `ask`, `web`).
 
-`DOT_PI_DIR` is auto-detected from `env.sh`'s location, so the repo can live anywhere.
+`dispatch-agent` auto-detects `DOT_PI_DIR` from its own location, so the repo can live anywhere as long as `core/bin/` is on your `PATH`.
 
 ## Provider setup (`dotpi setup`)
 
@@ -102,9 +101,7 @@ For a fully local setup (no API keys needed):
 ```bash
 git clone https://github.com/PlebeiusGaragicus/dot-pi.git ~/.dot-pi
 echo 'export PATH="$HOME/.dot-pi/core/bin:$PATH"' >> ~/.zshrc
-echo 'source "$HOME/.dot-pi/env.sh"' >> ~/.zshrc
 export PATH="$HOME/.dot-pi/core/bin:$PATH"
-source "$HOME/.dot-pi/env.sh"
 dotpi setup
 ```
 

@@ -25,7 +25,6 @@ For the user-facing command syntax implemented by `dispatch-agent`, see [Termina
 ```
 dot-pi/
 ├── dotpi                     # CLI: setup, create, create-agent, list, link-skill, link-auth
-├── env.sh                    # Shell environment (source in .zshrc/.bashrc)
 ├── dispatch-agent            # Symlink target in core/bin/ (dispatches commands to agents)
 ├── core/                     # Implementation internals
 │   ├── commands/             # Subcommand scripts (sourced by dotpi)

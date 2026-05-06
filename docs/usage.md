@@ -10,7 +10,6 @@ You have pi installed, the repo cloned to `~/.dot-pi`, and your shell configured
 
 ```bash
 export PATH="$HOME/.dot-pi/core/bin:$PATH"
-source "$HOME/.dot-pi/env.sh"
 ```
 
 ## 1. Recon a Codebase

@@ -1,4 +1,4 @@
-# Agent and skill bootstrap.sh handling.
+# Agent bootstrap.sh handling.
 
 _bootstrap_declares_workspace() {
   local config_dir="$1" file line value
@@ -58,29 +58,9 @@ _source_one_bootstrap() {
   fi
 }
 
-_collect_skill_bootstraps() {
-  local config_dir="$1" skill_dir skill_name
-  for skill_dir in "$config_dir"/skills/*/; do
-    [ -d "$skill_dir" ] || continue
-    [ -f "$skill_dir/scripts/bootstrap.sh" ] || continue
-    skill_name=$(basename "$skill_dir")
-    printf '%s\t%s\n' "$skill_name" "$skill_dir/scripts/bootstrap.sh"
-  done | sort -t $'\t' -k1,1
-}
-
 _source_bootstrap() {
   local config_dir="$1" phase="$2" ws_path="${3:-}" agent_name="${4:-$AGENT_NAME}"
   local agent_file log_dir has_hooks=false
-
-  agent_file="$(_bootstrap_file "$config_dir")"
-  [ -n "$agent_file" ] && has_hooks=true
-
-  local skill_hooks=() skill_line
-  while IFS= read -r skill_line; do
-    [ -n "$skill_line" ] && skill_hooks+=("$skill_line") && has_hooks=true
-  done < <(_collect_skill_bootstraps "$config_dir")
-
-  [ "$has_hooks" = true ] || return 0
 
   export DOT_PI_DIR
   export AGENT_NAME="$agent_name"
@@ -100,6 +80,11 @@ _source_bootstrap() {
     export BOOTSTRAP_LOG="${BOOTSTRAP_LOG:-$config_dir/sessions/bootstrap.log}"
   fi
 
+  agent_file="$(_bootstrap_file "$config_dir")"
+  [ -n "$agent_file" ] && has_hooks=true
+
+  [ "$has_hooks" = true ] || return 0
+
   log_dir="$(dirname "$BOOTSTRAP_LOG")"
   mkdir -p "$log_dir"
   : > "$BOOTSTRAP_LOG"
@@ -113,11 +98,4 @@ _source_bootstrap() {
   if [ -n "$agent_file" ]; then
     _source_one_bootstrap "$agent_file" "agent $agent_name" || return $?
   fi
-
-  local skill_name skill_file
-  for skill_line in ${skill_hooks[@]+"${skill_hooks[@]}"}; do
-    skill_name="${skill_line%%	*}"
-    skill_file="${skill_line#*	}"
-    _source_one_bootstrap "$skill_file" "skill $skill_name" || return $?
-  done
 }

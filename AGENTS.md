@@ -21,7 +21,6 @@ dot-pi/
 ├── AGENTS.md                 # This file
 ├── README.md                 # Human-facing overview
 ├── dotpi                     # CLI: setup, create, create-agent, list, link-skill, link-auth
-├── env.sh                    # Shell environment (source in .zshrc/.bashrc)
 ├── dispatch-agent            # Symlink target in core/bin/ (dispatches commands to agents)
 ├── core/                     # Implementation internals
 │   ├── commands/             # Subcommand scripts (sourced by dotpi)
@@ -229,16 +228,6 @@ Use this curl command to search: ...
 
 Skills live in `shared/skills/` and are symlinked per-skill into each agent config's `skills/` directory.
 
-#### Skill Bootstraps
-
-A skill may include `scripts/bootstrap.sh`. When present, `dispatch-agent` sources it before pi starts — after the agent-level `bootstrap.sh` (if any) and in alphabetical order by skill name. Because the script is sourced, exported variables persist into pi and are available in every bash tool call.
-
-Use skill bootstraps to set up environment variables, create state directories, or run health checks that the skill's SKILL.md instructions depend on. Skill bootstraps receive the same environment contract as agent-level bootstraps: `DOT_PI_DIR`, `AGENT_NAME`, `AGENT_DIR`, `DOTPI_BOOTSTRAP_PHASE`, `WORKSPACE_AGENT`, optional `WORKSPACE_DIR`, and `BOOTSTRAP_LOG`.
-
-Skill bootstraps should be idempotent: check whether variables are already set before overwriting them. A non-zero exit stops the launch and reports the failure via `BOOTSTRAP_LOG`.
-
-Workspace mode (`WORKSPACE_AGENT=1`) remains an agent-level concern. Skill bootstraps must not declare workspace mode.
-
 ### Workspace Agents
 
 Any MAS or standalone agent can run as a **workspace agent** by adding a `bootstrap.sh` file with `WORKSPACE_AGENT=1` to its directory. When present, running the command (e.g. `deepresearch`) launches pi in a fresh dated directory (`agents/<name>/workspaces/<timestamp>/`) inside a subshell, so the user's shell stays in its original directory after pi exits.
@@ -379,7 +368,6 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `agents/*/extensions/**/*.ts` | Yes | Custom agent extensions |
 | `dotpi` | Yes | CLI dispatcher (setup, create, list, link-skill, link-auth) |
 | `core/commands/*.sh` | Yes | Subcommand scripts (sourced by dotpi) |
-| `env.sh` | Yes | Shell environment (sourced from .zshrc/.bashrc) |
 | `dispatch-agent` | Yes | Symlink target in core/bin/ (dispatches commands to agents) |
 | `core/dispatch/*.sh` | Yes | Focused launcher internals sourced by `dispatch-agent` |
 | `docs/**/*.md` | Yes | MkDocs documentation |

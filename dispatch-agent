@@ -7,12 +7,13 @@ set -euo pipefail
 # shellcheck disable=SC2034  # used by sourced dispatch modules
 AGENT_NAME="$(basename "$0")"
 
-# When invoked outside a shell that sourced env.sh (e.g. cron, scripts),
-# bootstrap DOT_PI_DIR from our own location.
+# DOT_PI_DIR is a runtime contract for every pi process launched by dot-pi.
+# Self-locate here so users only need core/bin on PATH; child processes inherit
+# this value through dispatch/runtime setup and normal process inheritance.
 if [ -z "${DOT_PI_DIR:-}" ]; then
   DOT_PI_DIR="$(cd "$(dirname "$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")")" && pwd)"
-  [ -f "$DOT_PI_DIR/env.sh" ] && source "$DOT_PI_DIR/env.sh"
 fi
+export DOT_PI_DIR
 
 _dispatch_source() {
   local module="$DOT_PI_DIR/core/dispatch/$1"
@@ -24,7 +25,7 @@ _dispatch_source() {
   source "$module"
 }
 
-_dispatch_source env.sh
+_dispatch_source runtime.sh
 _dispatch_source util.sh
 _dispatch_source invoke.sh
 _dispatch_source pi-args.sh

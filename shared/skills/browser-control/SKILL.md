@@ -8,13 +8,13 @@ disable-model-invocation: false
 
 **`browser-control` is the product name for this CLI, not a command on `PATH`.** Invoke it only as **`$B <subcommand> …`**.
 
-Use **`$B`** to drive a persistent Playwright Chromium daemon. The first command starts the daemon; later commands reuse the same browser state through `.browser-control/browse.json`. By default this is project-local; workspace agents set **`BROWSER_CONTROL_STATE_DIR`** so state, screenshots, and logs stay inside the current workspace.
+Use **`$B`** to drive a persistent Playwright Chromium daemon. The first command starts the daemon; later commands reuse the same browser state through `.browser-control/browse.json`. State is workspace-local when launched inside a dot-pi workspace, and project-local for normal in-situ browsing.
 
 ## Setup
 
-**`$B`** and **`BROWSER_CONTROL_STATE_DIR`** are initialized at startup by the skill bootstrap (`scripts/bootstrap.sh`). No manual setup is needed. Use **`$B …`** directly in bash.
+**`$B`** is initialized by dot-pi dispatch before Pi starts. Browser-control calculates its state directory automatically from `BROWSER_CONTROL_STATE_DIR`, `WORKSPACE_DIR`, the current dot-pi workspace path, or the current project root. Use **`$B …`** directly in bash.
 
-If **`$B`** is missing or empty, check `bootstrap.log` for errors.
+If **`$B`** is missing or empty, the agent was likely not launched through dot-pi dispatch. For manual debugging, set `B` to the browser-control binary path or invoke the binary directly.
 
 ## Core Workflow
 

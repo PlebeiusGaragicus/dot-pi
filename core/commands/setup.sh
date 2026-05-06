@@ -451,7 +451,7 @@ echo ""
 
 echo "  Local config (gitignored, safe to edit by hand):"
 echo "    $MODELS_FILE    (providers, API keys, model lists)"
-echo "    $defaults_file           (fallback model aliases; sourced by env.sh)"
+echo "    $defaults_file           (fallback model aliases; loaded by dispatch-agent)"
 echo ""
 
 _setup_shell_rc() {
@@ -474,7 +474,6 @@ else
   echo "  Shell: not configured yet. Add to $(basename "$_rc"):"
   echo ""
   echo "       export PATH=\"\$HOME/.dot-pi/core/bin:\$PATH\""
-  echo "       source \"\$HOME/.dot-pi/env.sh\""
   echo ""
   echo "  Then restart your shell and run:  lm"
 fi
