@@ -45,6 +45,8 @@ nav:
   - Usage Guide: usage.md
   - Terminal Dispatch: terminal-dispatch.md
   - Architecture: architecture.md
+  - Design:
+    - Top-Level Agent MAS: design/top-level-agent-mas.md
   - Agent Layout: agent-layout.md
   - Standalone Agents: standalone-agents.md
   - Multi-Agent Systems:
