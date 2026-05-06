@@ -290,6 +290,64 @@ This keeps orchestration prompts short while preserving traceability. The select
 
 Personas are not capabilities. They should not be used to grant tools, browser access, repository context, or filesystem permissions. If persona frontmatter can alter tools or skills, that behavior must remain explicit and should be treated as part of the worker's structural contract.
 
+## Invocation Contracts (Deferred)
+
+Invocation contracts are a likely future extension of this design, but they should be deferred until the basic top-level-agent MAS model works with direct tasks and workflow prompts.
+
+A contract is a small, reusable invocation protocol for a worker. It is not a new subagent identity. It answers questions such as:
+
+- What role is this worker playing in this call?
+- What output shape must it return?
+- What files or artifacts should it read or produce?
+- What counts as success or failure?
+- How concise should the reply be?
+- How should errors or uncertainty be reported?
+
+Personas and contracts are different:
+
+- A persona controls voice, stance, and reasoning style.
+- A contract controls role, output format, artifact expectations, and failure handling.
+- The task supplies the concrete work item.
+- The base agent config supplies durable capability, tool access, skills, and safety boundaries.
+
+For example, `ask` can use a persona to sound human or terse, but a contract tells it to act as a judge:
+
+```json
+{
+  "agent": "ask",
+  "persona": "helpful",
+  "contract": "pass-fail-judge",
+  "task": "Check whether report.md satisfies the citation rules. Reply only PASS or FAIL: <one sentence>."
+}
+```
+
+For a deep research workflow, inline contracts in the `/deepresearch` prompt may be enough at first:
+
+```markdown
+When invoking `ask` as final judge, instruct it:
+Return exactly `PASS` or `FAIL: <one sentence>`.
+Check source coverage, citation format, and unsupported claims.
+Do not add preamble or follow-up.
+```
+
+Named contract files should only be introduced when the same protocol repeats across workflows or becomes important enough to test independently. This avoids recreating the old `subagents/` tree under a new name.
+
+If promoted to files, contracts should live with the worker they constrain:
+
+```text
+agents/ask/contracts/pass-fail-judge.md
+agents/ask/contracts/semantic-evaluator.md
+agents/web/contracts/source-leads.md
+agents/browser/contracts/source-capture.md
+agents/writer/contracts/research-report.md
+```
+
+Contracts should stay small, roughly 10-40 lines. If a contract grows into a full worker prompt, that is a signal to either simplify it, move the stable behavior into the agent's base prompt, or reconsider whether the workflow really needs a specialized subagent.
+
+Contracts must not grant capabilities. A contract may say "write `report.md`," but a worker without write tools still cannot write. Tool access, skills, context-file behavior, model defaults, and safety posture remain structural properties of the agent config.
+
+The first implementation should prefer inline workflow guidance. Contract files are a second-stage abstraction for repeated strict protocols, especially judges, source-list formats, artifact-capture confirmations, and report-output requirements.
+
 ## Artifact Handoffs
 
 The MAS root owns the shared workspace. Workers may contribute artifacts only when their structural permissions allow it and the task explicitly asks for it.
