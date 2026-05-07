@@ -1,6 +1,0 @@
---model
-$DEFAULT_AGENTIC_MODEL
---tools read,find,ls,write
---no-skills
-# Disable repo context files for non-coding agents (prevents parent AGENTS.md leakage).
---no-context-files
