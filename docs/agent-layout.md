@@ -385,7 +385,7 @@ agents/example-mas/workspaces/2026-04-28-120000--named-run/
 └── manifest.json
 ```
 
-The exact artifact files are workflow-specific. For example, a research agent might write `sources/` and `report.md`, while a reader/OCR agent writes `pages/`, `reader-manifest.json`, `document.md`, and `summary.md`.
+The exact artifact files are workflow-specific. For example, a research agent might write `sources/` and `report.md`, while a reader/OCR agent writes `pages/`, `ocr-manifest.json`, `document.md`, and `summary.md`.
 
 Workspace contents are runtime artifacts. They are useful for resuming and debugging, but they are not agent source.
 

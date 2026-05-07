@@ -1,6 +1,6 @@
 # `/pdf-ocr` workflow (mas)
 
-The diagram and pseudocode below describe the **intended** `/pdf-ocr` prompt flow for the `mas` orchestrator: `reader-manifest.json` plus split trees **`pages-png/`** (renders) and **`pages-ocr/`** (markdown), with **delegation targets** the durable top-level agents (`coder`, `web`, `writer`, `ask`) instead of reader’s `ingester` / `ocr-page` / etc.
+The diagram and pseudocode below describe the **intended** `/pdf-ocr` prompt flow for the `mas` orchestrator: `ocr-manifest.json` plus split trees **`pages-png/`** (renders) and **`pages-ocr/`** (markdown), with **delegation targets** the durable top-level agents (`coder`, `web`, `writer`, `ask`) instead of reader’s `ingester` / `ocr-page` / etc.
 
 ## Flow (Mermaid)
 
@@ -17,7 +17,7 @@ flowchart TD
   end
 
   subgraph artifacts["Artifacts on disk"]
-    M[reader-manifest.json]
+    M[ocr-manifest.json]
     P["pages-png/page-NNNN.png"]
     MD["pages-ocr/page-NNNN.md"]
     DOC[document.md / summary.md optional]
@@ -87,8 +87,8 @@ FUNCTION mas_pdf_ocr(user_text):
   # pages-png/ + pages-ocr/ + manifest are created by the ingest subagent on first run
 
   # --- Resume vs fresh ingest ---
-  IF file_exists("reader-manifest.json") AND glob("pages-png/*.png").non_empty:
-    manifest ← read("reader-manifest.json")
+  IF file_exists("ocr-manifest.json") AND glob("pages-png/*.png").non_empty:
+    manifest ← read("ocr-manifest.json")
     IF user did NOT request re-ingest:
       GOTO ocr_phase
   # else fall through to ingest
@@ -97,7 +97,7 @@ FUNCTION mas_pdf_ocr(user_text):
   reply_ingest ← subagent("coder", task:
     run pdfinfo / pdftoppm (or magick fallback),
     apply DPI + max-edge rules,
-    write reader-manifest.json,
+    write ocr-manifest.json,
     emit pages-png/page-0001.png …,
     return confirmation + page count + blockers)
   IF reply_ingest indicates hard failure:
@@ -123,7 +123,7 @@ ocr_phase:
 
   # --- Orchestrator-only checks (no path-only ask) ---
   skim manifest + spot-check a few MD paths with read()
-  RETURN short_message(paths: reader-manifest.json, pages-png/, pages-ocr/, document.md if any)
+  RETURN short_message(paths: ocr-manifest.json, pages-png/, pages-ocr/, document.md if any)
 ```
 
 ## Worker mapping (reference)

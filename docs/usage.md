@@ -162,7 +162,7 @@ Reader ingests a PDF once, renders each page to an image, OCRs each page with a 
 reader - "/path/to/document.pdf"
 ```
 
-**What happens:** `reader` creates `agents/reader/workspaces/<timestamp>/` with `pages/` and `sessions/` subdirectories. The orchestrator first creates `reader-manifest.json`, then dispatches one `ocr-page` subagent per page image. Each page is stored as a pair:
+**What happens:** `reader` creates `agents/reader/workspaces/<timestamp>/` with `pages/` and `sessions/` subdirectories. The orchestrator first creates `ocr-manifest.json`, then dispatches one `ocr-page` subagent per page image. Each page is stored as a pair:
 
 ```text
 pages/page-0001.png
@@ -177,7 +177,7 @@ To resume without re-ingesting the PDF:
 reader resume
 ```
 
-On resume, the orchestrator inspects `reader-manifest.json` and `pages/`, reuses existing page images, and only OCRs missing or failed page markdown.
+On resume, the orchestrator inspects `ocr-manifest.json` and `pages/`, reuses existing page images, and only OCRs missing or failed page markdown.
 
 ### Running evals
 

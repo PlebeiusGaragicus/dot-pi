@@ -17,7 +17,7 @@ Reader owns its top-level workflow in `SYSTEM.md`. Subagents live under `agents/
 | Tools | bash, read, write, ls |
 | Model | `$DEFAULT_AGENTIC_MODEL` |
 
-Renders one PDF into zero-padded PNG files under `pages/` and writes `reader-manifest.json`. It prefers Poppler (`pdfinfo`, `pdftoppm`) and falls back to ImageMagick when available.
+Renders one PDF into zero-padded PNG files under `pages/` and writes `ocr-manifest.json`. It prefers Poppler (`pdfinfo`, `pdftoppm`) and falls back to ImageMagick when available.
 
 ### ocr-page
 
@@ -51,7 +51,7 @@ Reads page markdown files in order and produces `document.md`, plus `summary.md`
 
 The standard pipeline is:
 
-1. **ingester** (single) -- renders PDF pages to `pages/page-0001.png` and writes `reader-manifest.json`.
+1. **ingester** (single) -- renders PDF pages to `pages/page-0001.png` and writes `ocr-manifest.json`.
 2. **ocr-page** (parallel) -- transcribes one page image per worker to `pages/page-0001.md`.
 3. **page-auditor** (selective) -- reruns only pages marked uncertain, low-confidence, empty, or structurally difficult.
 4. **assembler** (single, optional) -- assembles all page markdown into `document.md` and optionally `summary.md`.
@@ -70,7 +70,7 @@ agents/reader/workspaces/2026-04-28-101500/
 │   ├── page-0002.png
 │   └── page-0002.md
 ├── sessions/
-├── reader-manifest.json
+├── ocr-manifest.json
 ├── document.md
 └── summary.md
 ```
