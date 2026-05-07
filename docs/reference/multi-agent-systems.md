@@ -217,6 +217,8 @@ For the exact rules, see [Subagent Concurrency](subagent-concurrency.md).
 
 Workflow prompts and orchestrator task strings must respect each worker's structural configuration. Prompt instructions can narrow behavior, but they cannot grant tools, skills, context-file access, filesystem access, browser access, or write permission.
 
+For a compact checklist before drafting or revising a workflow prompt, see the [Workflow Writing Guide](../workflow-writing-guide.md).
+
 Before writing a `subagent` call, check the target worker's `USAGE.md` or `CAPABILITY.md` and its `pi-args`:
 
 - If the task names file paths, the worker must have `read` or another explicit way to inspect those paths.

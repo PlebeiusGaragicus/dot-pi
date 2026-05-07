@@ -144,7 +144,7 @@ Subagents are pi config directories discovered from `<agentDir>/agents/` and pro
 
 Prompt templates (`.md` files in `prompts/`) define reusable workflows. They can reference `$@` as a placeholder for user input and are invoked with `/template-name` syntax in the pi chat.
 
-Prompt templates are orchestration policy, not capability grants. Each delegated step must match the target worker's structural tools, skills, and artifact contract. See [Multi-Agent Systems](reference/multi-agent-systems.md#workflow-authoring-and-capability-boundaries) for workflow authoring rules and examples.
+Prompt templates are orchestration policy, not capability grants. Each delegated step must match the target worker's structural tools, skills, and artifact contract. See [Workflow Writing Guide](workflow-writing-guide.md) for the condensed checklist and [Multi-Agent Systems](reference/multi-agent-systems.md#workflow-authoring-and-capability-boundaries) for detailed authoring rules and examples.
 
 ## Isolation Model
 
