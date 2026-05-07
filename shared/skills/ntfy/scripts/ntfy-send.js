@@ -8,13 +8,16 @@ import {
 	requireNtfyConfig,
 } from "./ntfy-common.js";
 
+const DEFAULT_TOPIC = "bot";
+
 const args = process.argv.slice(2);
 
 function usage() {
-	console.log("Usage: ntfy-send.js <topic> <message...>");
-	console.log("       echo message | ntfy-send.js <topic>");
+	console.log("Usage: ntfy-send.js [options] <message...>");
+	console.log("       echo message | ntfy-send.js [options]");
 	console.log("");
 	console.log("Options:");
+	console.log(`  --topic NAME    ntfy topic (default: ${DEFAULT_TOPIC})`);
 	console.log("  --title TEXT    Notification title (ntfy Title header)");
 	console.log("  --priority N    1 (min) … 5 (max), default from server");
 	console.log("  --tags LIST     Comma-separated tags (ntfy Tags header)");
@@ -40,11 +43,12 @@ function readMessageFromStdin() {
 	}
 }
 
-if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
+if (args[0] === "--help" || args[0] === "-h") {
 	usage();
 	process.exit(0);
 }
 
+let topic = DEFAULT_TOPIC;
 let title = "";
 let priority = "";
 let tags = "";
@@ -53,7 +57,10 @@ const positionals = [];
 try {
 	for (let i = 0; i < args.length; i++) {
 		const arg = args[i];
-		if (arg === "--title") {
+		if (arg === "--topic") {
+			topic = readOption(args, i, arg);
+			i++;
+		} else if (arg === "--title") {
 			title = readOption(args, i, arg);
 			i++;
 		} else if (arg === "--priority") {
@@ -69,29 +76,27 @@ try {
 		}
 	}
 
-	if (positionals.length === 0) {
-		throw new Error("Missing topic");
-	}
-
-	const topic = positionals[0];
-	let message = positionals.slice(1).join(" ").trim();
+	let message = positionals.join(" ").trim();
 
 	if (!message) {
 		message = readMessageFromStdin();
 	}
 
 	if (!message) {
-		throw new Error("Missing message: pass text after the topic or pipe stdin.");
+		throw new Error("Missing message: pass message text as arguments or pipe stdin.");
 	}
 
 	const config = requireNtfyConfig();
 	const url = `${config.baseUrl}/${encodeURIComponent(topic)}`;
 
+	// Sanitize header values to ASCII only (HTTP spec requires ASCII headers)
+	const sanitizeHeader = (str) => str.replace(/[^\x00-\x7F]/g, "");
+
 	const headers = {
 		...basicAuthHeaders(config),
 	};
 
-	if (title) headers.Title = title;
+	if (title) headers.Title = sanitizeHeader(title);
 	if (priority) headers.Priority = priority;
 	if (tags) headers.Tags = tags;
 
