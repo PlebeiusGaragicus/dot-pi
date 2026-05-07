@@ -1,6 +1,6 @@
 # `/pdf-ocr` workflow (mas)
 
-The diagram and pseudocode below describe the **intended** `/pdf-ocr` prompt flow for the `mas` orchestrator: same artifact story as the legacy **reader** MAS (`reader-manifest.json`, `pages/*.png`, `pages/*.md`), but **delegation targets** are the durable top-level agents (`coder`, `web`, `writer`, `ask`) instead of `ingester` / `ocr-page` / etc.
+The diagram and pseudocode below describe the **intended** `/pdf-ocr` prompt flow for the `mas` orchestrator: `reader-manifest.json` plus split trees **`pages-png/`** (renders) and **`pages-ocr/`** (markdown), with **delegation targets** the durable top-level agents (`coder`, `web`, `writer`, `ask`) instead of reader’s `ingester` / `ocr-page` / etc.
 
 ## Flow (Mermaid)
 
@@ -18,13 +18,13 @@ flowchart TD
 
   subgraph artifacts["Artifacts on disk"]
     M[reader-manifest.json]
-    P["pages/page-NNNN.png"]
-    MD["pages/page-NNNN.md"]
+    P["pages-png/page-NNNN.png"]
+    MD["pages-ocr/page-NNNN.md"]
     DOC[document.md / summary.md optional]
   end
 
   subgraph ingest["Ingest once"]
-    D --> I{Manifest + page PNGs exist?}
+    D --> I{Manifest + pages-png/*.png exist?}
     I -->|resume: yes| L
     I -->|no| IG[subagent: coder — pdfinfo, pdftoppm, manifest, resize rules]
     IG --> L
@@ -33,7 +33,7 @@ flowchart TD
   end
 
   subgraph ocr["Page OCR"]
-    L[mas: read manifest + list pages/] --> O{Pages missing .md or pending/failed?}
+    L[mas: read manifest + list pages-png/ + pages-ocr/] --> O{Pages missing .md or pending/failed?}
     O -->|none| AU
     O -->|some| OC[subagent: coder — one task per page, batches ≤ 8]
     OC --> AU
@@ -50,7 +50,7 @@ flowchart TD
 
   subgraph assemble["Optional assemble"]
     ASM{User wants document.md or summary.md?}
-    ASM -->|yes| AS[subagent: writer — read pages/*.md, write document or summary]
+    ASM -->|yes| AS[subagent: writer — read pages-ocr/*.md, write document or summary]
     ASM -->|no| VAL
     AS --> VAL
     AS -.-> DOC
@@ -84,10 +84,10 @@ FUNCTION mas_pdf_ocr(user_text):
   ELSE:
     pdf_path ← resolved_local_path(path_or_url)
 
-  # pages/ + manifest are created by the ingest subagent on first run
+  # pages-png/ + pages-ocr/ + manifest are created by the ingest subagent on first run
 
   # --- Resume vs fresh ingest ---
-  IF file_exists("reader-manifest.json") AND glob("pages/*.png").non_empty:
+  IF file_exists("reader-manifest.json") AND glob("pages-png/*.png").non_empty:
     manifest ← read("reader-manifest.json")
     IF user did NOT request re-ingest:
       GOTO ocr_phase
@@ -98,7 +98,7 @@ FUNCTION mas_pdf_ocr(user_text):
     run pdfinfo / pdftoppm (or magick fallback),
     apply DPI + max-edge rules,
     write reader-manifest.json,
-    emit pages/page-0001.png …,
+    emit pages-png/page-0001.png …,
     return confirmation + page count + blockers)
   IF reply_ingest indicates hard failure:
     RETURN blocker
@@ -119,11 +119,11 @@ ocr_phase:
 
   # --- Optional document-level output ---
   IF user asked for full transcript OR summary:
-    subagent("writer", task: read all pages/*.md, write document.md and/or summary.md)
+    subagent("writer", task: read all pages-ocr/*.md, write document.md and/or summary.md)
 
   # --- Orchestrator-only checks (no path-only ask) ---
   skim manifest + spot-check a few MD paths with read()
-  RETURN short_message(paths: reader-manifest.json, pages/, document.md if any)
+  RETURN short_message(paths: reader-manifest.json, pages-png/, pages-ocr/, document.md if any)
 ```
 
 ## Worker mapping (reference)
@@ -135,6 +135,6 @@ ocr_phase:
 | `ocr-page` | `coder` | `read` image, `write` one `.md` per page; needs **vision-capable** model on that worker |
 | `page-auditor` | `coder` | Same tools; one page per task |
 | `assembler` | `writer` | Prose / stitched doc from existing markdown; no `bash` required |
-| PASS/FAIL rubric over pasted excerpts | `ask` | Only with **inline** text; never “read `pages/foo.md`” |
+| PASS/FAIL rubric over pasted excerpts | `ask` | Only with **inline** text; never “read `pages-ocr/foo.md`” |
 
 Adjust the diagram if you later pin OCR to `writer` (multimodal + `write`) or split fetch strictly onto `web` vs `coder`.
