@@ -55,6 +55,22 @@ The standard pipeline runs four steps:
 3. **writer** (single) -- synthesizes all sources into `report.md`
 4. **editor** (single) -- reviews and produces final `report.md`
 
+This pipeline is the quality bar for research workflows in dot-pi. A successful run should leave behind multiple normalized source files, screenshots for browser-captured pages, a final report with inline citations, and session traces for every phase.
+
+## Mapping To Top-Level `mas`
+
+The experimental top-level `mas` agent does not expose `collector` or `editor` as permanent worker identities. When `/deepresearch` is implemented as a prompt template on `mas`, it should preserve the same artifact contracts with durable capability agents:
+
+| Legacy deepresearch role | Top-level `mas` mapping |
+|--------------------------|-------------------------|
+| `scout` | `web` source-scout task returning a numbered URL plan |
+| `collector` | parallel `web` collector tasks, one URL per task |
+| `writer` | `writer` draft task reading all `sources/*.md` |
+| `editor` | second `writer` task acting as editorial reviewer |
+| final validation | MAS reads `report.md`; `ask` may judge only text supplied inline |
+
+The mapping should not weaken the workflow. In particular, `web` collector tasks should still save one `sources/<slug>.md` file with URL metadata and one screenshot when browser capture succeeds, and the editor pass should still verify citations and source references before final response.
+
 ## Workspace Structure
 
 Each run creates a dated directory under `agents/deepresearch/workspaces/`:

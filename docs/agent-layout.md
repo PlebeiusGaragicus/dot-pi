@@ -230,6 +230,10 @@ Prompt templates invoked inside pi with `/template-name`. Scaffolds link `prompt
 
 Prompt templates are useful for stable workflows such as research-write-edit chains, fixed implementation/review loops, or repeatable report generation.
 
+Workflow prompts that accept user input should include `$@`, preferably near the end of the template so the user's request is the final context. Every workflow step must respect the structural capabilities in the target worker's `CAPABILITY.md`, `USAGE.md`, and `pi-args`. Do not ask a worker to read paths, write files, browse the web, or run commands unless that worker actually has the required tools or skills.
+
+For example, a chat-only evaluator can judge text included in its task, but it cannot inspect `report.md` by path. A source-collection workflow should specify durable artifact contracts such as `sources/<slug>.md` and `screenshots/<slug>.png` rather than accepting a summary that cannot be audited later.
+
 ### `skills/`
 
 Opt-in skill symlinks. Skills are markdown instruction bundles stored in `shared/skills/<skill>/SKILL.md` and linked per agent with:

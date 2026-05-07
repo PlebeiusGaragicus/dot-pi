@@ -284,6 +284,14 @@ Workspace contents are gitignored (`agents/*/workspaces/`).
 
 Markdown files in `<agentDir>/prompts/` defining reusable workflows. Invoked via `/template-name` in pi chat. Typically chain subagents with `{previous}` placeholders and reference `$@` for user input.
 
+When editing prompt templates, keep delegation structural:
+
+- Include `$@` for workflows that accept user input, preferably near the end of the template.
+- Match every subagent task to that worker's real `CAPABILITY.md`, `USAGE.md`, `pi-args`, tools, and skills.
+- Do not ask no-tool agents such as `ask` to read paths, URLs, commands, or runtime state; inline the text they must judge.
+- Preserve artifact contracts when replacing workflow-specific workers with durable capability agents. A `web` task standing in for a collector should still create source files and screenshots, not just a summary.
+- Require auditable files for research and reports: source markdown, URL metadata, screenshots when available, inline citations, and source appendices.
+
 ## Symlink Patterns
 
 `dotpi` wires shared resources into agent config directories via relative symlinks. The canonical sources live in `shared/` and are never loaded directly by pi.

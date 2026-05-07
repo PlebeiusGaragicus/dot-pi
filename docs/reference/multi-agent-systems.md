@@ -213,6 +213,40 @@ This matters most for self-hosted inference. Ten OCR tasks may be logically inde
 
 For the exact rules, see [Subagent Concurrency](subagent-concurrency.md).
 
+## Workflow Authoring And Capability Boundaries
+
+Workflow prompts and orchestrator task strings must respect each worker's structural configuration. Prompt instructions can narrow behavior, but they cannot grant tools, skills, context-file access, filesystem access, browser access, or write permission.
+
+Before writing a `subagent` call, check the target worker's `USAGE.md` or `CAPABILITY.md` and its `pi-args`:
+
+- If the task names file paths, the worker must have `read` or another explicit way to inspect those paths.
+- If the task asks for an artifact, the worker must have `write`, `edit`, or an explicitly allowed script path through `bash`.
+- If the task asks for live web data, the worker must have web/search/browser skills and the tools needed to use them.
+- If the task asks for semantic judgement from a no-tool worker, include the relevant text directly in the task.
+- If a workflow depends on auditability, require durable source files, screenshots, logs, or manifests instead of accepting a large natural-language summary.
+
+Bad delegation:
+
+```json
+{
+  "agent": "ask",
+  "persona": "judge",
+  "task": "Evaluate whether reports/report.md has enough citations."
+}
+```
+
+`ask` has no tools and cannot read `reports/report.md`. A correct call either uses a reader/editor worker, or passes the report excerpt and rubric inline:
+
+```json
+{
+  "agent": "ask",
+  "persona": "judge",
+  "task": "Report excerpt: ...\nRubric: citations must appear on factual claims.\nReply PASS or FAIL."
+}
+```
+
+For research workflows, preserve artifact contracts when migrating from workflow-specific workers to durable capability agents. If a legacy `collector` saved one cleaned source file and screenshot per URL, the replacement `web` task should still demand one source file and screenshot per URL; it should not merely summarize several pages into one opaque notes file.
+
 ## Workspace And Artifact Handoffs
 
 MAS configs often run in workspace mode. A workspace gives all subagents a shared filesystem for durable artifacts:

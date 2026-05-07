@@ -246,6 +246,8 @@ Use top-level capability agents.
 
 The workers do not become deep-research-specific. They receive deep-research-specific task instructions only for that invocation.
 
+When migrating an existing workflow-specific MAS into top-level prompts, preserve the workflow's artifact contracts. A durable capability worker can take on a phase role for one invocation, but the prompt must still require the same inspectable handoffs that made the original workflow reliable. For example, replacing a `collector` identity with `web` should still require one captured source file per URL, URL metadata, screenshots when browser capture succeeds, and explicit issue reporting for failed pages.
+
 ## Invocation Semantics
 
 The new extension should support at least three invocation shapes:
