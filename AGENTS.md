@@ -61,7 +61,7 @@ These files are **never tracked**. They're created locally by the installer or `
 | `shared/settings.json` | Symlink → `~/.pi/agent/settings.json` (created by `dotpi sync`) | Pi runtime settings (theme, defaults). Edit `~/.pi/agent/settings.json` or use pi's settings UI. |
 | `shared/auth.json` | Symlink → `~/.pi/agent/auth.json` (created by `dotpi sync`) | API credentials. Edit `~/.pi/agent/auth.json` directly. |
 | `*/auth.json` (under `agents/<name>/`) | Symlink → `../../shared/auth.json` (created by `dotpi sync` / scaffolds) | Same credential file for every top-level agent; edit `~/.pi/agent/auth.json`. Override with `dotpi link-auth` if needed. |
-| `.exa.env`, `.tavily.env` | `/exa-api-key`, `/tavily-api-key`, or manual `SERVICE_API_KEY=value` | Repo-root keys for optional search extensions. Convention: **`.service-name.env`** (gitignored). |
+| `.exa.env`, `.tavily.env`, `.ntfy.env` | `/exa-api-key`, `/tavily-api-key`, manual keys, or `NTFY_*` for ntfy | Repo-root keys / ntfy URL and optional Basic auth. Convention: **`.service-name.env`** (gitignored). |
 | `REFERENCES/*` | Optional manual `git clone`s; see REFERENCE-REPOS.md` | Sibling project source for agents to read. |
 
 ### MAS Directory Layout (`agents/<name>/`)
@@ -393,5 +393,5 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `model-defaults` | Local | Per-machine global fallback model aliases. Created by `dotpi sync` or `dotpi model-defaults`, loaded at agent launch time. |
 | `agents/*/.model`, `subagents/*/.model`, `agents/*/agents/*/.model` | Local | Per-agent raw `provider/model` overrides written by `/model-default`; gitignored. |
 | `shared/settings.json` | **No** | Symlink → `~/.pi/agent/settings.json`. Edit the system file directly or use pi's settings UI. |
-| `.exa.env`, `.tavily.env` | Local | Repo-root API keys for Exa / Tavily; convention `.service-name.env`. Gitignored. |
+| `.exa.env`, `.tavily.env`, `.ntfy.env` | Local | Repo-root API keys for Exa / Tavily and optional ntfy server URL + auth; convention `.service-name.env`. Gitignored. |
 | `VERSION` | Yes | Bump on releases. Surfaced via `dotpi --version`. |

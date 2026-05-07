@@ -5,4 +5,5 @@ Multi
 Top-level orchestrator:
   use
     /deepresearch for research workflows
+    /pdf-ocr for PDF page-by-page OCR
     /subagents to inspect workers

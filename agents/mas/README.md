@@ -10,6 +10,6 @@ Unlike workflow-specific MAS configs that own a nested worker pool, `mas` delega
 - `coder` - implementation, tests, builds, and command execution.
 - `web` - live web search, browser-control, source extraction, and citation-backed synthesis.
 
-Workflow prompts in `prompts/` define task-specific orchestration. For example, `/deepresearch` can ask `web` to find and inspect sources, `writer` to create a report, and `ask` with the `judge` persona to validate quality gates. The workers remain general-purpose capability agents.
+Workflow prompts in `prompts/` define task-specific orchestration. For example, `/deepresearch` can ask `web` to find and inspect sources, `writer` to create a report, and `ask` with the `judge` persona to validate quality gates. `/pdf-ocr` drives PDF ingestion, per-page OCR via `coder`, optional assembly via `writer`, and URL fetch via `web` when needed. The workers remain general-purpose capability agents.
 
 Worker traces are grouped under `subagent-traces/<run-id>/` with a manifest for retrospective inspection. User-resumable `mas` sessions remain separate in `sessions/`.
