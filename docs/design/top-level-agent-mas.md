@@ -40,7 +40,7 @@ A workflow is a task pattern:
 - PDF reading.
 - Release-note drafting.
 
-The top-level-agent MAS should avoid creating new worker identities just because a workflow has a phase name. Instead of creating a permanent `collector` worker for one research workflow, the MAS should call `web` with precise instructions for source discovery or browser inspection. Instead of creating a permanent `report-writer` worker for one workflow, it should call `writer` with the report contract for that invocation.
+The top-level-agent MAS should avoid creating new worker identities just because a workflow has a phase name. Instead of creating a permanent `collector` worker for one research workflow, the MAS should call `web` with precise instructions for source discovery or browser inspection. Instead of creating a permanent `report-writer` worker for one workflow, it should call `writer` with the report profile for that invocation.
 
 Tool permissions, skills, model choices, context-file behavior, and safety posture must stay structural. They should not be moved into workflow prompts. A prompt can ask a worker to behave like a collector for one task, but it should not grant browser access, filesystem access, or repository context access.
 
@@ -226,6 +226,9 @@ A workflow prompt should specify:
 - Quality gates.
 - Stop conditions.
 - Final response expectations.
+- Invocation profiles, including the fact that worker replies are consumed by the orchestrator and should not be written as human-facing responses.
+
+The final response expectation belongs to the MAS agent, not to every worker. For artifact-producing workflows, the best final response is often a short status and path, such as `Research completed. Report saved to ./report.md`. The MAS should not duplicate the artifact by summarizing it back to the user unless the workflow explicitly asks for a summary.
 
 For example, a future `/deepresearch` prompt might specify:
 
@@ -237,8 +240,8 @@ Use top-level capability agents.
 1. Ask `web` to find source candidates for the user's topic.
 2. Ask `web` to inspect selected URLs and save source notes when an artifact is needed.
 3. Ask `writer` to synthesize the saved notes into `report.md`.
-4. Ask `ask` with a judge persona or inline judge contract to check source coverage and factual consistency.
-5. Read the final artifact and summarize the result to the user.
+4. Ask `ask` with a judge profile to check source coverage and factual consistency.
+5. If the quality gate passes, reply to the user with a concise completion notice such as: `Research completed. Report saved to ./report.md`.
 ```
 
 The workers do not become deep-research-specific. They receive deep-research-specific task instructions only for that invocation.
@@ -254,131 +257,112 @@ The new extension should support at least three invocation shapes:
 The MAS should pass explicit task instructions to each worker. Instructions should include:
 
 - The user's goal.
+- The selected invocation profile, if any.
 - The worker's role in this invocation.
 - Any files it may read or write.
-- Expected output format.
+- Expected orchestrator-facing output format.
 - Failure conditions.
-- Whether the answer should be concise or artifact-oriented.
+- Whether the answer should be concise status, operational notes, or artifact-oriented.
 
 The worker process should inherit the MAS current working directory and the runtime environment needed by the target agent, including web/browser environment variables such as `$B` when calling `web`. The extension should set `PI_IS_SUBAGENT=1` for every worker invocation.
 
-The extension should capture worker output in a structured result that includes:
+Worker replies are not human-facing. A worker is part of a chain, and its final reply is consumed by the orchestrator. Worker instructions should explicitly say that the worker should not summarize for the user, explain its process conversationally, or add human-centered preamble and closing text. The final reply should carry only the information the orchestrator needs to decide the next step.
+
+Worker output can be natural language. It does not need to follow a strict schema because the top-level orchestrator is another agent and can interpret concise operational replies. The important invariant is content, not format: the reply should tell the orchestrator what happened, what artifacts were created or changed, what decisions matter, and whether anything blocked or failed.
+
+The extension should capture enough process metadata for debugging and orchestration, but the worker's own final reply can remain plain text:
 
 - Agent name.
 - Exit status.
-- Final text output.
+- Final orchestrator-facing reply.
 - Tool or runtime errors when available.
 - Usage statistics when available.
-- Artifact paths returned by the worker, if any.
 
-## Invocation Personas
+Artifact paths do not need a separate machine-readable channel in the first version. Workers should mention important paths directly in their final reply.
 
-Some workers need a reusable voice, stance, or reasoning style without making the MAS pass a long prompt on every invocation. This should be handled with named personas local to the worker agent.
+## Invocation Profiles
 
-Personas live under the worker config root:
+Invocation profiles combine the ideas previously described as personas, semantics, and contracts. A profile is a named, auditable system-prompt overlay for a worker invocation. It can control voice and stance, but its more important job is to define worker behavior for one reusable invocation pattern.
+
+A profile is not a new subagent identity. It is an invocation-time behavior layer applied to a durable capability agent. The task supplies the concrete work item. The base agent config supplies structural capability, tool access, skills, context-file behavior, model defaults, and safety boundaries.
+
+Profiles live under the worker config root:
 
 ```text
-agents/ask/personas/chat.md
-agents/ask/personas/plato.md
+agents/ask/profiles/judge.md
+agents/ask/profiles/classifier.md
+agents/web/profiles/source-discovery.md
+agents/web/profiles/source-capture.md
+agents/writer/profiles/research-report.md
+agents/coder/profiles/implementation.md
 ```
 
-A persona file is a system-prompt overlay with frontmatter:
+A profile file is a system-prompt overlay with frontmatter:
 
 ```markdown
 ---
-description: Direct and sharp; anti-slop, real opinions
+description: PASS/FAIL evaluator for orchestrator quality gates
 mode: replace
 ---
 
-You are a conversational partner running in chat-only mode...
+You are evaluating an artifact for the orchestrator, not speaking to the user.
+Check the requested criteria and reply only with PASS or FAIL plus one concise reason.
 ```
 
 The `mode` field controls prompt composition:
 
-- `append`: preserve the base system prompt and append the persona block.
-- `prepend`: put the persona block before the base system prompt.
+- `append`: preserve the base system prompt and append the profile block.
+- `prepend`: put the profile block before the base system prompt.
 - `replace`: replace the base system prompt entirely.
-
-If `personas/helpful.md` exists, it is the default persona. Agents that want a neutral baseline should encode that baseline as `helpful` rather than relying on a persona-less or "off" state.
 
 The default should be `append`, because capability agents often have safety, tool, or task instructions in their base prompt that must remain active. `replace` is appropriate for tiny chat-only agents such as `ask`, where the static prompt exists mainly to prevent pi from injecting its default system prompt.
 
-The personas extension should support two activation paths:
+The profiles implementation should support two activation paths:
 
-- `/persona <name>` for interactive top-level use.
-- `--persona <name>` for subprocess and MAS use.
+- `/profile <name>` for interactive top-level use.
+- `--profile <name>` for subprocess and MAS use.
 
-The MAS should invoke a persona by name, not by passing its full text. For example:
-
-```json
-{
-  "agent": "ask",
-  "persona": "chat",
-  "task": "Evaluate whether this argument is persuasive: ..."
-}
-```
-
-This keeps orchestration prompts short while preserving traceability. The selected persona remains auditable in the worker's config directory, and the MAS only decides when a persona is appropriate.
-
-Personas are not capabilities. They should not be used to grant tools, browser access, repository context, or filesystem permissions. If persona frontmatter can alter tools or skills, that behavior must remain explicit and should be treated as part of the worker's structural contract.
-
-## Invocation Contracts (Deferred)
-
-Invocation contracts are a likely future extension of this design, but they should be deferred until the basic top-level-agent MAS model works with direct tasks and workflow prompts.
-
-A contract is a small, reusable invocation protocol for a worker. It is not a new subagent identity. It answers questions such as:
+A profile should answer the operational questions the orchestrator would otherwise have to repeat in every task:
 
 - What role is this worker playing in this call?
-- What output shape must it return?
-- What files or artifacts should it read or produce?
-- What counts as success or failure?
-- How concise should the reply be?
-- How should errors or uncertainty be reported?
+- What method should it use to accomplish the task?
+- What files, paths, URLs, or prior artifacts should it inspect?
+- What files, paths, URLs, or unrelated context should it ignore?
+- What artifacts may it create or modify?
+- What counts as success, failure, or a blocker?
+- What should it do if it encounters uncertainty, missing inputs, tool failure, or partial results?
+- What should the final reply tell the orchestrator?
+- What human-facing explanation or summary is forbidden?
 
-Personas and contracts are different:
-
-- A persona controls voice, stance, and reasoning style.
-- A contract controls role, output format, artifact expectations, and failure handling.
-- The task supplies the concrete work item.
-- The base agent config supplies durable capability, tool access, skills, and safety boundaries.
-
-For example, `ask` can use a persona to sound human or terse, but a contract tells it to act as a judge:
+The MAS should invoke a profile by name, not by passing its full text. For example:
 
 ```json
 {
   "agent": "ask",
-  "persona": "helpful",
-  "contract": "pass-fail-judge",
-  "task": "Check whether report.md satisfies the citation rules. Reply only PASS or FAIL: <one sentence>."
+  "profile": "judge",
+  "task": "Check whether report.md satisfies the citation rules."
 }
 ```
 
-For a deep research workflow, inline contracts in the `/deepresearch` prompt may be enough at first:
+This keeps orchestration prompts short while preserving traceability. The selected profile remains auditable in the worker's config directory, and the MAS only decides which profile is appropriate for the invocation.
+
+Profiles are not capabilities. They must not be used to grant tools, browser access, repository context, filesystem permissions, model defaults, or skills that are not already structurally allowed by the worker config. If profile frontmatter can alter tools or skills in a future implementation, that behavior must be explicit and treated as part of the worker's structural configuration.
+
+Profiles should usually say that the worker is not speaking to the user. The profile should define what the orchestrator needs back: status, artifact paths, key decisions, validation results, errors, and next-step recommendations. A worker that created or inspected a large artifact should normally return the artifact path and concise operational notes, not a prose summary of the artifact.
+
+For a deep research workflow, `/deepresearch` might invoke `ask` with a `judge` profile:
 
 ```markdown
-When invoking `ask` as final judge, instruct it:
-Return exactly `PASS` or `FAIL: <one sentence>`.
-Check source coverage, citation format, and unsupported claims.
-Do not add preamble or follow-up.
+Use `ask` with profile `judge`.
+Task: Check whether `report.md` satisfies the citation rules.
+Criteria: source coverage, citation format, and unsupported claims.
+Reply to the orchestrator only. Return `PASS` or `FAIL: <one sentence>`.
+Do not add preamble, follow-up, user-facing explanation, or a report summary.
 ```
 
-Named contract files should only be introduced when the same protocol repeats across workflows or becomes important enough to test independently. This avoids recreating the old `subagents/` tree under a new name.
+Profiles should stay small, roughly 10-60 lines. If a profile grows into a full worker prompt, that is a signal to either simplify it, move the stable behavior into the agent's base prompt, or reconsider whether the workflow really needs a specialized subagent.
 
-If promoted to files, contracts should live with the worker they constrain:
-
-```text
-agents/ask/contracts/pass-fail-judge.md
-agents/ask/contracts/semantic-evaluator.md
-agents/web/contracts/source-leads.md
-agents/web/contracts/source-capture.md
-agents/writer/contracts/research-report.md
-```
-
-Contracts should stay small, roughly 10-40 lines. If a contract grows into a full worker prompt, that is a signal to either simplify it, move the stable behavior into the agent's base prompt, or reconsider whether the workflow really needs a specialized subagent.
-
-Contracts must not grant capabilities. A contract may say "write `report.md`," but a worker without write tools still cannot write. Tool access, skills, context-file behavior, model defaults, and safety posture remain structural properties of the agent config.
-
-The first implementation should prefer inline workflow guidance. Contract files are a second-stage abstraction for repeated strict protocols, especially judges, source-list formats, artifact-capture confirmations, and report-output requirements.
+The existing `personas` extension is a useful implementation starting point because it already supports named prompt overlays, `append`/`prepend`/`replace`, and subprocess selection through `--persona`. The top-level-agent MAS should generalize that idea into `profiles` with `--profile` rather than preserving a separate persona/contract split. A compatibility path can map existing `agents/ask/personas/*.md` files into profiles or rename the concept during cleanup.
 
 ## Artifact Handoffs
 
@@ -406,7 +390,7 @@ PI_IS_SUBAGENT=1
 
 Any extension that launches a child agent should set this environment variable for the child process. Any extension that provides interactive or parent-only behavior should check it before registering tools, commands, hooks, prompt augmentation, or UI affordances that do not make sense in a worker process.
 
-This is especially important for tools that require live user input. A worker agent cannot pause and ask the user to choose from an interactive prompt because the parent MAS owns the user conversation. The child process usually runs with piped IO and returns structured output to the parent.
+This is especially important for tools that require live user input. A worker agent cannot pause and ask the user to choose from an interactive prompt because the parent MAS owns the user conversation. The child process usually runs with piped IO and returns an orchestrator-facing reply to the parent.
 
 The `questionnaire` tool is the motivating example. It is useful in an interactive top-level `writer` or `coder` session, and direct-use agents may include `questionnaire` in their `pi-args` `--tools` allowlist. The same tool should not be available when those agents are invoked as workers. The best first-version behavior is registration-time suppression in the extension:
 
@@ -503,7 +487,7 @@ Each eligible agent should have:
 - No assumptions that it is always speaking directly to a human.
 - Subprocess-safe extensions that suppress interactive tools and UI-only behavior when `PI_IS_SUBAGENT=1`.
 
-Direct-user friendliness is still useful, but worker use requires stricter input and output contracts.
+Direct-user friendliness is still useful, but worker use requires stricter invocation profiles and orchestrator-facing replies.
 
 ## Compatibility Risks
 
@@ -523,14 +507,15 @@ The design answers these risks with allowlists, capability descriptors, workspac
 
 1. Update this specification until the first-version worker set and safety rules are stable.
 2. Add `CAPABILITY.md` to `ask`, `scout`, `writer`, `coder`, and `web`.
-3. Clean the five core agents for worker use: prompts, `pi-args`, skills, model defaults, context-file behavior, and subprocess-safe extensions.
-4. Make direct-use interactive tools such as `questionnaire` available to `writer` and `coder` only when not running with `PI_IS_SUBAGENT=1`.
-5. Implement `shared/extensions/top-level-agent-orchestrator/` separately from the existing nested-worker orchestrator.
-6. Configure `agents/mas/` with the new extension, an explicit core-agent allowlist, and a clear `SYSTEM.md`.
-7. Add workflow prompts to `agents/mas/prompts/`, starting with `/deepresearch`.
-8. Run smoke tests with each single worker: `ask`, `scout`, `writer`, `coder`, and `web`.
-9. Run small multi-worker workflows and inspect final artifacts, intermediate files, and worker outputs.
-10. Decide whether existing workflow-specific MAS agents should remain, be deprecated, or be reduced to `mas` prompt templates.
+3. Add initial invocation profiles for repeated worker behaviors such as `ask/judge`, `ask/classifier`, `web/source-discovery`, `web/source-capture`, and `writer/research-report`.
+4. Clean the five core agents for worker use: prompts, `pi-args`, skills, model defaults, context-file behavior, and subprocess-safe extensions.
+5. Make direct-use interactive tools such as `questionnaire` available to `writer` and `coder` only when not running with `PI_IS_SUBAGENT=1`.
+6. Implement `shared/extensions/top-level-agent-orchestrator/` separately from the existing nested-worker orchestrator.
+7. Configure `agents/mas/` with the new extension, an explicit core-agent allowlist, and a clear `SYSTEM.md`.
+8. Add workflow prompts to `agents/mas/prompts/`, starting with `/deepresearch`.
+9. Run smoke tests with each single worker: `ask`, `scout`, `writer`, `coder`, and `web`.
+10. Run small multi-worker workflows and inspect final artifacts, intermediate files, and worker outputs.
+11. Decide whether existing workflow-specific MAS agents should remain, be deprecated, or be reduced to `mas` prompt templates.
 
 ## Non-Goals
 
@@ -547,6 +532,6 @@ The design answers these risks with allowlists, capability descriptors, workspac
 - What should the final extension and tool names be?
 - Should the allowlist live in the MAS root, the extension config, or both?
 - Should capability descriptors support structured frontmatter?
+- Should profiles support structured frontmatter beyond `description` and `mode`?
 - Should the extension support per-worker timeout and budget controls?
-- Should worker outputs include machine-readable artifact manifests?
 - Should `coder` load repository context files when invoked as a worker, or should context-file behavior differ between direct and subprocess use?
