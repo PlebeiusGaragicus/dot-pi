@@ -21,6 +21,7 @@ agents/*/auth.json
 agents/*/.model
 # agents/*/settings.json
 agents/*/.cache/
+agents/*/subagent-traces/
 agents/*/agents/*/.model
 subagents/*/sessions/*
 !subagents/*/sessions/.gitkeep

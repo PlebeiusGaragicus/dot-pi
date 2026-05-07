@@ -76,6 +76,8 @@ function errorResult(
 }
 
 export default function questionnaire(pi: ExtensionAPI) {
+	if (process.env.PI_IS_SUBAGENT === "1") return;
+
 	pi.registerTool({
 		name: "questionnaire",
 		label: "Questionnaire",

@@ -117,12 +117,12 @@ Use `--no-context-files` for agents that should not inherit repository guidance 
 
 !!! warning "`--tools` is an allowlist that gates extension tools"
 
-    When `--tools` is present, **only the listed tool names are available** to the agent. This applies equally to built-in tools, extension-registered tools (`pi.registerTool()`), and SDK custom tools. If an extension registers a tool (e.g. `tavily_search`) but the name is not in the `--tools` list, the LLM will receive "Tool not found" when it tries to call it.
+    When `--tools` is present, **only the listed tool names are available** to the agent. This applies equally to built-in tools, extension-registered tools (`pi.registerTool()`), and SDK custom tools. If an extension registers a tool (e.g. `custom_lookup`) but the name is not in the `--tools` list, the LLM will receive "Tool not found" when it tries to call it.
 
     To use extension tools with a restricted built-in set, name them explicitly:
 
     ```text
-    --tools read,ls,bash,tavily_search
+    --tools read,ls,bash,custom_lookup
     ```
 
     Omitting `--tools` entirely enables all tools (built-in defaults plus all extension tools). Use `--no-builtin-tools` to suppress only the default built-ins (read, bash, edit, write) while keeping all extension tools enabled.

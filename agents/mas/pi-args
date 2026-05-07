@@ -1,0 +1,5 @@
+--model
+$DEFAULT_AGENTIC_MODEL
+--tools
+ls,find,grep,read,subagent
+--no-context-files

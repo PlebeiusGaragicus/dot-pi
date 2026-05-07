@@ -1,4 +1,6 @@
-# Tavily Web Search Extension
+# Tavily Web Search Extension (Deprecated)
+
+This extension is deprecated. Prefer the `tavily-search` skill, which exposes script-based Tavily search and extraction through `skills/tavily-search/scripts/`, similar to the Exa skill.
 
 Direct Tavily REST-API access via a structured `tavily_search` tool. Avoids having agents shell out to `curl` and parse `jq` output. Also displays plan-quota usage in the footer status bar.
 

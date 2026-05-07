@@ -1,0 +1,8 @@
+Multi
+    -Agent
+         System
+---
+Top-level orchestrator:
+  use
+    /deepresearch for research workflows
+    /subagents to inspect workers

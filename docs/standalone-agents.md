@@ -86,12 +86,12 @@ Available flags include `--tools <list>` (allowlist), `--no-tools` (disable all 
 
 !!! warning "`--tools` gates extension tools too"
 
-    `--tools` is a strict allowlist that applies to **all** tool types — built-in, extension-registered (`pi.registerTool()`), and SDK custom. If an agent loads an extension that registers a tool (e.g. `tavily_search`) but the `--tools` line does not include that name, the tool will not be available and the LLM will see "Tool not found."
+    `--tools` is a strict allowlist that applies to **all** tool types — built-in, extension-registered (`pi.registerTool()`), and SDK custom. If an agent loads an extension that registers a tool (e.g. `custom_lookup`) but the `--tools` line does not include that name, the tool will not be available and the LLM will see "Tool not found."
 
     To combine a restricted built-in set with extension tools, list everything explicitly:
 
     ```text
-    --tools read,ls,bash,tavily_search
+    --tools read,ls,bash,custom_lookup
     ```
 
     Omitting `--tools` entirely enables all tools. Use `--no-builtin-tools` to suppress only the default built-ins while keeping all extension tools enabled.

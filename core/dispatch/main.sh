@@ -9,7 +9,7 @@ _list_available() {
       local name mode kind
       name=$(basename "$d")
       mode=$(_is_workspace_agent "$d" && echo workspace || echo in-situ)
-      kind=$([ -e "$d/extensions/agent-orchestrator/index.ts" ] && echo mas || echo agent)
+      kind=$([ -e "$d/extensions/agent-orchestrator/index.ts" ] || [ -e "$d/extensions/top-level-agent-orchestrator/index.ts" ] && echo mas || echo agent)
       printf '%s\t%s\t%s\n' "$name" "$kind" "$mode"
     done
   } | sort -t $'\t' -k1,1 | while IFS=$'\t' read -r name kind mode; do
