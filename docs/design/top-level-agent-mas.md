@@ -266,7 +266,7 @@ The MAS should pass explicit task instructions to each worker. Instructions shou
 
 The worker process should inherit the MAS current working directory and the runtime environment needed by the target agent, including web/browser environment variables such as `$B` when calling `web`. The extension should set `PI_IS_SUBAGENT=1` for every worker invocation.
 
-The launch path should mirror the existing nested-worker orchestrator where possible: spawn a child `pi` process in JSON mode, set `PI_CODING_AGENT_DIR` to the selected top-level agent root, read that agent's `pi-args`, pass `--persona <name>` when a persona is selected, and send the delegated task through print mode. The extension should not invoke the dot-pi dispatcher for workers in the first version.
+The launch path should mirror the existing nested-worker orchestrator where possible: spawn a child `pi` process in JSON mode, set `PI_CODING_AGENT_DIR` to the selected top-level agent root, read that agent's `pi-args`, pass `--persona <name>` when a persona is selected, pass an explicit worker trace `--session-dir`, and send the delegated task through print mode. The extension should not invoke the dot-pi dispatcher for workers in the first version.
 
 Worker replies are not human-facing. A worker is part of a chain, and its final reply is consumed by the orchestrator. Worker instructions should explicitly say that the worker should not summarize for the user, explain its process conversationally, or add human-centered preamble and closing text. The final reply should carry only the information the orchestrator needs to decide the next step.
 
@@ -281,6 +281,66 @@ The extension should capture enough process metadata for debugging and orchestra
 - Usage statistics when available.
 
 Artifact paths do not need a separate machine-readable channel in the first version. Workers should mention important paths directly in their final reply.
+
+## Session Trace Management
+
+Top-level `mas` session files and worker trace files have different jobs and should be stored separately.
+
+The top-level `mas` agent's own JSONL sessions should remain in its normal `sessions/` directory so user-initiated conversations can be resumed normally. A worker invocation of `ask`, `scout`, `writer`, `coder`, or `web` is not a user-resumable conversation. Those child JSONL files are retrospective execution traces for the MAS trajectory, and they should not be written into the selected worker agent's config-root `sessions/` directory.
+
+For every top-level MAS run, the extension should create or select a dedicated trace bundle directory for all worker sessions from that run. For in-situ `mas`, the first-version convention should be:
+
+```text
+agents/mas/subagent-traces/<mas-run-id>/
+```
+
+The sibling `agents/mas/sessions/` directory remains reserved for user-resumable `mas` conversations:
+
+```text
+agents/mas/sessions/          # top-level user-resumable MAS sessions
+agents/mas/subagent-traces/   # grouped worker JSONL traces
+```
+
+For workspace MAS runs in a later version, the same layout can move under the workspace:
+
+```text
+<workspace>/sessions/              # top-level user-resumable MAS sessions
+<workspace>/subagent-traces/<run>/ # grouped worker JSONL traces
+```
+
+The extension should derive one `mas-run-id` at the start of a MAS process and reuse it for every worker launch in that top-level run. If pi exposes a parent session identifier, the run id should include or mirror it. Otherwise, a timestamp plus short random suffix is sufficient, such as:
+
+```text
+2026-05-06-203104--mas-a7f3c2
+```
+
+Every worker process should be launched with an explicit session policy:
+
+- In normal tracing mode, pass `--session-dir <trace-bundle-dir>`.
+- If a future workflow intentionally disables trace persistence, pass `--no-session`.
+- Never allow child workers to fall back to `agents/<worker>/sessions/`.
+
+The trace bundle should include a small manifest for retrospective analysis:
+
+```json
+{
+  "parentAgent": "mas",
+  "traceRunId": "2026-05-06-203104--mas-a7f3c2",
+  "cwd": "/path/to/project",
+  "workers": [
+    {
+      "index": 1,
+      "agent": "web",
+      "persona": null,
+      "mode": "single",
+      "startedAt": "2026-05-06T20:31:04-07:00",
+      "exitCode": 0
+    }
+  ]
+}
+```
+
+The manifest does not need to replace pi's JSONL session files. It only needs to make a complete MAS trajectory easy to find and inspect.
 
 The tool schema should support these first-version shapes:
 
@@ -417,9 +477,9 @@ Recommended conventions:
 - `drafts/` for intermediate writing.
 - `reports/` or a named root file for final deliverables.
 - `screenshots/` for browser evidence.
-- `sessions/` for optional run logs when a workflow chooses to create them.
+- `subagent-traces/` for grouped worker JSONL traces managed by the MAS extension.
 
-The exact directories should be chosen by each workflow prompt. Worker agents should not assume workflow-specific directories unless the invocation gives them.
+The exact artifact directories should be chosen by each workflow prompt. Worker agents should not assume workflow-specific directories unless the invocation gives them. Session trace directories are different from workflow artifacts and should be managed by the MAS extension, not by individual workflow prompts.
 
 ## Subprocess-Aware Extensions
 
@@ -547,7 +607,7 @@ The design answers these risks with a hard-coded core worker list, capability de
 4. Clean the five core agents for worker use: prompts, `pi-args`, skills, model defaults, context-file behavior, and subprocess-safe extensions. Leave `coder`'s current context-file behavior as-is for the first version.
 5. Ensure `web` includes browser-control behavior and any required skill link or environment inheritance needed for `$B`.
 6. Make direct-use interactive tools such as `questionnaire` available to `writer` and `coder` only when not running with `PI_IS_SUBAGENT=1`.
-7. Implement `shared/extensions/top-level-agent-orchestrator/` separately from the existing nested-worker orchestrator. It should register the `subagent` tool, use the hard-coded core worker list, support `agent`, optional `persona`, and `task`, and pass personas to child processes with `--persona`.
+7. Implement `shared/extensions/top-level-agent-orchestrator/` separately from the existing nested-worker orchestrator. It should register the `subagent` tool, use the hard-coded core worker list, support `agent`, optional `persona`, and `task`, pass personas to child processes with `--persona`, and pass an explicit worker trace `--session-dir`.
 8. Configure `agents/mas/` with the new extension and a clear `SYSTEM.md`.
 9. Add workflow prompts to `agents/mas/prompts/`, starting with `/deepresearch`.
 10. Run smoke tests with each single worker: `ask`, `scout`, `writer`, `coder`, and `web`.
@@ -563,6 +623,8 @@ Smoke-test acceptance criteria:
 - Sequential `chain[]` calls can reference prior output with `{previous}`.
 - Child workers inherit the parent working directory and relevant runtime environment.
 - Every child worker runs with `PI_IS_SUBAGENT=1`.
+- Every child worker receives an explicit `--session-dir` under the current MAS run's trace bundle, and no worker JSONL files are written to `agents/<worker>/sessions/`.
+- The current MAS run's trace bundle contains a manifest that lists worker invocations and enough metadata to inspect the full trajectory later.
 - `questionnaire` is not registered or visible inside worker processes.
 - `web` can use configured web search and browser-control behavior, or returns a concise blocker when required provider or browser state is unavailable.
 - Worker results expose final reply, exit status, runtime/tool errors when available, and usage statistics when available.
