@@ -12,7 +12,7 @@ The proposed pattern separates durable capability from workflow:
 
 - Top-level agents represent durable capabilities and trust boundaries.
 - Workflow prompts represent task-specific orchestration.
-- A new extension discovers and invokes eligible top-level agents.
+- A new extension invokes a hard-coded set of core top-level agents.
 - The existing orchestrator extension remains responsible for the current nested-worker pattern.
 
 In this model, the general `mas` agent can run a `/deepresearch` prompt that asks it to use the `web` top-level agent for search and browser-control work, `writer` for prose artifacts, and `ask` for semantic evaluation or final PASS/FAIL checks. The workflow prompt supplies the research-specific sequencing and artifact expectations. The workers remain general.
@@ -40,7 +40,7 @@ A workflow is a task pattern:
 - PDF reading.
 - Release-note drafting.
 
-The top-level-agent MAS should avoid creating new worker identities just because a workflow has a phase name. Instead of creating a permanent `collector` worker for one research workflow, the MAS should call `web` with precise instructions for source discovery or browser inspection. Instead of creating a permanent `report-writer` worker for one workflow, it should call `writer` with the report profile for that invocation.
+The top-level-agent MAS should avoid creating new worker identities just because a workflow has a phase name. Instead of creating a permanent `collector` worker for one research workflow, the MAS should call `web` with precise instructions for source discovery or browser inspection. Instead of creating a permanent `report-writer` worker for one workflow, it should call `writer` with the report persona for that invocation.
 
 Tool permissions, skills, model choices, context-file behavior, and safety posture must stay structural. They should not be moved into workflow prompts. A prompt can ask a worker to behave like a collector for one task, but it should not grant browser access, filesystem access, or repository context access.
 
@@ -76,7 +76,7 @@ flowchart TD
     MasAgent --> Artifacts["Files in current working directory"]
 ```
 
-The MAS agent owns the user conversation. The workflow prompt tells the MAS how to decompose the task. The extension exposes eligible top-level agents as callable workers. Worker agents run in isolated child contexts, inherit the MAS process working directory, and receive specific task instructions from the MAS.
+The MAS agent owns the user conversation. The workflow prompt tells the MAS how to decompose the task. The extension exposes the hard-coded core top-level agents as callable workers. Worker agents run in isolated child contexts, inherit the MAS process working directory, and receive specific task instructions from the MAS.
 
 ## First-Version Core Workers
 
@@ -100,17 +100,19 @@ The experiment should use a new extension, tentatively:
 shared/extensions/top-level-agent-orchestrator/
 ```
 
-The new extension should not be a mode inside the existing orchestrator extension. It can borrow implementation ideas, but it should own its own discovery rules, tool schema, prompt augmentation, filtering, and compatibility checks.
+The new extension should not be a mode inside the existing orchestrator extension. It can borrow implementation ideas, but it should own its own discovery rules, tool schema, prompt augmentation, filtering, and worker-selection rules.
 
 Reasons to use a separate extension:
 
 - It keeps existing MAS behavior stable.
-- It avoids overloading one tool with two different meanings of "available agent."
+- It avoids overloading one implementation with two different meanings of "available agent."
 - It lets the new model evolve independently.
 - It makes the experiment easy to attach only to a future general MAS agent.
-- It allows stricter eligibility checks for top-level agents.
+- It keeps the first-version worker set intentionally small.
 
-The tool name should be distinct from the current nested-worker tool. A possible name is `agent`, `delegate`, or `top_agent`. The exact name should be chosen when implementation starts, but it should make clear that it invokes top-level capability agents, not nested workflow workers.
+The tool name for the new extension should be `subagent`. Reusing the name is acceptable because the general `mas` agent should load only the new top-level-agent extension, while existing workflow-specific MAS agents continue to load the existing nested-worker orchestrator. The two extensions should not be loaded into the same agent config in the first version because they would register the same tool name with different worker catalogs.
+
+The top-level `subagent` tool invokes top-level capability agents, not nested workflow workers. Its first-version contract should support `agent`, optional `persona`, and `task` for single calls, plus equivalent `tasks[]` and `chain[]` item shapes for parallel and sequential calls.
 
 ## Discovery Model
 
@@ -120,7 +122,7 @@ The extension should discover top-level agent config roots under:
 agents/
 ```
 
-Discovery should be explicit and conservative. The extension should not blindly expose every top-level agent. The first implementation should use a hard-coded or MAS-local allowlist containing exactly:
+Discovery should be explicit and conservative. The extension should not blindly expose every top-level agent. The first implementation should use a hard-coded worker list in `shared/extensions/top-level-agent-orchestrator/` containing exactly:
 
 ```json
 {
@@ -130,19 +132,15 @@ Discovery should be explicit and conservative. The extension should not blindly 
 
 Only those agents should appear in the MAS catalog. This avoids accidental recursion, prevents partially cleaned-up agents from being invoked as workers, and keeps the experiment focused on a small set of durable capability boundaries.
 
-The extension should exclude:
+Because the list is hard-coded, the first version does not need a general-purpose compatibility scanner. It should not walk every directory under `agents/`, parse arbitrary bootstrap files, detect workspace agents, or infer whether an agent is an orchestrator. The core list is expected to be curated and kept compatible by implementation work in this repo.
 
-- The active MAS agent itself.
-- Any agent marked as a workspace agent.
-- Any agent that is itself an orchestration agent, unless explicitly allowed for a later advanced use case.
-- Any agent without a capability descriptor.
-- Any agent whose config is missing a system prompt.
+The extension should resolve each hard-coded name relative to the dot-pi root, read that agent's `CAPABILITY.md`, and build the prompt catalog from the descriptors that exist. Missing descriptors should not produce strict startup failure during the experiment, but the implementation plan requires adding descriptors for all five core agents before meaningful smoke testing.
 
-Name collisions should be resolved before runtime. If two eligible agents expose the same callable name, startup should fail or the duplicate should be omitted with a clear diagnostic.
+`coder` is allowed to rely on pi's default system prompt instead of a local `SYSTEM.md`. A missing local `SYSTEM.md` should not by itself make a hard-coded core worker ineligible.
 
 ## Workspace Agent Exclusion
 
-Workspace agents should be excluded from the first version. This is a worker-eligibility rule, not a requirement that users adopt dot-pi workspace agents for `mas`.
+Workspace agents should be excluded from the first version by curation rather than by broad runtime scanning. This is a worker-selection rule, not a requirement that users adopt dot-pi workspace agents for `mas`.
 
 The user chooses the execution directory by launching `mas` from an existing project or by creating and entering a clean directory before launch. The MAS and its workers operate in that current working directory. Workflow prompts may ask workers to create local directories such as `sources/`, `drafts/`, or `reports/`, but the top-level-agent MAS should not depend on the dot-pi workspace-agent lifecycle.
 
@@ -150,13 +148,13 @@ Top-level agents normally launch through the dot-pi dispatcher. The dispatcher h
 
 A worker invocation from a MAS extension starts a child agent process directly. It does not run the target agent through the dispatcher. That means a workspace agent's launch lifecycle is not available to the child process.
 
-An agent should be considered incompatible when its bootstrap declares workspace mode:
+The hard-coded v1 worker list should contain only agents that do not require workspace-agent bootstrap behavior. The extension does not need to parse all candidate agents for:
 
 ```sh
 WORKSPACE_AGENT=1
 ```
 
-Later versions could define a way to delegate through the dispatcher or emulate the workspace lifecycle, but that should not be part of the first implementation.
+Later versions could define a way to delegate through the dispatcher, emulate the workspace lifecycle, or enforce compatibility checks dynamically, but that should not be part of the first implementation.
 
 ## Capability Descriptors
 
@@ -168,7 +166,7 @@ The proposed descriptor file is:
 CAPABILITY.md
 ```
 
-An eligible top-level agent should include this file. The new extension should use it to build the MAS catalog appended to the parent prompt.
+Each hard-coded core top-level agent should include this file. The new extension should use it to build the MAS catalog appended to the parent prompt.
 
 The descriptor should be concise and operational. Suggested sections:
 
@@ -201,7 +199,9 @@ Find, inspect, and synthesize live web sources using configured search and brows
 
 The descriptor is not a replacement for the agent's system prompt. The system prompt defines the worker's behavior. The descriptor tells the MAS when and how to invoke that worker.
 
-Implementation should add these files before the new extension treats any agent as eligible:
+First-version descriptors should be plain Markdown without required structured frontmatter. If structured descriptor data becomes useful later, it can be added deliberately after the Markdown contract is proven.
+
+Implementation should add these files before smoke testing the new extension:
 
 ```text
 agents/ask/CAPABILITY.md
@@ -226,7 +226,7 @@ A workflow prompt should specify:
 - Quality gates.
 - Stop conditions.
 - Final response expectations.
-- Invocation profiles, including the fact that worker replies are consumed by the orchestrator and should not be written as human-facing responses.
+- Invocation personas, including the fact that worker replies are consumed by the orchestrator and should not be written as human-facing responses.
 
 The final response expectation belongs to the MAS agent, not to every worker. For artifact-producing workflows, the best final response is often a short status and path, such as `Research completed. Report saved to ./report.md`. The MAS should not duplicate the artifact by summarizing it back to the user unless the workflow explicitly asks for a summary.
 
@@ -240,7 +240,7 @@ Use top-level capability agents.
 1. Ask `web` to find source candidates for the user's topic.
 2. Ask `web` to inspect selected URLs and save source notes when an artifact is needed.
 3. Ask `writer` to synthesize the saved notes into `report.md`.
-4. Ask `ask` with a judge profile to check source coverage and factual consistency.
+4. Ask `ask` with the `judge` persona to check source coverage and factual consistency.
 5. If the quality gate passes, reply to the user with a concise completion notice such as: `Research completed. Report saved to ./report.md`.
 ```
 
@@ -257,7 +257,7 @@ The new extension should support at least three invocation shapes:
 The MAS should pass explicit task instructions to each worker. Instructions should include:
 
 - The user's goal.
-- The selected invocation profile, if any.
+- The selected invocation persona, if any.
 - The worker's role in this invocation.
 - Any files it may read or write.
 - Expected orchestrator-facing output format.
@@ -265,6 +265,8 @@ The MAS should pass explicit task instructions to each worker. Instructions shou
 - Whether the answer should be concise status, operational notes, or artifact-oriented.
 
 The worker process should inherit the MAS current working directory and the runtime environment needed by the target agent, including web/browser environment variables such as `$B` when calling `web`. The extension should set `PI_IS_SUBAGENT=1` for every worker invocation.
+
+The launch path should mirror the existing nested-worker orchestrator where possible: spawn a child `pi` process in JSON mode, set `PI_CODING_AGENT_DIR` to the selected top-level agent root, read that agent's `pi-args`, pass `--persona <name>` when a persona is selected, and send the delegated task through print mode. The extension should not invoke the dot-pi dispatcher for workers in the first version.
 
 Worker replies are not human-facing. A worker is part of a chain, and its final reply is consumed by the orchestrator. Worker instructions should explicitly say that the worker should not summarize for the user, explain its process conversationally, or add human-centered preamble and closing text. The final reply should carry only the information the orchestrator needs to decide the next step.
 
@@ -280,24 +282,63 @@ The extension should capture enough process metadata for debugging and orchestra
 
 Artifact paths do not need a separate machine-readable channel in the first version. Workers should mention important paths directly in their final reply.
 
-## Invocation Profiles
+The tool schema should support these first-version shapes:
 
-Invocation profiles combine the ideas previously described as personas, semantics, and contracts. A profile is a named, auditable system-prompt overlay for a worker invocation. It can control voice and stance, but its more important job is to define worker behavior for one reusable invocation pattern.
-
-A profile is not a new subagent identity. It is an invocation-time behavior layer applied to a durable capability agent. The task supplies the concrete work item. The base agent config supplies structural capability, tool access, skills, context-file behavior, model defaults, and safety boundaries.
-
-Profiles live under the worker config root:
-
-```text
-agents/ask/profiles/judge.md
-agents/ask/profiles/classifier.md
-agents/web/profiles/source-discovery.md
-agents/web/profiles/source-capture.md
-agents/writer/profiles/research-report.md
-agents/coder/profiles/implementation.md
+```json
+{
+  "agent": "ask",
+  "persona": "judge",
+  "task": "Check whether report.md satisfies the citation rules."
+}
 ```
 
-A profile file is a system-prompt overlay with frontmatter:
+```json
+{
+  "tasks": [
+    {
+      "agent": "web",
+      "task": "Find five authoritative sources for the topic."
+    },
+    {
+      "agent": "scout",
+      "task": "Locate existing notes or docs relevant to the topic."
+    }
+  ]
+}
+```
+
+```json
+{
+  "chain": [
+    {
+      "agent": "web",
+      "task": "Find source candidates for the topic."
+    },
+    {
+      "agent": "ask",
+      "persona": "judge",
+      "task": "Evaluate whether these source candidates are sufficient: {previous}"
+    }
+  ]
+}
+```
+
+`persona` is optional. When present, the extension should launch the worker with `--persona <name>`.
+
+## Invocation Personas
+
+Invocation personas combine the ideas previously described as personas, semantics, and contracts. A persona is a named, auditable system-prompt overlay for a worker invocation. It can control voice and stance, but its more important job is to define worker behavior for one reusable invocation pattern.
+
+A persona is not a new subagent identity. It is an invocation-time behavior layer applied to a durable capability agent. The task supplies the concrete work item. The base agent config supplies structural capability, tool access, skills, context-file behavior, model defaults, and safety boundaries.
+
+Personas live under the worker config root:
+
+```text
+agents/ask/personas/judge.md
+agents/ask/personas/classifier.md
+```
+
+The first version only needs `ask` personas. Future workflows can add personas to `web`, `writer`, `coder`, or other core agents when repeated invocation patterns justify them. A persona file is a system-prompt overlay with frontmatter:
 
 ```markdown
 ---
@@ -311,18 +352,18 @@ Check the requested criteria and reply only with PASS or FAIL plus one concise r
 
 The `mode` field controls prompt composition:
 
-- `append`: preserve the base system prompt and append the profile block.
-- `prepend`: put the profile block before the base system prompt.
+- `append`: preserve the base system prompt and append the persona block.
+- `prepend`: put the persona block before the base system prompt.
 - `replace`: replace the base system prompt entirely.
 
 The default should be `append`, because capability agents often have safety, tool, or task instructions in their base prompt that must remain active. `replace` is appropriate for tiny chat-only agents such as `ask`, where the static prompt exists mainly to prevent pi from injecting its default system prompt.
 
-The profiles implementation should support two activation paths:
+The personas implementation already supports two activation paths:
 
-- `/profile <name>` for interactive top-level use.
-- `--profile <name>` for subprocess and MAS use.
+- `/persona <name>` for interactive top-level use.
+- `--persona <name>` for subprocess and MAS use.
 
-A profile should answer the operational questions the orchestrator would otherwise have to repeat in every task:
+A persona should answer the operational questions the orchestrator would otherwise have to repeat in every task:
 
 - What role is this worker playing in this call?
 - What method should it use to accomplish the task?
@@ -334,35 +375,35 @@ A profile should answer the operational questions the orchestrator would otherwi
 - What should the final reply tell the orchestrator?
 - What human-facing explanation or summary is forbidden?
 
-The MAS should invoke a profile by name, not by passing its full text. For example:
+The MAS should invoke a persona by name, not by passing its full text. For example:
 
 ```json
 {
   "agent": "ask",
-  "profile": "judge",
+  "persona": "judge",
   "task": "Check whether report.md satisfies the citation rules."
 }
 ```
 
-This keeps orchestration prompts short while preserving traceability. The selected profile remains auditable in the worker's config directory, and the MAS only decides which profile is appropriate for the invocation.
+This keeps orchestration prompts short while preserving traceability. The selected persona remains auditable in the worker's config directory, and the MAS only decides which persona is appropriate for the invocation.
 
-Profiles are not capabilities. They must not be used to grant tools, browser access, repository context, filesystem permissions, model defaults, or skills that are not already structurally allowed by the worker config. If profile frontmatter can alter tools or skills in a future implementation, that behavior must be explicit and treated as part of the worker's structural configuration.
+Personas are not capabilities. They must not be used to grant tools, browser access, repository context, filesystem permissions, model defaults, or skills that are not already structurally allowed by the worker config. If persona frontmatter can alter tools or skills in a future implementation, that behavior must be explicit and treated as part of the worker's structural configuration.
 
-Profiles should usually say that the worker is not speaking to the user. The profile should define what the orchestrator needs back: status, artifact paths, key decisions, validation results, errors, and next-step recommendations. A worker that created or inspected a large artifact should normally return the artifact path and concise operational notes, not a prose summary of the artifact.
+Personas should usually say that the worker is not speaking to the user. The persona should define what the orchestrator needs back: status, artifact paths, key decisions, validation results, errors, and next-step recommendations. A worker that created or inspected a large artifact should normally return the artifact path and concise operational notes, not a prose summary of the artifact.
 
-For a deep research workflow, `/deepresearch` might invoke `ask` with a `judge` profile:
+For a deep research workflow, `/deepresearch` might invoke `ask` with the `judge` persona:
 
 ```markdown
-Use `ask` with profile `judge`.
+Use `ask` with persona `judge`.
 Task: Check whether `report.md` satisfies the citation rules.
 Criteria: source coverage, citation format, and unsupported claims.
 Reply to the orchestrator only. Return `PASS` or `FAIL: <one sentence>`.
 Do not add preamble, follow-up, user-facing explanation, or a report summary.
 ```
 
-Profiles should stay small, roughly 10-60 lines. If a profile grows into a full worker prompt, that is a signal to either simplify it, move the stable behavior into the agent's base prompt, or reconsider whether the workflow really needs a specialized subagent.
+Personas should stay small, roughly 10-60 lines. If a persona grows into a full worker prompt, that is a signal to either simplify it, move the stable behavior into the agent's base prompt, or reconsider whether the workflow really needs a specialized subagent.
 
-The existing `personas` extension is a useful implementation starting point because it already supports named prompt overlays, `append`/`prepend`/`replace`, and subprocess selection through `--persona`. The top-level-agent MAS should generalize that idea into `profiles` with `--profile` rather than preserving a separate persona/contract split. A compatibility path can map existing `agents/ask/personas/*.md` files into profiles or rename the concept during cleanup.
+The existing `personas` extension is the first-version implementation path. The top-level-agent MAS should use `persona` terminology consistently and should pass persona names through to child processes with `--persona`.
 
 ## Artifact Handoffs
 
@@ -421,7 +462,7 @@ This convention applies beyond questionnaires:
 - Status widgets, notifications, speech, and other user-facing affordances should check both `PI_IS_SUBAGENT` and UI availability.
 - Extensions that are safe in subprocesses should document that assumption.
 
-Agent prompts should also account for this distinction. A direct-use top-level agent may ask clarifying questions, but the same agent invoked as a worker should complete the delegated task or return a concise blocker. If a prompt tells an agent to use an interactive tool at the start of every task, that prompt must be revised before the agent is eligible for worker use.
+Agent prompts should also account for this distinction. A direct-use top-level agent may ask clarifying questions, but the same agent invoked as a worker should complete the delegated task or return a concise blocker. If a prompt tells an agent to use an interactive tool at the start of every task, that prompt must be revised before the agent is used as a worker.
 
 ## Structural Boundaries
 
@@ -438,7 +479,7 @@ Workflow prompts can narrow behavior but should not be trusted to create securit
 
 ## Prompt Augmentation
 
-At startup, the new extension should append a catalog of eligible top-level agents to the MAS system prompt. The catalog should be built from capability descriptors, not from human-facing launch documentation.
+At startup, the new extension should append a catalog of the hard-coded core top-level agents to the MAS system prompt. The catalog should be built from capability descriptors, not from human-facing launch documentation.
 
 The catalog should include:
 
@@ -451,10 +492,8 @@ The catalog should include:
 
 The catalog should omit:
 
-- Agents not in the allowlist.
-- Workspace agents.
-- Agents missing capability descriptors.
-- Agents that fail compatibility checks.
+- Agents outside the hard-coded core list.
+- Agents whose capability descriptor cannot be read.
 
 The extension should also provide a command to inspect the active catalog interactively.
 
@@ -462,22 +501,19 @@ The extension should also provide a command to inspect the active catalog intera
 
 The first implementation should avoid recursive orchestration.
 
-Default exclusions should include:
+The hard-coded core list is the first recursion-prevention mechanism. Since `mas`, `reader`, `deepresearch`, and other workflow-oriented agents are not in the list, the extension does not need to discover and exclude them dynamically.
 
-- The active MAS agent.
-- Agents that load the new top-level-agent extension.
-- Agents that load the existing nested-worker orchestrator extension.
-- Workspace MAS agents.
+The first implementation should also avoid loading the new top-level-agent extension and the existing nested-worker orchestrator extension into the same top-level agent config. Both expose the `subagent` tool name, but with different worker catalogs.
 
 Recursive orchestration may be useful later, but it requires budgets, depth limits, failure propagation, and clear tracing. It should not be part of the first experiment.
 
 ## Top-Level Agent Cleanup Requirements
 
-Before implementation, eligible top-level agents should be tidied so they behave predictably as workers.
+Before implementation, the five core top-level agents should be tidied so they behave predictably as workers.
 
-Each eligible agent should have:
+Each core agent should have:
 
-- A clear system prompt.
+- A clear system prompt, or an intentional reliance on pi's default system prompt in the case of `coder`.
 - A clear capability descriptor.
 - Intentional tool permissions.
 - Intentional skill links.
@@ -487,7 +523,7 @@ Each eligible agent should have:
 - No assumptions that it is always speaking directly to a human.
 - Subprocess-safe extensions that suppress interactive tools and UI-only behavior when `PI_IS_SUBAGENT=1`.
 
-Direct-user friendliness is still useful, but worker use requires stricter invocation profiles and orchestrator-facing replies.
+Direct-user friendliness is still useful, but worker use requires stricter invocation personas and orchestrator-facing replies.
 
 ## Compatibility Risks
 
@@ -501,27 +537,42 @@ The main risks are:
 - The MAS may select an overpowered worker when a safer limited worker exists.
 - A direct-use `questionnaire` instruction may leak into worker behavior unless the prompt and extension both account for subprocess mode.
 
-The design answers these risks with allowlists, capability descriptors, workspace exclusion, structural tool boundaries, and explicit workflow prompts.
+The design answers these risks with a hard-coded core worker list, capability descriptors, curated worker setup, structural tool boundaries, and explicit workflow prompts.
 
 ## Implementation Plan
 
 1. Update this specification until the first-version worker set and safety rules are stable.
 2. Add `CAPABILITY.md` to `ask`, `scout`, `writer`, `coder`, and `web`.
-3. Add initial invocation profiles for repeated worker behaviors such as `ask/judge`, `ask/classifier`, `web/source-discovery`, `web/source-capture`, and `writer/research-report`.
-4. Clean the five core agents for worker use: prompts, `pi-args`, skills, model defaults, context-file behavior, and subprocess-safe extensions.
-5. Make direct-use interactive tools such as `questionnaire` available to `writer` and `coder` only when not running with `PI_IS_SUBAGENT=1`.
-6. Implement `shared/extensions/top-level-agent-orchestrator/` separately from the existing nested-worker orchestrator.
-7. Configure `agents/mas/` with the new extension, an explicit core-agent allowlist, and a clear `SYSTEM.md`.
-8. Add workflow prompts to `agents/mas/prompts/`, starting with `/deepresearch`.
-9. Run smoke tests with each single worker: `ask`, `scout`, `writer`, `coder`, and `web`.
-10. Run small multi-worker workflows and inspect final artifacts, intermediate files, and worker outputs.
-11. Decide whether existing workflow-specific MAS agents should remain, be deprecated, or be reduced to `mas` prompt templates.
+3. Keep `persona` as the invocation overlay concept. The first version only needs the existing `ask` personas such as `judge` and `classifier`; add personas to other workers only when a future workflow requires them.
+4. Clean the five core agents for worker use: prompts, `pi-args`, skills, model defaults, context-file behavior, and subprocess-safe extensions. Leave `coder`'s current context-file behavior as-is for the first version.
+5. Ensure `web` includes browser-control behavior and any required skill link or environment inheritance needed for `$B`.
+6. Make direct-use interactive tools such as `questionnaire` available to `writer` and `coder` only when not running with `PI_IS_SUBAGENT=1`.
+7. Implement `shared/extensions/top-level-agent-orchestrator/` separately from the existing nested-worker orchestrator. It should register the `subagent` tool, use the hard-coded core worker list, support `agent`, optional `persona`, and `task`, and pass personas to child processes with `--persona`.
+8. Configure `agents/mas/` with the new extension and a clear `SYSTEM.md`.
+9. Add workflow prompts to `agents/mas/prompts/`, starting with `/deepresearch`.
+10. Run smoke tests with each single worker: `ask`, `scout`, `writer`, `coder`, and `web`.
+11. Run small multi-worker workflows and inspect final artifacts, intermediate files, and worker outputs.
+12. Decide whether existing workflow-specific MAS agents should remain, be deprecated, or be reduced to `mas` prompt templates.
+
+Smoke-test acceptance criteria:
+
+- The `mas` system prompt catalog includes the five hard-coded workers and content from their `CAPABILITY.md` files.
+- A single `subagent` call works with `agent` and `task`.
+- A single `subagent` call works with `agent`, `persona`, and `task`, including `ask` with `persona: "judge"`.
+- Parallel `tasks[]` calls return independent worker results.
+- Sequential `chain[]` calls can reference prior output with `{previous}`.
+- Child workers inherit the parent working directory and relevant runtime environment.
+- Every child worker runs with `PI_IS_SUBAGENT=1`.
+- `questionnaire` is not registered or visible inside worker processes.
+- `web` can use configured web search and browser-control behavior, or returns a concise blocker when required provider or browser state is unavailable.
+- Worker results expose final reply, exit status, runtime/tool errors when available, and usage statistics when available.
+- Artifact-producing workers write only when structurally allowed and explicitly instructed, then mention important paths in their final reply.
 
 ## Non-Goals
 
 - Do not replace the existing MAS model.
 - Do not modify nested-worker discovery for existing MAS agents.
-- Do not make workspace top-level agents eligible in the first version.
+- Do not add workspace top-level agents to the hard-coded worker list in the first version.
 - Do not treat prompt instructions as a substitute for tool restrictions.
 - Do not auto-expose every top-level agent.
 - Do not expose workflow-specific top-level agents such as `reader` or `deepresearch` as workers.
@@ -529,9 +580,6 @@ The design answers these risks with allowlists, capability descriptors, workspac
 
 ## Open Design Questions
 
-- What should the final extension and tool names be?
-- Should the allowlist live in the MAS root, the extension config, or both?
-- Should capability descriptors support structured frontmatter?
-- Should profiles support structured frontmatter beyond `description` and `mode`?
 - Should the extension support per-worker timeout and budget controls?
-- Should `coder` load repository context files when invoked as a worker, or should context-file behavior differ between direct and subprocess use?
+- Which existing workflow-specific MAS agent should be the first candidate for reduction into `mas` prompt templates after the experiment works?
+- What additional personas, if any, are justified by future workflows beyond the initial `ask` personas?
