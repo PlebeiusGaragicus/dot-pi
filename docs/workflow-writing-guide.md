@@ -23,13 +23,19 @@ Use this structure unless the workflow is intentionally tiny:
 1. Title and one-sentence purpose.
 2. `## Goal`: user-visible outcome and preferred artifact over chat output.
 3. `## Required Trajectory`: numbered phases with explicit delegation.
-4. `### Preflight`: parse `$@`, identify inputs, choose defaults, and use `questionnaire` only when missing information blocks safe progress.
+4. `### Preflight`: parse the final user request section, identify inputs, choose defaults, and use `questionnaire` only when missing information blocks safe progress.
 5. Worker phases: name the worker, state why it is the right capability, and include an exact task contract with inputs, allowed paths, expected output, success criteria, and blocker conditions.
 6. Validation phase: inspect artifacts directly with the orchestrator's tools, or pass inline excerpts to `ask` with a rubric.
 7. `## Artifact Conventions`: directories, filenames, manifests, frontmatter, screenshots, logs, or reports.
 8. `## Stop Conditions`: missing inputs, dependency failures, too few sources, unsafe ambiguity, user cancellation, or unrecoverable worker errors.
 9. `## Final Response`: short user-facing completion message with artifact paths, or a concise blocker and partial paths.
-10. `## User Request`: end with the literal user input placeholder.
+10. `## User Request`: end with the standard user input block shown below.
+
+## User Input Section
+
+Prompt templates should put the replacement placeholder only once, at the bottom of the file. Use a header and a short instruction so the runtime agent can treat the substituted text as the invocation request.
+
+Do not tell the agent to "find `$@`" or "parse `$@`" in earlier sections. Prompt expansion replaces every occurrence of that token before the model sees the prompt, so earlier mentions become copies of the user's request and can corrupt instructions.
 
 ```markdown
 ## User Request
@@ -55,7 +61,8 @@ Treat the text below as the user's instructions, including scope, inputs, output
 - Asking `ask` to inspect `reports/report.md`, a URL, screenshots, or command output. Inline the relevant text instead.
 - Asking `writer` to run tests, install tools, fetch URLs, or inspect browser-rendered pages. Use `coder` or `web`.
 - Accepting a long worker summary when the workflow needs source files, screenshots, manifests, logs, or reports.
-- Omitting `$@`, which leaves the generated workflow disconnected from the user's invocation.
+- Omitting the final user input placeholder, which leaves the generated workflow disconnected from the user's invocation.
+- Mentioning `$@` multiple times in a prompt template, which duplicates the user's request into instruction sections after expansion.
 - Leaving artifact ownership vague, causing parallel workers to write the same file.
 - Validating only the worker's final message instead of reading the artifact that will matter after the run.
 - Hiding partial failures. Continue only when the remaining artifacts are sufficient, and report failed URLs, pages, tests, or missing dependencies.

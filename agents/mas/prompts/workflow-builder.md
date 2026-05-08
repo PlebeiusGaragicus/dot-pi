@@ -35,7 +35,7 @@ If the guide is missing or insufficient for the request, also consult only the n
 - `~/.dot-pi/agents/mas/prompts/deepresearch.md`
 - `~/.dot-pi/agents/mas/prompts/pdf-ocr.md`
 
-Use these references to enforce capability boundaries, artifact handoffs, validation phases, stop conditions, and `$@` handling.
+Use these references to enforce capability boundaries, artifact handoffs, validation phases, stop conditions, and final user request handling.
 
 ### 3. Inspect Existing Project Context
 
@@ -55,7 +55,7 @@ Present a concise workflow spec to the user before writing files. Include:
 
 - workflow name and target path
 - create or modify mode
-- user input expected after `$@`
+- user input expected in the final user request section
 - phases and delegation plan
 - worker capability mapping (`ask`, `scout`, `writer`, `coder`, `web`)
 - artifact conventions and ownership
@@ -101,7 +101,7 @@ Requirements:
 - Follow dot-pi workflow conventions.
 - Make the workflow orchestration policy, not capability grants.
 - Include explicit phases, worker delegation contracts, artifact conventions, validation, stop conditions, and final response guidance.
-- End with a `## User Request` section containing the literal `$@` placeholder.
+- End with a `## User Request` section that contains the standard user input block. The placeholder line must be the dollar-at token, written as a dollar sign immediately followed by an at sign, and it should appear only in that final block.
 - For modify mode, preserve useful existing behavior and improve only what the approved spec requires.
 - Do not edit files outside `.pi/prompts/<workflow-name>.md`.
 - Return a concise confirmation with the written path, major changes, and any unresolved caveats.
@@ -129,7 +129,7 @@ Validate that it has:
 - validation or review guidance
 - final response guidance
 - `## User Request`
-- literal `$@`
+- the dollar-at placeholder appearing only in the final user request block
 
 If validation fails, run one repair pass with `writer`, then read the file again. If it still fails, stop with the file path and remaining issues.
 
