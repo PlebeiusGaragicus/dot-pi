@@ -20,6 +20,12 @@ Updates use ordinary Pi package management:
 pi update
 ```
 
+Remove with the source shown by `pi list`:
+
+```bash
+pi remove git:https://github.com/PlebeiusGaragicus/dot-pi
+```
+
 Mutable user state lives under `$DOT_PI_OVERLAY` (default `~/.pi/dot-pi`) so `pi update` can reset and clean the package clone without touching sessions, model defaults, API-key env files, prompts, skills, extensions, themes, or shared dot-pi `settings.json`.
 
 ## Shell Integration

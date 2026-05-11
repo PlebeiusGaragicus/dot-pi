@@ -53,6 +53,13 @@ dotpi_link_extension_bundle() {
   done
 }
 
+dotpi_link_extension_helpers() {
+  local target_dir="$1" rel_prefix="$2"
+  [ -d "$DOT_PI_DIR/shared/extensions/lib" ] || return 0
+  mkdir -p "$target_dir"
+  dotpi_link_force_symlink "$rel_prefix/lib" "$target_dir/lib"
+}
+
 dotpi_ensure_overlay_skeleton() {
   local overlay="$1" agent="$2" agent_overlay
   mkdir -p "$overlay"
@@ -104,6 +111,7 @@ dotpi_relink() {
     dotpi_link_force_symlink "../../shared/settings.json" "$subagent/settings.json"
     [ -L "$subagent/bin" ] || dotpi_link_if_absent "../../shared/bin" "$subagent/bin"
     dotpi_link_extension_bundle "$shared_dir/extensions-subagents" "$subagent/extensions" "../../../shared/extensions-subagents"
+    dotpi_link_extension_helpers "$subagent/extensions" "../../../shared/extensions"
   done
 
   for d in "$dot_pi_dir"/agents/*/; do
@@ -119,6 +127,7 @@ dotpi_relink() {
     dotpi_link_force_symlink "../../shared/settings.json" "$d/settings.json"
     [ -L "$d/bin" ] || dotpi_link_if_absent "../../shared/bin" "$d/bin"
     dotpi_link_extension_bundle "$shared_dir/extensions-common" "$d/extensions" "../../../shared/extensions-common"
+    dotpi_link_extension_helpers "$d/extensions" "../../../shared/extensions"
 
     if [ -e "$d/extensions/agent-orchestrator/index.ts" ]; then
       for subagent in "$d"/agents/*/; do
@@ -140,6 +149,7 @@ dotpi_relink() {
         dotpi_link_force_symlink "../../../../shared/settings.json" "$subagent/settings.json"
         [ -L "$subagent/bin" ] || dotpi_link_if_absent "../../../../shared/bin" "$subagent/bin"
         dotpi_link_extension_bundle "$shared_dir/extensions-subagents" "$subagent/extensions" "../../../../../shared/extensions-subagents"
+        dotpi_link_extension_helpers "$subagent/extensions" "../../../../../shared/extensions"
       done
     fi
 

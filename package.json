@@ -1,8 +1,15 @@
 {
   "name": "dot-pi",
-  "private": true,
-  "version": "0.0.0",
+  "version": "0.7.0",
   "description": "Pi agent configurations managed as a Pi git package.",
+  "keywords": [
+    "pi-package"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PlebeiusGaragicus/dot-pi.git"
+  },
+  "license": "MIT",
   "scripts": {
     "postinstall": "bash core/install/postinstall.sh"
   },

@@ -43,6 +43,8 @@ settings_after=$(shasum -a 256 "$OVERLAY/settings.json" | awk '{print $1}')
 
 assert_link "$FIXTURE/shared/settings.json"
 assert_link "$FIXTURE/agents/coder/settings.json"
+assert_link "$FIXTURE/agents/coder/extensions/lib"
+assert_link "$FIXTURE/agents/mas/extensions/lib"
 assert_link "$FIXTURE/agents/coder/prompts/custom.md"
 assert_link "$FIXTURE/core/bin/coder"
 [ ! -L "$FIXTURE/core/bin/resume" ] || fail "global resume symlink should not be recreated"

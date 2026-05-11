@@ -18,6 +18,12 @@ Use ordinary Pi updates:
 pi update
 ```
 
+Remove the package with the same source identity Pi records in `pi list`:
+
+```bash
+pi remove git:https://github.com/PlebeiusGaragicus/dot-pi
+```
+
 The old curl installer and `~/.dot-pi` product install are no longer supported.
 
 ## What Install Does
