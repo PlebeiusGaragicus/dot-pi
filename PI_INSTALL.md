@@ -10,7 +10,7 @@ This document records **what dot-pi is moving toward**, **how Pi’s package ins
 
 1. **Vanilla `pi`** — Running `pi` with no custom agent layout should behave like a **normal Pi install**: default agent directory (`~/.pi/agent`), no dot-pi–specific extension bundles unless the user explicitly added them there.
 
-2. **Named agents (`coder`, `mas`, …)** — Short commands on `PATH` should launch **this repo’s** agent configs (`SYSTEM.md`, `pi-args`, orchestration, workspace bootstrap, etc.) with **`PI_CODING_AGENT_DIR`** pointing at `agents/<name>/`.
+2. **Named agents (`coder`, `mas`, …) are first-class** — Short commands on `PATH` should launch **this repo’s** agent configs (`SYSTEM.md`, `pi-args`, orchestration, workspace bootstrap, etc.) with **`PI_CODING_AGENT_DIR`** pointing at **`agents/<name>/`** inside the **installed package tree** (or a copy/symlink layout your installer defines). **No fixed install path** such as **`~/.dot-pi`** is required; that name is historical convenience only.
 
 3. **Installable, upgradable shared bundle** — Shared skills, extensions, prompts, and themes should be consumable via Pi’s **first-class** mechanism: **`pi install`** / **`packages`** in `settings.json`, so users can **`pi update`** when the upstream git (or npm) package moves.
 
@@ -21,8 +21,8 @@ This document records **what dot-pi is moving toward**, **how Pi’s package ins
 ### 1.2 Operational goals
 
 - **Documented one-liner** for registering the git package, e.g.  
-  `PI_CODING_AGENT_DIR="$DOT_PI_DIR/.pi-bootstrap" pi install git:https://github.com/<org>/dot-pi`  
-  (exact URL and bootstrap path are policy choices; see §5.)
+  `PI_CODING_AGENT_DIR="$HOME/…/dot-pi/.pi-bootstrap" pi install git:https://github.com/<org>/dot-pi`  
+  (exact URL, bootstrap path, and whether **`postinstall`** wires **`PATH`** are policy choices; see §2.3, §3, and §5.)
 
 - **Optional helpers** — `dotpi packages bootstrap` (or similar) and/or small `core/bin` shims so users rarely type raw env vars.
 
@@ -53,9 +53,20 @@ This repo targets [pi-mono](https://github.com/PlebeiusGaragicus/pi-mono) / `@ma
 So:
 
 - **`PI_CODING_AGENT_DIR` unset** → **`~/.pi/agent/settings.json`** receives **`packages`** (affects vanilla `pi`).
-- **`PI_CODING_AGENT_DIR=$DOT_PI_DIR/.pi-bootstrap`** → **`.pi-bootstrap/settings.json`** receives **`packages`** (does **not** touch `~/.pi/agent/settings.json` if that file is separate).
+- **`PI_CODING_AGENT_DIR=<your-bootstrap-dir>`** → **`bootstrap-dir/settings.json`** receives **`packages`** (does **not** touch **`~/.pi/agent/settings.json`** if that file is separate).
 
-### 2.3 What a “package” is
+### 2.3 Git packages: `npm install` and lifecycle scripts
+
+Pi does **not** expose a separate “run this script after **`pi install`** / **`pi update`**” API in the package manifest. For **git** sources it **`git clone`**s (or on update: **`fetch`**, **`reset --hard`**, **`git clean -fdx`**) into **`{agentDir}/git/<host>/<path>`**, then runs **`npm install`** in that clone when **`package.json`** exists (see pi-mono **`DefaultPackageManager`** / **`installGit`** / **`updateGit`**).
+
+That means **standard npm lifecycle scripts** in the repo’s **`package.json`**—typically **`postinstall`**—run in the **clone directory** after install and again after dependency install on update. Use them to:
+
+- prepend or symlink **`core/bin`** (and thus **`dispatch-agent`**) onto the user’s **`PATH`**, or
+- run one-time or idempotent **migrations** (prefer writing durable state under **`~/.config/…`** or similar—the clone is **`git clean -fdx`’d** on update, so **do not rely on untracked files inside the package tree** for migration bookkeeping).
+
+Security-wise this is the same class of trust as Pi extensions: **`postinstall` runs arbitrary code** during **`pi install`** / **`pi update`**.
+
+### 2.4 What a “package” is
 
 Each **`packages[]`** entry is usually a string:
 
@@ -70,7 +81,7 @@ Pi then **merges** resources from each installed package root:
 - Prefer **`package.json` → `"pi"`** manifest (`extensions`, `skills`, `prompts`, `themes` path arrays / globs).
 - Else conventional directories **`extensions/`**, **`skills/`**, **`prompts/`**, **`themes/`** at package root.
 
-### 2.4 `settings.json` arrays (top-level agent config)
+### 2.5 `settings.json` arrays (top-level agent config)
 
 Independently of **`packages`**, **`settings.json`** may list:
 
@@ -78,32 +89,33 @@ Independently of **`packages`**, **`settings.json`** may list:
 
 Pi **resolves** those entries, then **auto-discovers** conventional dirs under the agent dir. Empty or absent dirs avoid duplicate discovery; override patterns (`!`, `+`, `-`) exist for advanced filtering (see pi-mono `DefaultPackageManager`).
 
-### 2.5 Merging `packages` vs merging settings keys
+### 2.6 Merging `packages` vs merging settings keys
 
 For **settings**, **`deepMergeSettings`** replaces **whole arrays** when the override (e.g. project) sets a key — arrays are not unioned by default. That matters when splitting “vanilla” vs “project” **`packages`**.
 
 ---
 
-## 3. Two directories on disk (no automatic copy between them)
+## 3. On-disk layout: Pi clone as source of truth
 
-After **`pi install git:…dot-pi`**:
+After **`pi install git:…dot-pi`** (with default **`PI_CODING_AGENT_DIR`**), Pi keeps a **git clone** under **`{agentDir}/git/<host>/<path>/`** (see **`getGitInstallPath`** in pi-mono; default **`agentDir`** is **`~/.pi/agent`**, so often **`~/.pi/agent/git/...`**). That directory is the **authoritative checkout** for:
 
-1. **Pi-managed clone** — e.g. **`~/.pi/agent/git/github.com/<org>/dot-pi/`** (exact path from Pi’s `getGitInstallPath`). This is what **`packages`** resolution reads for the **`"pi"`** manifest and bundled trees.
+- the **`"pi"`** manifest and merged **extensions / skills / prompts / themes**, and  
+- **everything else in the repo** at that revision—**including `dispatch-agent`**, **`agents/`**, **`core/bin/`**, **`dotpi`**, and **`shared/`**.
 
-2. **User’s dot-pi checkout** — e.g. **`~/.dot-pi`** (or **`DOT_PI_HOME`**). Holds **`dispatch-agent`**, **`agents/<name>/`**, **`shared/`**, **`dotpi`**, etc.
+**`~/.dot-pi` (or `DOT_PI_HOME`) is not required.** It is a **historical default** for a separate manual **`git clone`** + curl installer. A **`pi install`–centric** setup can treat the **Pi-managed clone** as the only tree and make named agents first-class by:
 
-**Pi does not copy** from (1) into (2). They are independent checkouts unless you add custom sync scripts. Typical roles:
+1. putting **`core/bin`** on **`PATH`** (via **`postinstall`**, user docs, or a one-line shell snippet), and  
+2. setting **`PI_CODING_AGENT_DIR`** to **`…/agents/<name>`** inside that same tree when **`dispatch-agent`** runs (today it derives **`DOT_PI_DIR`** from its own location—relocating **`dispatch-agent`** into the clone preserves that behavior).
 
-| Tree | Role |
-|------|------|
-| **`~/.dot-pi`** | Dispatch, per-agent prompts/system, **`dotpi sync`**, optional paths in **`settings.json` arrays** pointing at **`../../shared/...`**. |
-| **`~/.pi/agent/git/.../dot-pi`** | Versioned **package** surface for Pi’s loader and **`pi update`**. |
+### 3.1 Optional second checkout
 
-Keeping **both** is valid: **repo** for orchestration and ergonomics; **Pi cache** for installable/upgradable **shared** resources declared in **`package.json`**.
+Keeping **two** trees—a **developer `git clone`** (e.g. **`~/.dot-pi`**) **and** the **Pi cache clone**—remains valid for contributors who edit the repo in place while still testing **`pi update`** on the package copy. Pi **does not** sync between them automatically; **`postinstall`**, **`dotpi sync`**, or manual **`git pull`** are separate concerns.
+
+### 3.2 `dispatch-agent` and “copy over”
+
+Pi does **not** copy **`dispatch-agent`** into a second home by default. If you need files outside the clone (e.g. **`PATH`** shims in **`~/bin`**), implement that in **`package.json` scripts** (§2.3) or document a manual step. First-class agents only require that **`pi`** can be launched with **`PI_CODING_AGENT_DIR`** pointing at the right **`agents/<name>`** directory—usually next to **`dispatch-agent`** on disk.
 
 ---
-
-## 4. Vanilla `pi` vs `coder` / `mas`
 
 ### 4.1 Same binary
 
@@ -111,7 +123,7 @@ There is a **single** `pi` executable. Isolation is by **environment and paths**
 
 - **Vanilla** — **`PI_CODING_AGENT_DIR` unset** → Pi uses **`~/.pi/agent`** and **`~/.pi/agent/settings.json`**. If that file has **no** dot-pi **`packages`**, vanilla sessions do not load dot-pi’s git package merge.
 
-- **Dot-pi agents** — **`PI_CODING_AGENT_DIR=$DOT_PI_DIR/agents/coder`** (etc.) → Pi uses that directory’s **`settings.json`**, **`SYSTEM.md`**, **`pi-args`**, plus merged **`packages`** and explicit arrays.
+- **Dot-pi agents** — **`PI_CODING_AGENT_DIR=<package-root>/agents/coder`** (etc.) → Pi uses that directory’s **`settings.json`**, **`SYSTEM.md`**, **`pi-args`**, plus merged **`packages`** and explicit arrays. **`<package-root>`** is typically the Pi git clone (or a symlinked layout that preserves relative paths).
 
 ### 4.2 How users invoke names on `PATH`
 
@@ -125,7 +137,7 @@ That is **not** the only possible implementation — any wrapper that sets **`PI
 
 **Pattern B** (chosen direction): each **`agents/<name>/settings.json`** is **its own file** (theme, models, arrays, …) but each includes the **same logical `packages` list**. To avoid drift, **tooling** (e.g. **`dotpi sync`**) should merge a **canonical** `packages` list (from e.g. **`.pi-bootstrap/packages.json`** or a fragment) into every agent file with **`jq`**, preserving other keys.
 
-**Bootstrap dir (e.g. `.pi-bootstrap/`)** — minimal directory whose **`settings.json`** is the target when running **`PI_CODING_AGENT_DIR=$DOT_PI_DIR/.pi-bootstrap pi install …`**, so **`~/.pi/agent/settings.json`** stays vanilla-clean. After install, sync copies **`packages`** into each agent’s **`settings.json`** (or you symlink only if you accept shared non-package keys — usually not for Pattern B).
+**Bootstrap dir (e.g. `.pi-bootstrap/`)** — minimal directory whose **`settings.json`** is the target when running **`PI_CODING_AGENT_DIR=<repo>/.pi-bootstrap pi install …`** (with **`<repo>`** either a dev checkout or a path inside the Pi clone—policy choice), so **`~/.pi/agent/settings.json`** stays vanilla-clean. After install, sync copies **`packages`** into each agent’s **`settings.json`** (or you symlink only if you accept shared non-package keys — usually not for Pattern B).
 
 ---
 
@@ -134,33 +146,26 @@ That is **not** the only possible implementation — any wrapper that sets **`PI
 Illustrative **target** tree (some pieces may not exist yet; this is the direction described in planning):
 
 ```text
-~/.pi/agent/                          # default Pi profile (vanilla)
+~/.pi/agent/                          # default Pi profile (vanilla); agentDir when PI_CODING_AGENT_DIR unset
 ├── settings.json                     # no dot-pi packages[] (policy)
 ├── auth.json
 ├── models.json
-└── git/github.com/<org>/dot-pi/      # Pi’s clone after `pi install git:…`
-    ├── package.json                  # must include "pi": { … } for manifest-driven resources
-    ├── extensions/ …
-    └── skills/ …
+└── git/github.com/<org>/dot-pi/      # Pi’s clone: full repo at installed revision (“package root”)
+    ├── package.json                  # "pi": { … } manifest + optional scripts.postinstall for PATH / migrations
+    ├── agents/
+    │   └── <name>/                   # per-agent PI_CODING_AGENT_DIR targets live here
+    ├── core/bin/                     # coder, mas, … → dispatch-agent (first-class commands once on PATH)
+    ├── dispatch-agent
+    ├── dotpi
+    ├── shared/
+    └── .pi-bootstrap/                # optional: settings.json target for pi install without polluting vanilla
+        ├── settings.json
+        └── README.md
 
-~/…/dot-pi/                            # DOT_PI_DIR — user clone + dispatch
-├── package.json                      # same repo: makes git URL a valid Pi package at install time
-├── .pi-bootstrap/
-│   ├── settings.json                 # receives packages[] during `pi install` when PI_CODING_AGENT_DIR=.pi-bootstrap
-│   └── README.md                     # operator docs for install one-liner
-├── agents/
-│   ├── coder/
-│   │   ├── settings.json             # per-agent: prefs + extensions/skills arrays + packages[] (synced)
-│   │   ├── SYSTEM.md / APPEND_SYSTEM.md / pi-args / …
-│   │   └── auth.json → ../../shared/auth.json   # typical: shared credentials
-│   └── mas/ …
-├── shared/                           # canonical repo resources (paths from agent settings.json arrays)
-├── core/bin/                         # coder, mas, … → dispatch-agent
-├── dispatch-agent
-└── dotpi
+# Optional: separate developer git clone (e.g. ~/.dot-pi) — not required for end users
 ```
 
-**Root `package.json`** — Tracked in-repo with **`"private": true`**, **`"pi": { "extensions": [...], "skills": [...], … }`** pointing into **`shared/`** (or subtrees you intend to ship as the package). That is what Pi reads from the **git clone** under **`~/.pi/agent/git/...`**.
+**Root `package.json`** — Tracked in-repo with **`"private": true`**, **`"pi": { "extensions": [...], "skills": [...], … }`** pointing at **`shared/`** (or subtrees you ship). Pi reads that manifest from the **git clone** under **`{agentDir}/git/...`**.
 
 ---
 
@@ -168,13 +173,13 @@ Illustrative **target** tree (some pieces may not exist yet; this is the directi
 
 | Approach | Pros | Cons |
 |----------|------|------|
-| **Symlink-only `shared/`** (status quo) | Simple; one checkout. | No **`pi update`** for shared bundle; upgrades = `git pull` in `DOT_PI_DIR` only. |
-| **`pi install` git package** | Pi-native upgrades; **`checkForAvailableUpdates`** can nudge users. | Second clone under **`~/.pi/agent/git/...`**; must keep **`packages`** out of vanilla settings if isolation desired. |
+| **Symlink-only `shared/`** (status quo) | Simple; one checkout. | No **`pi update`** for shared bundle; upgrades = **`git pull`** in your checkout only. |
+| **`pi install` git package** | Pi-native upgrades; **`checkForAvailableUpdates`** can nudge users; **`postinstall`** can wire **`PATH`**. | Default flow uses a **Pi-managed clone** (often alongside **`~/.pi/agent`**); contributors may still keep a **second dev clone**. |
 | **npm publish `@you/dot-pi`** | Same as git from Pi’s POV with `npm:`. | Publishing overhead. |
 | **Feynman-style wrapper** (`PI_CODING_AGENT_DIR=~/.feynman/agent`, separate settings home) | Strong isolation from `~/.pi/agent`. | Heavier product layer than dot-pi wants today. |
 | **Only `pi install -l` in a project** | Never touches user global `settings.json`. | Awkward for “global agents on PATH everywhere.” |
 
-Dot-pi’s direction: **keep the repo + dispatch** for named agents, add **root `package.json` + `pi install` + `pi update`** for the **shared bundle**, and use **per-agent `settings.json`** + **synced `packages`** for Pattern B.
+Dot-pi’s direction: **named agents first-class** from the **installed package tree** (or equivalent layout), **`package.json` + `pi install` + `pi update`** for the **shared bundle**, optional **`postinstall`** for **`PATH`** and migrations, **per-agent `settings.json`** + **synced `packages`** for Pattern B, and **no requirement** for a fixed **`~/.dot-pi`** checkout.
 
 ---
 
@@ -199,7 +204,7 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
 
 ## 8. Relationship to existing dot-pi docs and scripts
 
-- **[`install`](install)** — Clones **`DOT_PI_HOME`**, runs **`dotpi sync`**, prepends **`core/bin`** to `PATH`. Becomes **complementary** to **`pi install`**: shell/installer vs Pi package manager.
+- **[`install`](install)** — Legacy **curl + bash** flow: clones a chosen home (historically **`~/.dot-pi`**), runs **`dotpi sync`**, prints **`PATH`**. Superseded for **end users** by **`pi install`** + optional **`postinstall`**; may remain for contributors who want a non–Pi-cache checkout or migration from old installs.
 - **[`core/commands/sync.sh`](core/commands/sync.sh)** — Today symlinks **`shared/settings.json` → ~/.pi/agent/settings.json`** when missing; **that conflicts with strict vanilla isolation** if **`packages`** are added globally. The migration plan is to **stop** treating **`~/.pi/agent/settings.json`** as the shared file for dot-pi agents and instead keep **`packages`** on **per-agent** (or bootstrap-only) files.
 - **[`AGENTS.md`](AGENTS.md)** — Agent authoring rules; should eventually describe **`packages` + arrays** alongside symlink bundles.
 
@@ -207,14 +212,14 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
 
 ## 9. Checklist for maintainers shipping this
 
-1. **Add** root **`package.json`** with **`"pi"`** manifest covering everything **`pi install`** should merge.
+1. **Add** root **`package.json`** with **`"pi"`** manifest covering everything **`pi install`** should merge, plus **`scripts.postinstall`** (or equivalent) if **`PATH`** wiring or migrations should run on **`pi install`** / **`pi update`**.
 2. **Add** **`.pi-bootstrap/`** with documented **`PI_CODING_AGENT_DIR=… pi install git:…`** flow.
 3. **Adjust** **`dotpi sync`** (and/or new **`dotpi packages`** command):  
    - merge canonical **`packages`** into each **`agents/*/settings.json`**;  
    - optionally migrate **`skills/`** symlinks → **`settings.json` arrays**.
 4. **Revisit** **`shared/settings.json`** ↔ **`~/.pi/agent/settings.json`** symlink policy for vanilla isolation.
 5. **Dispatch telemetry vs packages** — **`PI_OFFLINE` removed from `invoke.sh`** so package update UI and installs/updates are not suppressed for dispatched agents; document any Pi-native alternative for telemetry if maintainers add it later.
-6. **Document** in **[`docs/install.md`](docs/install.md)** and **this file** the two-tree mental model and upgrade commands.
+6. **Document** in **[`docs/install.md`](docs/install.md)** and **this file** the package-root / **`PATH`** model, **`postinstall`** expectations, and upgrade commands.
 
 ---
 
@@ -223,8 +228,8 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
 | Question | Answer |
 |----------|--------|
 | What is **`packages`**? | A **`settings.json`** list of **installable sources** (git/npm/local) Pi merges for **extensions/skills/prompts/themes**. |
-| Where does git install land? | Under **`~/.pi/agent/git/...`** (Pi cache), **not** auto-copied into **`DOT_PI_DIR`**. |
-| How do **`coder` / `mas`** work? | **`PI_CODING_AGENT_DIR`** to **`agents/<name>/`**, usually via **`dispatch-agent`** + **`core/bin`** on `PATH`. |
+| Where does git install land? | Under **`{agentDir}/git/<host>/<path>/`** (default **`agentDir`** → **`~/.pi/agent/git/...`**). Same tree holds **`dispatch-agent`**, **`agents/`**, **`core/bin/`**—no separate **`~/.dot-pi`** required. |
+| How do **`coder` / `mas`** work? | **`PI_CODING_AGENT_DIR`** to **`agents/<name>/`** inside the package root, usually via **`dispatch-agent`** + **`core/bin`** on **`PATH`**. |
 | How does vanilla **`pi`** stay vanilla? | No **`PI_CODING_AGENT_DIR`**; keep **`~/.pi/agent/settings.json`** free of dot-pi **`packages`** if you want zero merge from dot-pi’s git package. |
 | How do upgrades happen? | User runs **`pi update`**; pushes alone do nothing until then. |
 | Optional nudge? | Interactive Pi may show package update UI when updates exist; **`dispatch-agent` does not set `PI_OFFLINE`**. Setting **`PI_OFFLINE` yourself** still disables those checks. |
