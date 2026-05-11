@@ -61,7 +61,10 @@ These files are **never tracked**. They're created locally by the installer or `
 | `shared/settings.json` | Symlink → `~/.pi/agent/settings.json` (created by `dotpi sync`) | Pi runtime settings (theme, defaults). Edit `~/.pi/agent/settings.json` or use pi's settings UI. |
 | `shared/auth.json` | Symlink → `~/.pi/agent/auth.json` (created by `dotpi sync`) | API credentials. Edit `~/.pi/agent/auth.json` directly. |
 | `*/auth.json` (under `agents/<name>/`) | Symlink → `../../shared/auth.json` (created by `dotpi sync` / scaffolds) | Same credential file for every top-level agent; edit `~/.pi/agent/auth.json`. Override with `dotpi link-auth` if needed. |
-| `.exa.env`, `.tavily.env`, `.ntfy.env` | `/exa-api-key`, `/tavily-api-key`, manual keys, or `NTFY_*` for ntfy | Repo-root keys / ntfy URL and optional Basic auth. Convention: **`.service-name.env`** (gitignored). |
+| `.exa.env`, `.tavily.env`, `.ntfy.env` | `/exa-api-key`, `/tavily-api-key`, manual keys, or `NTFY_*` for ntfy | API keys / ntfy URL (convention: **`.service-name.env`**). Prefer **`$DOT_PI_OVERLAY/.exa.env`** (etc.) when using a Pi-managed install so **`pi update`** does not wipe repo-root copies; fall back to repo root for dev checkouts. See **`PI_INSTALL.md`** §3.3. |
+| **`$DOT_PI_OVERLAY/`** | User-created; default **`~/.pi/dot-pi`** when **`DOT_PI_OVERLAY`** unset (once implemented) | Overlay root: per-agent **`prompts/`**, **`skills/`**, **`.tts-wpm`**, optional **`.ssh/`**, env files. **Never** part of the Pi git clone; merged into **`settings.json`** by tooling. Set **`DOT_PI_OVERLAY`** to override path. **`PI_INSTALL.md`** §3.3. |
+| `.tts-wpm` | Say extension / `/tts-wpm` | TTS speed; store under **`$DOT_PI_OVERLAY`** for Pi-package installs. |
+| `.ssh/` (repo-scoped) | Optional tooling | If used, keep under **`$DOT_PI_OVERLAY/.ssh`** so keys are not deleted by **`git clean`** in the package tree. **Not** a replacement for the user’s **`~/.ssh`**. |
 | `REFERENCES/*` | Optional manual `git clone`s; see REFERENCE-REPOS.md` | Sibling project source for agents to read. |
 
 ### MAS Directory Layout (`agents/<name>/`)
@@ -393,5 +396,6 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `model-defaults` | Local | Per-machine global fallback model aliases. Created by `dotpi sync` or `dotpi model-defaults`, loaded at agent launch time. |
 | `agents/*/.model`, `subagents/*/.model`, `agents/*/agents/*/.model` | Local | Per-agent raw `provider/model` overrides written by `/model-default`; gitignored. |
 | `shared/settings.json` | **No** | Symlink → `~/.pi/agent/settings.json`. Edit the system file directly or use pi's settings UI. |
-| `.exa.env`, `.tavily.env`, `.ntfy.env` | Local | Repo-root API keys for Exa / Tavily and optional ntfy server URL + auth; convention `.service-name.env`. Gitignored. |
+| `.exa.env`, `.tavily.env`, `.ntfy.env` | Local | Prefer **`$DOT_PI_OVERLAY/`** for Pi-managed installs (**`PI_INSTALL.md`** §3.3); else repo-root. Gitignored. |
+| **`$DOT_PI_OVERLAY/**` | Local | User overlay outside repo; not tracked. |
 | `VERSION` | Yes | Bump on releases. Surfaced via `dotpi --version`. |

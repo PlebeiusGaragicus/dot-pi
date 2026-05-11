@@ -2,6 +2,8 @@
 
 This document records **what dot-pi is moving toward**, **how Pi’s package install system works**, **options and tradeoffs**, and **how this repository fits** under a `pi install`–centric workflow. It is intended for maintainers and advanced users; it is not a substitute for [docs/install.md](docs/install.md) or [AGENTS.md](AGENTS.md).
 
+**Supported surface (target):** end users install and maintain dot-pi **only** through Pi’s **`pi install`** and **`pi update`**. The **curl `install`** path is **not** part of that surface and **will be removed** so the repo stays simple and aligned with Pi’s package manager.
+
 ---
 
 ## 1. Goals
@@ -10,7 +12,7 @@ This document records **what dot-pi is moving toward**, **how Pi’s package ins
 
 1. **Vanilla `pi`** — Running `pi` with no custom agent layout should behave like a **normal Pi install**: default agent directory (`~/.pi/agent`), no dot-pi–specific extension bundles unless the user explicitly added them there.
 
-2. **Named agents (`coder`, `mas`, …) are first-class** — Short commands on `PATH` should launch **this repo’s** agent configs (`SYSTEM.md`, `pi-args`, orchestration, workspace bootstrap, etc.) with **`PI_CODING_AGENT_DIR`** pointing at **`agents/<name>/`** inside the **installed package tree** (or a copy/symlink layout your installer defines). **No fixed install path** such as **`~/.dot-pi`** is required; that name is historical convenience only.
+2. **Named agents (`coder`, `mas`, …) are first-class** — Short commands on `PATH` should launch **this repo’s** agent configs (`SYSTEM.md`, `pi-args`, orchestration, workspace bootstrap, etc.) with **`PI_CODING_AGENT_DIR`** pointing at **`agents/<name>/`** inside the **Pi-managed package tree** (see §3). There is **no** supported parallel “clone dot-pi to `~/…` and curl `install`” product flow.
 
 3. **Installable, upgradable shared bundle** — Shared skills, extensions, prompts, and themes should be consumable via Pi’s **first-class** mechanism: **`pi install`** / **`packages`** in `settings.json`, so users can **`pi update`** when the upstream git (or npm) package moves.
 
@@ -21,7 +23,7 @@ This document records **what dot-pi is moving toward**, **how Pi’s package ins
 ### 1.2 Operational goals
 
 - **Documented one-liner** for registering the git package, e.g.  
-  `PI_CODING_AGENT_DIR="$HOME/…/dot-pi/.pi-bootstrap" pi install git:https://github.com/<org>/dot-pi`  
+  `PI_CODING_AGENT_DIR="<absolute-path>/.pi-bootstrap" pi install git:https://github.com/<org>/dot-pi`  
   (exact URL, bootstrap path, and whether **`postinstall`** wires **`PATH`** are policy choices; see §2.3, §3, and §5.)
 
 - **Optional helpers** — `dotpi packages bootstrap` (or similar) and/or small `core/bin` shims so users rarely type raw env vars.
@@ -102,20 +104,57 @@ After **`pi install git:…dot-pi`** (with default **`PI_CODING_AGENT_DIR`**), P
 - the **`"pi"`** manifest and merged **extensions / skills / prompts / themes**, and  
 - **everything else in the repo** at that revision—**including `dispatch-agent`**, **`agents/`**, **`core/bin/`**, **`dotpi`**, and **`shared/`**.
 
-**`~/.dot-pi` (or `DOT_PI_HOME`) is not required.** It is a **historical default** for a separate manual **`git clone`** + curl installer. A **`pi install`–centric** setup can treat the **Pi-managed clone** as the only tree and make named agents first-class by:
+The **Pi-managed clone** is the **only** supported tree for **using** dot-pi as a product. Named agents are first-class when:
 
-1. putting **`core/bin`** on **`PATH`** (via **`postinstall`**, user docs, or a one-line shell snippet), and  
-2. setting **`PI_CODING_AGENT_DIR`** to **`…/agents/<name>`** inside that same tree when **`dispatch-agent`** runs (today it derives **`DOT_PI_DIR`** from its own location—relocating **`dispatch-agent`** into the clone preserves that behavior).
+1. **`core/bin`** is on **`PATH`** (typically via **`postinstall`** or documented shell config), and  
+2. **`dispatch-agent`** runs from that tree so it sets **`PI_CODING_AGENT_DIR`** to **`…/agents/<name>`** under the same root (today it derives **`DOT_PI_DIR`** from its own location).
 
-### 3.1 Optional second checkout
+### 3.1 Repository development vs `pi install`
 
-Keeping **two** trees—a **developer `git clone`** (e.g. **`~/.dot-pi`**) **and** the **Pi cache clone**—remains valid for contributors who edit the repo in place while still testing **`pi update`** on the package copy. Pi **does not** sync between them automatically; **`postinstall`**, **`dotpi sync`**, or manual **`git pull`** are separate concerns.
+**Contributors** edit this repository with a normal **`git clone`** of the source and run tests locally; that checkout is **not** a second “supported install” for end users and is unrelated to **`pi update`**. **Consumers** rely solely on **`pi install`** / **`pi update`** against the published git (or npm) package.
 
 ### 3.2 `dispatch-agent` and “copy over”
 
 Pi does **not** copy **`dispatch-agent`** into a second home by default. If you need files outside the clone (e.g. **`PATH`** shims in **`~/bin`**), implement that in **`package.json` scripts** (§2.3) or document a manual step. First-class agents only require that **`pi`** can be launched with **`PI_CODING_AGENT_DIR`** pointing at the right **`agents/<name>`** directory—usually next to **`dispatch-agent`** on disk.
 
+### 3.3 User overlay directory (survives `pi update`)
+
+Git package **`pi update`** runs **`git reset --hard`** and **`git clean -fdx`** in the Pi-managed clone, then **`npm install`**. Anything that must **never** be wiped or reverted—user prompt templates, extra skills, **`.service-name.env`** API keys, **`.tts-wpm`**, dot-pi–scoped **`.ssh`** material, etc.—must live **outside** that clone (or be re-materialized after every update by tooling).
+
+**Convention:** a single **overlay root** under Pi’s home, **`~/.pi/dot-pi/`**, referenced by **`DOT_PI_OVERLAY`**. When **`DOT_PI_OVERLAY`** is unset, **`dispatch-agent`** / **`postinstall`** / **`dotpi sync`** should default it to **`$HOME/.pi/dot-pi`** so tooling and extensions share one path. Set **`DOT_PI_OVERLAY`** explicitly to relocate the overlay. This directory is **only** user-owned sidecar data (not the old full-repo **`~/.dot-pi`** curl install).
+
+**Suggested layout:**
+
+```text
+$DOT_PI_OVERLAY/
+├── .exa.env
+├── .tavily.env
+├── .ntfy.env
+├── .tts-wpm
+├── .ssh/                       # optional: dot-pi–scoped ssh keys/config (not the user’s ~/.ssh)
+├── agents/
+│   ├── mas/
+│   │   ├── prompts/            # user slash-command templates merged with shipped mas prompts
+│   │   └── skills/             # user SKILL trees merged with shipped mas skills
+│   └── coder/
+│       ├── prompts/
+│       └── skills/
+└── (optional) settings.fragments/   # e.g. JSON snippets merged by dotpi after pi update
+```
+
+**How Pi picks up extra `prompts` / `skills`:** Pi resolves **`~/…`** in **`settings.json`** arrays (see pi-mono **`DefaultPackageManager`**). Because **`agents/<name>/settings.json`** inside the clone is **tracked**, it is **reset on `pi update`**—do not rely on hand-editing that file alone for overlay paths. Instead:
+
+1. **Tooling merge** — **`dotpi sync`** (or **`postinstall`**) (re)merges canonical shipped **`settings.json`** with overlay-derived entries, e.g. appending **`~/.pi/dot-pi/agents/mas/prompts`** (tilde or absolute paths—Pi does not expand raw **`$VAR`** inside JSON) to **`prompts`** / **`skills`** arrays **after** each **`pi update`**, preserving user-only keys from a fragment under **`$DOT_PI_OVERLAY`**. (Pi’s **`deepMergeSettings`** replaces **whole arrays** when one side sets a key—generators must **union** overlay paths with shipped lists, not overwrite blindly.)
+
+2. **Local `packages` entry** — **`pi install /path/to/overlay-mini-package`** with a tiny **`package.json`** + **`"pi": { "prompts": [...], "skills": [...] }`** pointing at **`$DOT_PI_OVERLAY`** is possible but awkward for per-agent layout; prefer **merged `settings.json`** for clarity.
+
+**Extensions and scripts** that today read repo-root **`.exa.env`**, **`.tavily.env`**, **`.tts-wpm`**, etc., should resolve **`$DOT_PI_OVERLAY/<file>`** first (default **`~/.pi/dot-pi/<file>`**), then fall back to **`$DOT_PI_DIR/<file>`** (package root), so keys survive **`pi update`** once the overlay exists. **`dispatch-agent`** should **`export DOT_PI_OVERLAY`** (defaulting to **`~/.pi/dot-pi`** when unset) so child **`pi`** processes inherit it.
+
+**`shared/auth.json` / `model-defaults`:** same rule—if they must survive reset inside a read-only-feeling tree, prefer **`~/.pi/agent/auth.json`** (existing Pi convention) or mirror into **`$DOT_PI_OVERLAY/`** and symlink/merge per migration docs when that work lands.
+
 ---
+
+## 4. Vanilla `pi` vs `coder` / `mas`
 
 ### 4.1 Same binary
 
@@ -137,7 +176,7 @@ That is **not** the only possible implementation — any wrapper that sets **`PI
 
 **Pattern B** (chosen direction): each **`agents/<name>/settings.json`** is **its own file** (theme, models, arrays, …) but each includes the **same logical `packages` list**. To avoid drift, **tooling** (e.g. **`dotpi sync`**) should merge a **canonical** `packages` list (from e.g. **`.pi-bootstrap/packages.json`** or a fragment) into every agent file with **`jq`**, preserving other keys.
 
-**Bootstrap dir (e.g. `.pi-bootstrap/`)** — minimal directory whose **`settings.json`** is the target when running **`PI_CODING_AGENT_DIR=<repo>/.pi-bootstrap pi install …`** (with **`<repo>`** either a dev checkout or a path inside the Pi clone—policy choice), so **`~/.pi/agent/settings.json`** stays vanilla-clean. After install, sync copies **`packages`** into each agent’s **`settings.json`** (or you symlink only if you accept shared non-package keys — usually not for Pattern B).
+**Bootstrap dir (e.g. `.pi-bootstrap/`)** — minimal directory whose **`settings.json`** is the target when running **`PI_CODING_AGENT_DIR=<bootstrap-abs-path> pi install …`** (path can live **inside** the Pi clone after first materialization, or be created ahead of time—policy choice), so **`~/.pi/agent/settings.json`** stays vanilla-clean. After install, sync copies **`packages`** into each agent’s **`settings.json`** (or you symlink only if you accept shared non-package keys — usually not for Pattern B).
 
 ---
 
@@ -146,6 +185,10 @@ That is **not** the only possible implementation — any wrapper that sets **`PI
 Illustrative **target** tree (some pieces may not exist yet; this is the direction described in planning):
 
 ```text
+~/.pi/dot-pi/                         # $DOT_PI_OVERLAY — user secrets, prompts, skills (see §3.3)
+├── .exa.env, .tavily.env, …
+└── agents/<name>/{prompts,skills}/
+
 ~/.pi/agent/                          # default Pi profile (vanilla); agentDir when PI_CODING_AGENT_DIR unset
 ├── settings.json                     # no dot-pi packages[] (policy)
 ├── auth.json
@@ -161,8 +204,6 @@ Illustrative **target** tree (some pieces may not exist yet; this is the directi
     └── .pi-bootstrap/                # optional: settings.json target for pi install without polluting vanilla
         ├── settings.json
         └── README.md
-
-# Optional: separate developer git clone (e.g. ~/.dot-pi) — not required for end users
 ```
 
 **Root `package.json`** — Tracked in-repo with **`"private": true`**, **`"pi": { "extensions": [...], "skills": [...], … }`** pointing at **`shared/`** (or subtrees you ship). Pi reads that manifest from the **git clone** under **`{agentDir}/git/...`**.
@@ -174,12 +215,12 @@ Illustrative **target** tree (some pieces may not exist yet; this is the directi
 | Approach | Pros | Cons |
 |----------|------|------|
 | **Symlink-only `shared/`** (status quo) | Simple; one checkout. | No **`pi update`** for shared bundle; upgrades = **`git pull`** in your checkout only. |
-| **`pi install` git package** | Pi-native upgrades; **`checkForAvailableUpdates`** can nudge users; **`postinstall`** can wire **`PATH`**. | Default flow uses a **Pi-managed clone** (often alongside **`~/.pi/agent`**); contributors may still keep a **second dev clone**. |
+| **`pi install` git package** | Pi-native upgrades; **`checkForAvailableUpdates`** can nudge users; **`postinstall`** can wire **`PATH`**. | Materializes under **`{agentDir}/git/...`**; product story assumes that tree is the install root (see §3). |
 | **npm publish `@you/dot-pi`** | Same as git from Pi’s POV with `npm:`. | Publishing overhead. |
 | **Feynman-style wrapper** (`PI_CODING_AGENT_DIR=~/.feynman/agent`, separate settings home) | Strong isolation from `~/.pi/agent`. | Heavier product layer than dot-pi wants today. |
 | **Only `pi install -l` in a project** | Never touches user global `settings.json`. | Awkward for “global agents on PATH everywhere.” |
 
-Dot-pi’s direction: **named agents first-class** from the **installed package tree** (or equivalent layout), **`package.json` + `pi install` + `pi update`** for the **shared bundle**, optional **`postinstall`** for **`PATH`** and migrations, **per-agent `settings.json`** + **synced `packages`** for Pattern B, and **no requirement** for a fixed **`~/.dot-pi`** checkout.
+Dot-pi’s direction: **named agents first-class** from the **Pi-managed package tree**, **`package.json` + `pi install` + `pi update`** as the **only** supported install/upgrade path for users, optional **`postinstall`** for **`PATH`** and migrations, **per-agent `settings.json`** + **synced `packages`** for Pattern B, a documented **`DOT_PI_OVERLAY`** tree for **secrets and user prompts/skills** (§3.3), and **removal** of the **curl `install`** flow from the supported repo surface.
 
 ---
 
@@ -204,9 +245,9 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
 
 ## 8. Relationship to existing dot-pi docs and scripts
 
-- **[`install`](install)** — Legacy **curl + bash** flow: clones a chosen home (historically **`~/.dot-pi`**), runs **`dotpi sync`**, prints **`PATH`**. Superseded for **end users** by **`pi install`** + optional **`postinstall`**; may remain for contributors who want a non–Pi-cache checkout or migration from old installs.
+- **[`install`](install)** — **Unsupported** under this plan: the **curl-to-bash** installer will be **removed** (or reduced to a short message pointing at **`pi install`**). Do not document or maintain backward compatibility with it; **[`docs/install.md`](docs/install.md)** should describe **`pi install` / `pi update`** only.
 - **[`core/commands/sync.sh`](core/commands/sync.sh)** — Today symlinks **`shared/settings.json` → ~/.pi/agent/settings.json`** when missing; **that conflicts with strict vanilla isolation** if **`packages`** are added globally. The migration plan is to **stop** treating **`~/.pi/agent/settings.json`** as the shared file for dot-pi agents and instead keep **`packages`** on **per-agent** (or bootstrap-only) files.
-- **[`AGENTS.md`](AGENTS.md)** — Agent authoring rules; should eventually describe **`packages` + arrays** alongside symlink bundles.
+- **[`AGENTS.md`](AGENTS.md)** — Agent authoring rules; **`DOT_PI_OVERLAY`** and per-agent overlay layout (§3.3) are summarized in the local-config table.
 
 ---
 
@@ -219,7 +260,10 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
    - optionally migrate **`skills/`** symlinks → **`settings.json` arrays**.
 4. **Revisit** **`shared/settings.json`** ↔ **`~/.pi/agent/settings.json`** symlink policy for vanilla isolation.
 5. **Dispatch telemetry vs packages** — **`PI_OFFLINE` removed from `invoke.sh`** so package update UI and installs/updates are not suppressed for dispatched agents; document any Pi-native alternative for telemetry if maintainers add it later.
-6. **Document** in **[`docs/install.md`](docs/install.md)** and **this file** the package-root / **`PATH`** model, **`postinstall`** expectations, and upgrade commands.
+6. **Document** in **[`docs/install.md`](docs/install.md)** and **this file** the package-root / **`PATH`** model, **`postinstall`** expectations, **`DOT_PI_OVERLAY`** (§3.3), and upgrade commands.
+7. **Remove** the root **[`install`](install)** curl script (or replace with a pointer to **`pi install`**); grep the repo for curl one-liners and update **README** / links accordingly.
+8. **Implement overlay resolution** — **`dispatch-agent`** exports **`DOT_PI_OVERLAY`** (default **`$HOME/.pi/dot-pi`** when unset); **`postinstall`** / **`dotpi sync`** creates **`~/.pi/dot-pi/`** and **merges** overlay **`prompts`/`skills`** paths into each **`agents/*/settings.json`** after **`pi update`** (union arrays, do not clobber user keys).
+9. **Migrate extensions and skills** that read **`.exa.env`**, **`.tavily.env`**, **`.tts-wpm`**, etc., to prefer **`$DOT_PI_OVERLAY`** then **`$DOT_PI_DIR`**; update docs under **`docs/reference/`** and **README**s accordingly.
 
 ---
 
@@ -228,10 +272,12 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
 | Question | Answer |
 |----------|--------|
 | What is **`packages`**? | A **`settings.json`** list of **installable sources** (git/npm/local) Pi merges for **extensions/skills/prompts/themes**. |
-| Where does git install land? | Under **`{agentDir}/git/<host>/<path>/`** (default **`agentDir`** → **`~/.pi/agent/git/...`**). Same tree holds **`dispatch-agent`**, **`agents/`**, **`core/bin/`**—no separate **`~/.dot-pi`** required. |
+| Where does git install land? | Under **`{agentDir}/git/<host>/<path>/`** (default **`agentDir`** → **`~/.pi/agent/git/...`**). Same tree holds **`dispatch-agent`**, **`agents/`**, **`core/bin/`**—the supported install root. |
+| How do users install dot-pi? | **`pi install`** (git or npm source); ongoing changes via **`pi update`**. **No** supported curl **`install`** path. |
 | How do **`coder` / `mas`** work? | **`PI_CODING_AGENT_DIR`** to **`agents/<name>/`** inside the package root, usually via **`dispatch-agent`** + **`core/bin`** on **`PATH`**. |
 | How does vanilla **`pi`** stay vanilla? | No **`PI_CODING_AGENT_DIR`**; keep **`~/.pi/agent/settings.json`** free of dot-pi **`packages`** if you want zero merge from dot-pi’s git package. |
 | How do upgrades happen? | User runs **`pi update`**; pushes alone do nothing until then. |
 | Optional nudge? | Interactive Pi may show package update UI when updates exist; **`dispatch-agent` does not set `PI_OFFLINE`**. Setting **`PI_OFFLINE` yourself** still disables those checks. |
+| User prompts, skills, `.env` keys? | **`DOT_PI_OVERLAY`** (default **`~/.pi/dot-pi`**) — §3.3. Merged into Pi via **`settings.json` arrays`** after **`pi update`**; extensions read overlay **then** package root. |
 
 This document should stay aligned with implementation as **`PI_INSTALL`-related** changes land in the repo.
