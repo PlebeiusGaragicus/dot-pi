@@ -1,7 +1,7 @@
 # pi process invocation and JSON event stream filtering.
 
 _pi() {
-  PI_SKIP_VERSION_CHECK=1 PI_OFFLINE=1 command pi "$@"
+  PI_SKIP_VERSION_CHECK=1 command pi "$@"
 }
 
 _run_pi_with_args_array() {

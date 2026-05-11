@@ -190,7 +190,8 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
 
 **Caveats:**
 
-- **`PI_OFFLINE`** — if set, the check is skipped entirely. **dot-pi’s `dispatch-agent` currently sets `PI_OFFLINE=1` when invoking `pi`** ([`core/dispatch/invoke.sh`](core/dispatch/invoke.sh)), so **package update banners may not appear** for dispatched agents unless that policy changes or users run **`pi`** directly for checks.
+- **`PI_OFFLINE`** — if set in the environment, Pi skips package update checks (and other network-sensitive package-manager paths) entirely.
+- **Dispatch** — **`dispatch-agent` used to set `PI_OFFLINE=1` in [`core/dispatch/invoke.sh`](core/dispatch/invoke.sh)** to cut background network use (including telemetry-style traffic), which also hid **“Package Updates Available”** and interfered with **`pi install` / `pi update`** behavior for **`coder` / `mas`**. **`PI_OFFLINE` is no longer set from dispatch** so those runs match bare **`pi`** for package discovery. Prefer **upstream Pi’s privacy / telemetry settings** (and documented env knobs) over blanket **`PI_OFFLINE`** here if you need tighter limits without losing package-manager ergonomics.
 - **Pinned git refs** — may skip auto-update checks per Pi’s rules.
 - **Non-interactive modes** — may not show the same UI nudge.
 
@@ -212,7 +213,7 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
    - merge canonical **`packages`** into each **`agents/*/settings.json`**;  
    - optionally migrate **`skills/`** symlinks → **`settings.json` arrays**.
 4. **Revisit** **`shared/settings.json`** ↔ **`~/.pi/agent/settings.json`** symlink policy for vanilla isolation.
-5. **Revisit** **`PI_OFFLINE=1`** in dispatch if package update notifications matter inside **`coder`/`mas`**.
+5. **Dispatch telemetry vs packages** — **`PI_OFFLINE` removed from `invoke.sh`** so package update UI and installs/updates are not suppressed for dispatched agents; document any Pi-native alternative for telemetry if maintainers add it later.
 6. **Document** in **[`docs/install.md`](docs/install.md)** and **this file** the two-tree mental model and upgrade commands.
 
 ---
@@ -226,6 +227,6 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
 | How do **`coder` / `mas`** work? | **`PI_CODING_AGENT_DIR`** to **`agents/<name>/`**, usually via **`dispatch-agent`** + **`core/bin`** on `PATH`. |
 | How does vanilla **`pi`** stay vanilla? | No **`PI_CODING_AGENT_DIR`**; keep **`~/.pi/agent/settings.json`** free of dot-pi **`packages`** if you want zero merge from dot-pi’s git package. |
 | How do upgrades happen? | User runs **`pi update`**; pushes alone do nothing until then. |
-| Optional nudge? | Interactive Pi may show package update UI unless **`PI_OFFLINE`** (note dot-pi dispatch today). |
+| Optional nudge? | Interactive Pi may show package update UI when updates exist; **`dispatch-agent` does not set `PI_OFFLINE`**. Setting **`PI_OFFLINE` yourself** still disables those checks. |
 
 This document should stay aligned with implementation as **`PI_INSTALL`-related** changes land in the repo.
