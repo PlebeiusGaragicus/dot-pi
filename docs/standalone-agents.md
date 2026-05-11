@@ -32,7 +32,7 @@ agents/<name>/
 ├── skills/                   # Add skills with dotpi link-skill <name> <skill>
 ├── themes/                   # Per-theme symlinks from shared/themes/
 ├── banner.txt                # Startup branding (ASCII art + usage text)
-├── bin/                      # → shared/bin/ (fd, rg)
+├── bin/                      # → $DOT_PI_OVERLAY/<agent>/bin → ~/.pi/agent/bin
 ├── models.json               # → shared/models.json
 ├── auth.json                 # → shared/auth.json
 ├── sessions/                 # Runtime conversation history (gitignored)

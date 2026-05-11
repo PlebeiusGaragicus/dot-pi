@@ -78,7 +78,7 @@ Run:
 dotpi setup
 ```
 
-Provider models are stored in Pi's standard `~/.pi/agent/models.json`. Credentials are stored in Pi's standard `~/.pi/agent/auth.json`. dot-pi agent roots link to those standard files through `shared/models.json` and `shared/auth.json`.
+Provider models are stored in Pi's standard `~/.pi/agent/models.json`. Credentials are stored in Pi's standard `~/.pi/agent/auth.json`. dot-pi exposes them through `$DOT_PI_OVERLAY/models.json` and `$DOT_PI_OVERLAY/auth.json`, then through `shared/models.json` and `shared/auth.json`, so all dot-pi agents share the same files as vanilla `pi`.
 
 Global model aliases are stored at:
 

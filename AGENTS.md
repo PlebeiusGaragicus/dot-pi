@@ -36,8 +36,8 @@ dot-pi/
 │   ├── skills/               # Shared skill definitions (each skill is a directory with SKILL.md)
 │   ├── themes/               # Shared themes (JSON)
 │   ├── bin/                  # Downloaded binaries (fd, rg) — gitignored contents
-│   ├── models.json           # Symlink → ~/.pi/agent/models.json (system pi config; managed by `dotpi setup`)
-│   ├── auth.json             # Symlink → ~/.pi/agent/auth.json (API credentials; managed by pi)
+│   ├── models.json           # Symlink → $DOT_PI_OVERLAY/models.json → ~/.pi/agent/models.json
+│   ├── auth.json             # Symlink → $DOT_PI_OVERLAY/auth.json → ~/.pi/agent/auth.json
 │   └── settings.json         # Symlink → $DOT_PI_OVERLAY/settings.json (dot-pi agent prefs)
 │
 ├── agents/                   # MAS and standalone agent directories
@@ -56,9 +56,9 @@ These files are **never tracked**. They're created locally by the installer or `
 | File | Source | Purpose |
 |------|--------|---------|
 | `$DOT_PI_OVERLAY/model-defaults` | Created by postinstall/relink or `dotpi model-defaults` when needed | Global fallback model aliases (`DEFAULT_AGENTIC_MODEL`, `DEFAULT_FAST_MODEL`, `DEFAULT_VLM_MODEL`). Loaded at agent launch time. |
-| `shared/models.json` | Symlink → `~/.pi/agent/models.json` (created by postinstall/relink) | Multi-provider model config shared with system pi. `dotpi setup` edits the system file. |
+| `shared/models.json` | Symlink → `$DOT_PI_OVERLAY/models.json` → `~/.pi/agent/models.json` (created by postinstall/relink) | Multi-provider model config shared with system pi. `dotpi setup` edits the system file. |
 | `shared/settings.json` | Symlink → `$DOT_PI_OVERLAY/settings.json` (created by postinstall/relink) | Shared dot-pi agent preferences. User-owned; install/update scripts must not overwrite existing overlay settings. |
-| `shared/auth.json` | Symlink → `~/.pi/agent/auth.json` (created by postinstall/relink) | API credentials. Edit `~/.pi/agent/auth.json` directly. |
+| `shared/auth.json` | Symlink → `$DOT_PI_OVERLAY/auth.json` → `~/.pi/agent/auth.json` (created by postinstall/relink) | API credentials. Edit `~/.pi/agent/auth.json` directly. |
 | `*/auth.json` (under `agents/<name>/`) | Symlink → `../../shared/auth.json` (created by postinstall/relink / scaffolds) | Same credential file for every top-level agent; edit `~/.pi/agent/auth.json`. Override with `dotpi link-auth` if needed. |
 | `.exa.env`, `.tavily.env`, `.ntfy.env` | `/exa-api-key`, `/tavily-api-key`, manual keys, or `NTFY_*` for ntfy | API keys / ntfy URL. Resolve from **`$DOT_PI_OVERLAY`** first, then repo root for development checkouts. |
 | **`$DOT_PI_OVERLAY/`** | Created by postinstall/relink as needed; default **`~/.pi/dot-pi`** when unset | Overlay root for shared **`settings.json`**, **`model-defaults`**, env files, **`.tts-wpm`**, optional **`.ssh/`**, and per-agent **`sessions/`**, **`prompts/`**, **`skills/`**, **`extensions/`**, **`themes/`**. User-owned; install/update scripts must not overwrite existing files. |
@@ -83,7 +83,7 @@ agents/<name>/
 ├── pi-args                   # (optional) Default CLI flags for the orchestrator (read by dispatch-agent)
 ├── banner.txt                # Startup branding (ASCII art + usage text)
 ├── bootstrap.sh              # (optional) In-situ launch setup hook
-├── bin/                      # → shared/bin/
+├── bin/                      # → $DOT_PI_OVERLAY/<agent>/bin → ~/.pi/agent/bin
 ├── models.json               # → shared/models.json
 ├── sessions/                 # Runtime (gitignored)
 ├── settings.json             # → shared/settings.json
@@ -111,7 +111,7 @@ agents/<name>/
 ├── themes/                   # Per-theme symlinks from shared/themes/
 ├── banner.txt                # Startup branding (ASCII art + usage text)
 ├── bootstrap.sh              # (optional) In-situ launch setup hook
-├── bin/                      # → shared/bin/
+├── bin/                      # → $DOT_PI_OVERLAY/<agent>/bin → ~/.pi/agent/bin
 ├── models.json               # → shared/models.json
 ├── sessions/                 # Runtime (gitignored)
 ├── settings.json             # → shared/settings.json
@@ -204,7 +204,7 @@ Recommended subagent files:
 - `models.json` -- symlink to `shared/models.json` (wired by postinstall/relink).
 - `settings.json` -- symlink to `shared/settings.json` (wired by postinstall/relink).
 - `auth.json` -- symlink to `shared/auth.json` (wired by postinstall/relink).
-- `bin/` -- symlink to `shared/bin/` (wired by postinstall/relink).
+- `bin/` -- symlink to `$DOT_PI_OVERLAY/<agent>/bin`, which points at `~/.pi/agent/bin` (wired by postinstall/relink).
 
 At the **root** of any `agents/<name>/` directory (MAS or standalone), **`USAGE.md`** is the file **`dispatch-agent`** prints for `<name> help`, `usage`, `-h`, and `--help` (plain text; use a man-style layout). **`README.md`** is for human- and agent-facing prose; launcher help does not fall back to it.
 
@@ -262,10 +262,10 @@ When editing prompt templates, keep delegation structural:
 - **Specialized extensions**: MAS roots link `agent-orchestrator` explicitly. Other one-off extensions (`agent-prompt`, `tavily`, `personas`, `plan-mode`, etc.) are linked intentionally per agent as needed.
 - **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
 - **Themes**: Each theme JSON in `shared/themes/` is symlinked individually into `<dir>/themes/`.
-- **bin**: A single directory symlink (`bin → ../../shared/bin`) so pi downloads `fd`/`rg` once and all agent configs share them.
-- **models.json**: A single file symlink (`models.json → ../../shared/models.json → ~/.pi/agent/models.json`). All agent configs and bare `pi` share one system config file. `dotpi setup` adds/edits/removes providers in the system file.
+- **bin**: Agent roots link `bin → $DOT_PI_OVERLAY/<agent>/bin → ~/.pi/agent/bin` so dot-pi agents share downloaded helper binaries (`fd`, `rg`, etc.) with vanilla `pi`.
+- **models.json**: A single file symlink (`models.json → ../../shared/models.json → $DOT_PI_OVERLAY/models.json → ~/.pi/agent/models.json`). All agent configs and bare `pi` share one system config file. `dotpi setup` adds/edits/removes providers in the system file.
 - **settings.json**: A single file symlink (`settings.json → ../../shared/settings.json → $DOT_PI_OVERLAY/settings.json`). All dot-pi agents share overlay-owned preferences. Postinstall/relink may create a missing seed file but must not overwrite an existing one.
-- **auth.json**: A single file symlink (`auth.json → ../../shared/auth.json → ~/.pi/agent/auth.json`). All agent configs share one credential store. Edit `~/.pi/agent/auth.json` directly. Postinstall/relink creates or repairs the `shared/` and agent-level symlinks. Use `dotpi link-auth` only when an agent must point at a different `auth.json`.
+- **auth.json**: A single file symlink (`auth.json → ../../shared/auth.json → $DOT_PI_OVERLAY/auth.json → ~/.pi/agent/auth.json`). All agent configs share one credential store. Edit `~/.pi/agent/auth.json` directly. Postinstall/relink creates or repairs the overlay, shared, and agent-level symlinks. Use `dotpi link-auth` only when an agent must point at a different `auth.json`.
 
 All symlinks use relative paths (e.g. `../../../shared/extensions-common/...` for common extensions under `agents/<name>/extensions/`).
 
@@ -338,13 +338,13 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `agents/*/extensions/*` | **No** | Symlinks — edit `shared/extensions/` instead |
 | `agents/*/skills/*` | **No** | Symlinks — edit `shared/skills/` instead |
 | `agents/*/themes/*` | **No** | Symlinks — edit `shared/themes/` instead |
-| `*/models.json` (in agent configs) | **No** | Symlink chain → `shared/models.json` → `~/.pi/agent/models.json` |
-| `shared/models.json` | **No** | Symlink → `~/.pi/agent/models.json`. Edit the system file directly or via `dotpi setup`. |
-| `shared/auth.json` | **No** | Symlink → `~/.pi/agent/auth.json`. Edit `~/.pi/agent/auth.json` directly. |
+| `*/models.json` (in agent configs) | **No** | Symlink chain → `shared/models.json` → `$DOT_PI_OVERLAY/models.json` → `~/.pi/agent/models.json` |
+| `shared/models.json` | **No** | Symlink → `$DOT_PI_OVERLAY/models.json` → `~/.pi/agent/models.json`. Edit the system file directly or via `dotpi setup`. |
+| `shared/auth.json` | **No** | Symlink → `$DOT_PI_OVERLAY/auth.json` → `~/.pi/agent/auth.json`. Edit `~/.pi/agent/auth.json` directly. |
 | `*/bin/` | **No** | Symlink — managed by pi runtime |
 | `*/sessions/` | **No** | Runtime data — gitignored |
 | `*/settings.json` (in agent configs) | **No** | Symlink chain → `shared/settings.json` → `$DOT_PI_OVERLAY/settings.json`; install/update must not overwrite existing overlay settings |
-| `*/auth.json` | **No** | Symlink chain → `shared/auth.json` → `~/.pi/agent/auth.json` |
+| `*/auth.json` | **No** | Symlink chain → `shared/auth.json` → `$DOT_PI_OVERLAY/auth.json` → `~/.pi/agent/auth.json` |
 | `REFERENCES/**` | **No** | Local-only sibling checkouts; gitignored. Cloned manually for agent context (see `REFERENCE-REPOS.md`). |
 | `$DOT_PI_OVERLAY/model-defaults` | Local | Per-machine global fallback model aliases. Created by postinstall/relink or `dotpi model-defaults`, loaded at agent launch time. |
 | `agents/*/.model`, `subagents/*/.model`, `agents/*/agents/*/.model` | Local | Per-agent raw `provider/model` overrides written by `/model-default`; gitignored. |

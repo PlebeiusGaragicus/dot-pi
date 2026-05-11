@@ -20,6 +20,60 @@ dotpi_create_file_if_missing() {
   [ -n "$mode" ] && chmod "$mode" "$path" 2>/dev/null || true
 }
 
+dotpi_seed_settings_if_missing() {
+  local path="$1"
+  if [ -e "$path" ] && [ ! -f "$path" ]; then
+    return 0
+  fi
+  mkdir -p "$(dirname "$path")"
+  if [ ! -f "$path" ]; then
+    {
+      umask 077
+      cat > "$path" <<'EOF'
+{
+  "enableInstallTelemetry": false,
+  "theme": "synthwave",
+  "collapseChangelog": true
+}
+EOF
+    }
+    return 0
+  fi
+  command -v node >/dev/null 2>&1 || return 0
+  node - "$path" <<'NODE'
+const fs = require("node:fs");
+const path = process.argv[2];
+const defaults = {
+  enableInstallTelemetry: false,
+  theme: "synthwave",
+  collapseChangelog: true,
+};
+
+let data;
+try {
+  data = JSON.parse(fs.readFileSync(path, "utf8"));
+} catch {
+  process.exit(0);
+}
+
+if (!data || Array.isArray(data) || typeof data !== "object") process.exit(0);
+
+let changed = false;
+for (const [key, value] of Object.entries(defaults)) {
+  if (!(key in data)) {
+    data[key] = value;
+    changed = true;
+  }
+}
+
+if (!changed) process.exit(0);
+
+const tmp = `${path}.tmp-${process.pid}`;
+fs.writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`, { mode: 0o600 });
+fs.renameSync(tmp, path);
+NODE
+}
+
 dotpi_link_force_symlink() {
   local target="$1" link="$2"
   if [ -e "$link" ] && [ ! -L "$link" ]; then
@@ -63,7 +117,7 @@ dotpi_link_extension_helpers() {
 dotpi_ensure_overlay_skeleton() {
   local overlay="$1" agent="$2" agent_overlay
   mkdir -p "$overlay"
-  dotpi_create_file_if_missing "$overlay/settings.json" "" "{}"
+  dotpi_seed_settings_if_missing "$overlay/settings.json"
   agent_overlay="$overlay/$agent"
   mkdir -p \
     "$agent_overlay/sessions" \
@@ -71,6 +125,7 @@ dotpi_ensure_overlay_skeleton() {
     "$agent_overlay/skills" \
     "$agent_overlay/extensions" \
     "$agent_overlay/themes"
+  dotpi_link_force_symlink "$HOME/.pi/agent/bin" "$agent_overlay/bin"
 }
 
 dotpi_link_overlay_entries() {
@@ -96,12 +151,14 @@ dotpi_relink() {
   local pi_agent_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
   local d name link subagent target
 
-  mkdir -p "$bin_dir" "$shared_dir" "$HOME/.pi/agent"
+  mkdir -p "$bin_dir" "$shared_dir" "$HOME/.pi/agent/bin"
 
-  dotpi_create_file_if_missing "$overlay/settings.json" "" "{}"
+  dotpi_seed_settings_if_missing "$overlay/settings.json"
+  dotpi_link_force_symlink "$HOME/.pi/agent/auth.json" "$overlay/auth.json"
+  dotpi_link_force_symlink "$HOME/.pi/agent/models.json" "$overlay/models.json"
   dotpi_link_force_symlink "$overlay/settings.json" "$shared_dir/settings.json"
-  dotpi_link_force_symlink "$HOME/.pi/agent/auth.json" "$shared_dir/auth.json"
-  dotpi_link_force_symlink "$HOME/.pi/agent/models.json" "$shared_dir/models.json"
+  dotpi_link_force_symlink "$overlay/auth.json" "$shared_dir/auth.json"
+  dotpi_link_force_symlink "$overlay/models.json" "$shared_dir/models.json"
 
   for subagent in "$dot_pi_dir"/subagents/*/; do
     [ -d "$subagent" ] || continue
@@ -109,7 +166,7 @@ dotpi_relink() {
     dotpi_link_force_symlink "../../shared/auth.json" "$subagent/auth.json"
     dotpi_link_force_symlink "../../shared/models.json" "$subagent/models.json"
     dotpi_link_force_symlink "../../shared/settings.json" "$subagent/settings.json"
-    [ -L "$subagent/bin" ] || dotpi_link_if_absent "../../shared/bin" "$subagent/bin"
+    dotpi_link_force_symlink "$HOME/.pi/agent/bin" "$subagent/bin"
     dotpi_link_extension_bundle "$shared_dir/extensions-subagents" "$subagent/extensions" "../../../shared/extensions-subagents"
     dotpi_link_extension_helpers "$subagent/extensions" "../../../shared/extensions"
   done
@@ -125,7 +182,7 @@ dotpi_relink() {
     dotpi_link_force_symlink "../../shared/auth.json" "$d/auth.json"
     dotpi_link_force_symlink "../../shared/models.json" "$d/models.json"
     dotpi_link_force_symlink "../../shared/settings.json" "$d/settings.json"
-    [ -L "$d/bin" ] || dotpi_link_if_absent "../../shared/bin" "$d/bin"
+    dotpi_link_force_symlink "$overlay/$name/bin" "$d/bin"
     dotpi_link_extension_bundle "$shared_dir/extensions-common" "$d/extensions" "../../../shared/extensions-common"
     dotpi_link_extension_helpers "$d/extensions" "../../../shared/extensions"
 
@@ -147,7 +204,7 @@ dotpi_relink() {
         dotpi_link_force_symlink "../../../../shared/auth.json" "$subagent/auth.json"
         dotpi_link_force_symlink "../../../../shared/models.json" "$subagent/models.json"
         dotpi_link_force_symlink "../../../../shared/settings.json" "$subagent/settings.json"
-        [ -L "$subagent/bin" ] || dotpi_link_if_absent "../../../../shared/bin" "$subagent/bin"
+        dotpi_link_force_symlink "$HOME/.pi/agent/bin" "$subagent/bin"
         dotpi_link_extension_bundle "$shared_dir/extensions-subagents" "$subagent/extensions" "../../../../../shared/extensions-subagents"
         dotpi_link_extension_helpers "$subagent/extensions" "../../../../../shared/extensions"
       done

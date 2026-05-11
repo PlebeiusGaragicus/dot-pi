@@ -16,7 +16,7 @@ agents/example/
 ├── auth.json -> ../../shared/auth.json
 ├── models.json -> ../../shared/models.json
 ├── settings.json -> ../../shared/settings.json
-├── bin -> ../../shared/bin
+├── bin -> $DOT_PI_OVERLAY/<agent>/bin -> ~/.pi/agent/bin
 ├── extensions/
 ├── prompts/
 ├── skills/
@@ -39,12 +39,12 @@ Most agents use only a subset of these files.
 ## Shared Config Links
 
 ```text
-agents/<name>/auth.json -> ../../shared/auth.json -> ~/.pi/agent/auth.json
-agents/<name>/models.json -> ../../shared/models.json -> ~/.pi/agent/models.json
+agents/<name>/auth.json -> ../../shared/auth.json -> $DOT_PI_OVERLAY/auth.json -> ~/.pi/agent/auth.json
+agents/<name>/models.json -> ../../shared/models.json -> $DOT_PI_OVERLAY/models.json -> ~/.pi/agent/models.json
 agents/<name>/settings.json -> ../../shared/settings.json -> $DOT_PI_OVERLAY/settings.json
 ```
 
-`auth.json` and `models.json` intentionally use Pi-standard files. `settings.json` is shared among dot-pi agents through the overlay and must not inherit the vanilla `~/.pi/agent/settings.json` package registration.
+`auth.json` and `models.json` intentionally resolve through the overlay to Pi-standard files so dot-pi agents and vanilla `pi` share credentials and provider catalogs. `settings.json` is shared among dot-pi agents through the overlay and must not inherit the vanilla `~/.pi/agent/settings.json` package registration.
 
 Install and relink scripts may create `$DOT_PI_OVERLAY/settings.json` if it is missing, but must never overwrite an existing one.
 
@@ -82,5 +82,7 @@ Reusable subagents live under `subagents/<name>/` and can be symlinked into MAS 
 ## Repo-Level Files
 
 `core/bin/<agent>` symlinks are repaired by package postinstall and `dotpi relink`.
+
+Agent-root `bin` links are repaired to `$DOT_PI_OVERLAY/<agent>/bin`, and that overlay link points at vanilla Pi's `~/.pi/agent/bin`. This lets dot-pi agents share downloaded binaries such as `fd` and `rg` with bare `pi`.
 
 `$DOT_PI_OVERLAY/model-defaults`, `$DOT_PI_OVERLAY/local-providers.conf`, `$DOT_PI_OVERLAY/agent-orchestrator.conf`, `.service.env` files, and `.tts-wpm` are user-owned local state. Clone-local fallbacks exist only for development checkouts.

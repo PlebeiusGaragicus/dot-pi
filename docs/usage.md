@@ -106,6 +106,8 @@ Auth and model provider catalogs use Pi's standard files:
 ~/.pi/agent/models.json
 ```
 
+dot-pi links those through `$DOT_PI_OVERLAY/auth.json` and `$DOT_PI_OVERLAY/models.json`, then into each agent root.
+
 ## Check Your Setup
 
 ```bash
