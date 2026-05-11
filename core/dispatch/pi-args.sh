@@ -4,7 +4,8 @@ _load_model_env() {
   local config_dir="$1"
   local file line name value fallback
   _inline_model_defaults=":"
-  file="$DOT_PI_DIR/model-defaults"
+  file="$DOT_PI_OVERLAY/model-defaults"
+  [ -f "$file" ] || file="$DOT_PI_DIR/model-defaults"
   [ -f "$file" ] || return 0
   while IFS= read -r line || [ -n "$line" ]; do
     [[ "$line" =~ ^[[:space:]]*export[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue
@@ -28,7 +29,13 @@ _load_model_env() {
 
 _read_agent_model() {
   local config_dir="$1"
-  local model_file="$config_dir/.model"
+  local model_file="$config_dir/.model" rel agent_name overlay_model
+  rel="${config_dir#"$DOT_PI_DIR/agents/"}"
+  if [ "$rel" != "$config_dir" ]; then
+    agent_name="${rel%%/*}"
+    overlay_model="$DOT_PI_OVERLAY/$agent_name/.model"
+    [ -f "$overlay_model" ] && model_file="$overlay_model"
+  fi
   local line
   [ -f "$model_file" ] || return 0
   while IFS= read -r line || [ -n "$line" ]; do

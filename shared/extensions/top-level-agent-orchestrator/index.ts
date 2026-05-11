@@ -14,6 +14,7 @@ import type { Message } from "@mariozechner/pi-ai";
 import { type ExtensionAPI, getAgentDir, getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
 import { Type } from "typebox";
+import { agentOverlayFirstFile, overlayFirstFile } from "../lib/dotpi-paths.js";
 
 const CORE_AGENT_NAMES = ["ask", "scout", "writer", "coder", "web"] as const;
 const MODEL_DEFAULT_ALIASES = ["DEFAULT_AGENTIC_MODEL", "DEFAULT_FAST_MODEL", "DEFAULT_VLM_MODEL"] as const;
@@ -192,9 +193,8 @@ function loadEnvFile(filePath: string, env: Record<string, string>): void {
 }
 
 function modelEnvForAgent(): Record<string, string> {
-	const root = findDotPiRoot();
 	const env = { ...process.env } as Record<string, string>;
-	loadEnvFile(path.join(root, "model-defaults"), env);
+	loadEnvFile(overlayFirstFile("model-defaults"), env);
 	return env;
 }
 
@@ -203,7 +203,7 @@ function inlineDefaultAliases(): Set<string> {
 }
 
 function readAgentModel(agentDir: string): string {
-	const modelPath = path.join(agentDir, ".model");
+	const modelPath = agentOverlayFirstFile(agentDir, ".model");
 	if (!fs.existsSync(modelPath)) return "";
 	for (const rawLine of fs.readFileSync(modelPath, "utf-8").split(/\r?\n/)) {
 		const line = rawLine.trim();

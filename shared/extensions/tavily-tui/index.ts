@@ -8,7 +8,7 @@
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import * as fs from "node:fs";
-import * as path from "node:path";
+import { ensureOverlayDir, overlayFile, overlayFirstFile } from "../lib/dotpi-paths.js";
 
 const USAGE_API_URL = "https://api.tavily.com/usage";
 const STATUS_KEY = "tavily-usage";
@@ -58,18 +58,11 @@ interface TavilyUsageResponse {
 	detail?: unknown;
 }
 
-function findDotPiRoot(): string {
-	if (!process.env.DOT_PI_DIR) {
-		throw new Error("DOT_PI_DIR is not set; run this extension through dispatch-agent.");
-	}
-	return process.env.DOT_PI_DIR;
-}
-
 function loadTavilyKey(): string | null {
 	const envKey = process.env.TAVILY_API_KEY?.trim();
 	if (envKey && envKey !== "$TAVILY_API_KEY") return envKey;
 
-	const keyPath = path.join(findDotPiRoot(), TAVILY_KEY_FILE);
+	const keyPath = overlayFirstFile(TAVILY_KEY_FILE);
 	if (!fs.existsSync(keyPath)) return null;
 
 	const content = fs.readFileSync(keyPath, "utf-8").trim();
@@ -78,7 +71,8 @@ function loadTavilyKey(): string | null {
 }
 
 function saveTavilyKey(key: string): string {
-	const keyPath = path.join(findDotPiRoot(), TAVILY_KEY_FILE);
+	ensureOverlayDir();
+	const keyPath = overlayFile(TAVILY_KEY_FILE);
 	fs.writeFileSync(keyPath, `TAVILY_API_KEY=${key}\n`, "utf-8");
 	return keyPath;
 }

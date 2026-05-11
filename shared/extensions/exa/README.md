@@ -4,7 +4,7 @@ Provides `/exa-api-key` for configuring a repo-local Exa API key. The Exa search
 
 ## Files
 
-- `index.ts` -- Registers `/exa-api-key` and reads/writes the repo-root `.exa.env` file.
+- `index.ts` -- Registers `/exa-api-key` and reads/writes `$DOT_PI_OVERLAY/.exa.env` with a repo-root fallback for development checkouts.
 
 ## Configuration
 

@@ -1,0 +1,15 @@
+{
+  "name": "dot-pi",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Pi agent configurations managed as a Pi git package.",
+  "scripts": {
+    "postinstall": "bash core/install/postinstall.sh"
+  },
+  "pi": {
+    "extensions": [],
+    "skills": [],
+    "prompts": [],
+    "themes": []
+  }
+}

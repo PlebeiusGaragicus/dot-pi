@@ -26,14 +26,14 @@ Follow these phases in order. Do not skip the review checkpoint before writing u
 
 Before drafting the workflow spec, use your own tools to read:
 
-- `~/.dot-pi/docs/workflow-writing-guide.md`
+- `$DOT_PI_DIR/docs/workflow-writing-guide.md`
 
 If the guide is missing or insufficient for the request, also consult only the needed parts of:
 
-- `~/.dot-pi/docs/reference/multi-agent-systems.md`
-- `~/.dot-pi/docs/design/top-level-agent-mas.md`
-- `~/.dot-pi/agents/mas/prompts/deepresearch.md`
-- `~/.dot-pi/agents/mas/prompts/pdf-ocr.md`
+- `$DOT_PI_DIR/docs/reference/multi-agent-systems.md`
+- `$DOT_PI_DIR/docs/design/top-level-agent-mas.md`
+- `$DOT_PI_DIR/agents/mas/prompts/deepresearch.md`
+- `$DOT_PI_DIR/agents/mas/prompts/pdf-ocr.md`
 
 Use these references to enforce capability boundaries, artifact handoffs, validation phases, stop conditions, and final user request handling.
 
@@ -140,7 +140,7 @@ If you use `ask` with persona `judge` for an additional semantic check, pass the
 - Project workflows are stored under `.pi/prompts/`.
 - Default generated path is `.pi/prompts/<workflow-name>.md`.
 - Workflow names should be lowercase kebab-case.
-- Do not write bundled prompts under `~/.dot-pi/agents/mas/prompts/` unless the user explicitly requests a dot-pi repo change rather than a project workflow.
+- Do not write bundled prompts under `$DOT_PI_DIR/agents/mas/prompts/` unless the user explicitly requests a dot-pi repo change rather than a project workflow.
 - Do not create project-local subagents, skills, or config files unless the user explicitly expands the scope.
 
 ## Stop Conditions

@@ -3,7 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FIXTURE="$(mktemp -d "${TMPDIR:-/tmp}/dotpi-dispatch-smoke.XXXXXX")"
-trap 'rm -rf "$FIXTURE"' EXIT
+OVERLAY="$(mktemp -d "${TMPDIR:-/tmp}/dotpi-dispatch-overlay.XXXXXX")"
+trap 'rm -rf "$FIXTURE" "$OVERLAY"' EXIT
 
 fail() {
   echo "dispatch smoke failed: $*" >&2
@@ -25,7 +26,7 @@ run_capture() {
   shift
   local output status
   set +e
-  output=$(DOT_PI_DIR="$FIXTURE" DOTPI_DISPATCH_CAPTURE_PI=1 "$@" < /dev/null 2>&1)
+  output=$(DOT_PI_DIR="$FIXTURE" DOT_PI_OVERLAY="$OVERLAY" DOTPI_DISPATCH_CAPTURE_PI=1 "$@" < /dev/null 2>&1)
   status=$?
   set -e
   if [ "$status" -ne 0 ] && [[ "$output" != *"PI_CODING_AGENT_DIR="* ]]; then
@@ -39,7 +40,7 @@ run_capture_stdin() {
   shift 2
   local output status
   set +e
-  output=$(printf '%s' "$stdin" | DOT_PI_DIR="$FIXTURE" DOTPI_DISPATCH_CAPTURE_PI=1 "$@" 2>&1)
+  output=$(printf '%s' "$stdin" | DOT_PI_DIR="$FIXTURE" DOT_PI_OVERLAY="$OVERLAY" DOTPI_DISPATCH_CAPTURE_PI=1 "$@" 2>&1)
   status=$?
   set -e
   if [ "$status" -ne 0 ] && [[ "$output" != *"PI_CODING_AGENT_DIR="* ]]; then
@@ -48,15 +49,33 @@ run_capture_stdin() {
   CAPTURE_OUT="$output"
 }
 
-mkdir -p "$FIXTURE/core/bin" "$FIXTURE/agents/coder" "$FIXTURE/agents/lm" \
-  "$FIXTURE/agents/browser" "$FIXTURE/agents/browser/workspaces/2026-04-29-000000--prefix/sessions"
+run_error() {
+  local label="$1"
+  shift
+  local output status
+  set +e
+  output=$(DOT_PI_DIR="$FIXTURE" DOT_PI_OVERLAY="$OVERLAY" DOTPI_DISPATCH_CAPTURE_PI=1 "$@" < /dev/null 2>&1)
+  status=$?
+  set -e
+  [ "$status" -ne 0 ] || fail "$label unexpectedly succeeded: $output"
+  CAPTURE_OUT="$output"
+}
+
+cwd_session_dir() {
+  local encoded
+  encoded="${PWD#/}"
+  encoded="${encoded//\//-}"
+  printf '%s/%s/sessions/--%s--' "$OVERLAY" "$1" "$encoded"
+}
+
+mkdir -p "$FIXTURE/core/bin" "$FIXTURE/agents/coder" "$FIXTURE/agents/lm" "$FIXTURE/agents/browser"
 ln -s "$ROOT/core" "$FIXTURE/core_src"
 ln -s "$FIXTURE/core_src/dispatch" "$FIXTURE/core/dispatch"
 ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/coder"
 ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/lm"
 ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/browser"
 
-cat > "$FIXTURE/model-defaults" <<'EOF'
+cat > "$OVERLAY/model-defaults" <<'EOF'
 export DEFAULT_AGENTIC_MODEL="${DEFAULT_AGENTIC_MODEL:-}"
 export DEFAULT_FAST_MODEL="${DEFAULT_FAST_MODEL:-}"
 export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
@@ -85,15 +104,10 @@ read,ls,bash
 --no-context-files
 EOF
 
-cat > "$FIXTURE/agents/browser/bootstrap.sh" <<'EOF'
-WORKSPACE_AGENT=1
-export WORKSPACE_AGENT
-mkdir -p "$WORKSPACE_DIR/sessions"
-EOF
-
 run_capture "coder no args" "$FIXTURE/core/bin/coder"
 assert_contains "$CAPTURE_OUT" "PI_CODING_AGENT_DIR=$FIXTURE/agents/coder" "coder no args"
 assert_contains "$CAPTURE_OUT" "ARGV" "coder no args"
+assert_contains "$CAPTURE_OUT" $'\t--session-dir\t'"$(cwd_session_dir coder)" "coder session dir"
 assert_not_contains "$CAPTURE_OUT" $'\t--model' "coder model fall-through"
 
 run_capture "lm interactive prompt" "$FIXTURE/core/bin/lm" - hi there
@@ -110,32 +124,18 @@ run_capture "lm print verbose prompt" "$FIXTURE/core/bin/lm" -p -v hi
 assert_contains "$CAPTURE_OUT" $'\t--mode\tjson' "lm print verbose prompt"
 assert_contains "$CAPTURE_OUT" $'\t-p\thi' "lm print verbose prompt"
 
-run_capture "browser print workspace" "$FIXTURE/core/bin/browser" -p status
-assert_contains "$CAPTURE_OUT" "PI_CODING_AGENT_DIR=$FIXTURE/agents/browser" "browser print workspace"
-assert_contains "$CAPTURE_OUT" $'\t--tools\tread,ls,bash' "browser print workspace"
-assert_contains "$CAPTURE_OUT" $'\t--mode\tjson' "browser print workspace"
-assert_contains "$CAPTURE_OUT" $'\t--session-dir\t' "browser print workspace"
-assert_contains "$CAPTURE_OUT" $'\t-p\tstatus' "browser print workspace"
+run_capture "browser print overlay session" "$FIXTURE/core/bin/browser" -p status
+assert_contains "$CAPTURE_OUT" "PI_CODING_AGENT_DIR=$FIXTURE/agents/browser" "browser print overlay session"
+assert_contains "$CAPTURE_OUT" $'\t--tools\tread,ls,bash' "browser print overlay session"
+assert_contains "$CAPTURE_OUT" $'\t--mode\tjson' "browser print overlay session"
+assert_contains "$CAPTURE_OUT" $'\t--session-dir\t'"$(cwd_session_dir browser)" "browser print overlay session"
+assert_contains "$CAPTURE_OUT" $'\t-p\tstatus' "browser print overlay session"
 
-run_capture "browser named interactive workspace" "$FIXTURE/core/bin/browser" -n named - prompt text
-assert_contains "$CAPTURE_OUT" "PI_CODING_AGENT_DIR=$FIXTURE/agents/browser" "browser named interactive workspace"
-assert_contains "$CAPTURE_OUT" $'\t--session-dir\t' "browser named interactive workspace"
-assert_contains "$CAPTURE_OUT" $'\tprompt text' "browser named interactive workspace"
-assert_not_contains "$CAPTURE_OUT" $'\t--mode\tjson' "browser named interactive workspace"
-assert_not_contains "$CAPTURE_OUT" $'\t-p\t' "browser named interactive workspace"
+run_error "browser named option removed" "$FIXTURE/core/bin/browser" -n named - prompt text
+assert_contains "$CAPTURE_OUT" "was removed with workspace mode" "browser named option removed"
 
-run_capture "browser exact resume prompt" "$FIXTURE/core/bin/browser" resume 2026-04-29-000000--prefix - continue here
-assert_contains "$CAPTURE_OUT" "Resuming: $FIXTURE/agents/browser/workspaces/2026-04-29-000000--prefix" "browser resume prompt"
-assert_contains "$CAPTURE_OUT" $'\t--continue' "browser resume prompt"
-assert_contains "$CAPTURE_OUT" $'\tcontinue here' "browser resume prompt"
-assert_not_contains "$CAPTURE_OUT" $'\t--mode\tjson' "browser resume prompt"
-
-# Clean up workspace dirs created by earlier tests so the picker only has the fixture entry
-find "$FIXTURE/agents/browser/workspaces" -mindepth 1 -maxdepth 1 -type d ! -name '2026-04-29-000000--prefix' -exec rm -rf {} +
-run_capture_stdin "browser picker resume prompt" $'1\n' "$FIXTURE/core/bin/browser" resume - continue from picker
-assert_contains "$CAPTURE_OUT" "Workspaces for browser:" "browser picker resume prompt"
-assert_contains "$CAPTURE_OUT" "Resuming: $FIXTURE/agents/browser/workspaces/2026-04-29-000000--prefix" "browser picker resume prompt"
-assert_contains "$CAPTURE_OUT" $'\tcontinue from picker' "browser picker resume prompt"
+run_error "browser resume removed" "$FIXTURE/core/bin/browser" resume old-workspace
+assert_contains "$CAPTURE_OUT" "resume' was removed with workspace mode" "browser resume removed"
 
 # --- Skills do not run launch-time bootstraps ---
 
@@ -171,6 +171,7 @@ EOF
 run_capture "skill bootstrap ignored" "$FIXTURE/core/bin/searcher"
 assert_contains "$CAPTURE_OUT" "PI_CODING_AGENT_DIR=$FIXTURE/agents/searcher" "skill bootstrap ignored agent"
 BOOTSTRAP_LOG="$FIXTURE/agents/searcher/sessions/bootstrap.log"
+BOOTSTRAP_LOG="$(cwd_session_dir searcher)/bootstrap.log"
 [ -f "$BOOTSTRAP_LOG" ] || fail "skill bootstrap ignored: bootstrap.log not created"
 LOG_CONTENT=$(cat "$BOOTSTRAP_LOG")
 assert_contains "$LOG_CONTENT" "bootstrap start: agent searcher" "skill bootstrap ignored: agent logged"

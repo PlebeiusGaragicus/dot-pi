@@ -6,27 +6,20 @@
  *
  * API key resolution (in priority order):
  *   1. EXA_API_KEY environment variable
- *   2. repo-root `.exa.env` file (written by /exa-api-key)
+ *   2. `$DOT_PI_OVERLAY/.exa.env`, falling back to repo-root `.exa.env`
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import * as fs from "node:fs";
-import * as path from "node:path";
+import { ensureOverlayDir, overlayFile, overlayFirstFile } from "../lib/dotpi-paths.js";
 
 const EXA_KEY_FILE = ".exa.env";
-
-function findDotPiRoot(): string {
-	if (!process.env.DOT_PI_DIR) {
-		throw new Error("DOT_PI_DIR is not set; run this extension through dispatch-agent.");
-	}
-	return process.env.DOT_PI_DIR;
-}
 
 function loadExaKey(): string | null {
 	const envKey = process.env.EXA_API_KEY?.trim();
 	if (envKey && envKey !== "$EXA_API_KEY") return envKey;
 
-	const keyPath = path.join(findDotPiRoot(), EXA_KEY_FILE);
+	const keyPath = overlayFirstFile(EXA_KEY_FILE);
 	if (!fs.existsSync(keyPath)) return null;
 
 	const content = fs.readFileSync(keyPath, "utf-8").trim();
@@ -35,7 +28,8 @@ function loadExaKey(): string | null {
 }
 
 function saveExaKey(key: string): string {
-	const keyPath = path.join(findDotPiRoot(), EXA_KEY_FILE);
+	ensureOverlayDir();
+	const keyPath = overlayFile(EXA_KEY_FILE);
 	fs.writeFileSync(keyPath, `EXA_API_KEY=${key}\n`, "utf-8");
 	return keyPath;
 }

@@ -3,6 +3,8 @@
 
 # shellcheck disable=SC2034
 SHARED_DIR="$DOT_PI_DIR/shared"
+DOT_PI_OVERLAY="${DOT_PI_OVERLAY:-$HOME/.pi/dot-pi}"
+export DOT_PI_OVERLAY
 
 link_extension_bundle() {
   local bundle_dir="$1" target_dir="$2" rel_prefix="$3" ext name
@@ -23,6 +25,7 @@ link_extension_bundle() {
 write_model_defaults_file() {
   local path="$1"
   [ -e "$path" ] && return 0
+  mkdir -p "$(dirname "$path")"
   cat > "$path" <<'EOF'
 # Local fallback model aliases used by pi-args files.
 # Leave a value empty to let pi fall back to its settings.json default.
@@ -30,6 +33,11 @@ export DEFAULT_AGENTIC_MODEL="${DEFAULT_AGENTIC_MODEL:-}"
 export DEFAULT_FAST_MODEL="${DEFAULT_FAST_MODEL:-}"
 export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
 EOF
+}
+
+resolve_model_defaults_file() {
+  mkdir -p "$DOT_PI_OVERLAY"
+  echo "$DOT_PI_OVERLAY/model-defaults"
 }
 
 resolve_models_file() {
@@ -101,31 +109,4 @@ resolve_dir() {
   else
     return 1
   fi
-}
-
-agent_declares_workspace() {
-  local dir="$1" line value
-  local file="$dir/bootstrap.sh"
-  [ -f "$file" ] || return 1
-  while IFS= read -r line || [ -n "$line" ]; do
-    line="${line#"${line%%[![:space:]]*}"}"
-    line="${line%"${line##*[![:space:]]}"}"
-    [[ -z "$line" || "$line" == \#* ]] && continue
-    if [[ "$line" =~ ^export[[:space:]]+(.+)$ ]]; then
-      line="${BASH_REMATCH[1]}"
-      line="${line#"${line%%[![:space:]]*}"}"
-      line="${line%"${line##*[![:space:]]}"}"
-    fi
-    [[ "$line" =~ ^WORKSPACE_AGENT=(.*)$ ]] || continue
-    value="${BASH_REMATCH[1]}"
-    value="${value#"${value%%[![:space:]]*}"}"
-    value="${value%"${value##*[![:space:]]}"}"
-    if [[ "$value" == \"*\" && "$value" == *\" ]]; then
-      value="${value:1:${#value}-2}"
-    elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
-      value="${value:1:${#value}-2}"
-    fi
-    [ "$value" = "1" ] && return 0
-  done < "$file"
-  return 1
 }

@@ -138,23 +138,15 @@ The extension should resolve each hard-coded name relative to the dot-pi root, r
 
 `coder` is allowed to rely on pi's default system prompt instead of a local `SYSTEM.md`. A missing local `SYSTEM.md` should not by itself make a hard-coded core worker ineligible.
 
-## Workspace Agent Exclusion
+## In-Situ Agent Assumption
 
-Workspace agents should be excluded from the first version by curation rather than by broad runtime scanning. This is a worker-selection rule, not a requirement that users adopt dot-pi workspace agents for `mas`.
+All top-level agents are in-situ. Worker selection no longer needs workspace-agent compatibility checks.
 
 The user chooses the execution directory by launching `mas` from an existing project or by creating and entering a clean directory before launch. The MAS and its workers operate in that current working directory. Workflow prompts may ask workers to create local directories such as `sources/`, `drafts/`, or `reports/`, but the top-level-agent MAS should not depend on the dot-pi workspace-agent lifecycle.
 
-Top-level agents normally launch through the dot-pi dispatcher. The dispatcher handles optional workspace selection, workspace creation, bootstrap sourcing, runtime environment setup, and resume behavior.
+Top-level agents normally launch through the dot-pi dispatcher. The dispatcher handles bootstrap sourcing, runtime environment setup, and overlay session directories.
 
-A worker invocation from a MAS extension starts a child agent process directly. It does not run the target agent through the dispatcher. That means a workspace agent's launch lifecycle is not available to the child process.
-
-The hard-coded v1 worker list should contain only agents that do not require workspace-agent bootstrap behavior. The extension does not need to parse all candidate agents for:
-
-```sh
-WORKSPACE_AGENT=1
-```
-
-Later versions could define a way to delegate through the dispatcher, emulate the workspace lifecycle, or enforce compatibility checks dynamically, but that should not be part of the first implementation.
+A worker invocation from a MAS extension starts a child agent process directly. It does not run the target agent through the dispatcher, so the extension is responsible for passing the same relevant environment, model defaults, and session behavior.
 
 ## Capability Descriptors
 

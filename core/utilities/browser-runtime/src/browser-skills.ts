@@ -18,9 +18,10 @@ interface SkillTiers {
 }
 
 export function skillTiers(config: RuntimeConfig): SkillTiers {
+  const overlay = process.env.DOT_PI_OVERLAY || path.join(process.env.HOME || '', '.pi', 'dot-pi');
   return {
     project: path.join(config.stateDir, 'browser-skills'),
-    global: path.join(process.env.HOME || '', '.dot-pi', 'browser-skills'),
+    global: path.join(overlay, 'browser-skills'),
     bundled: path.resolve(import.meta.dir, '..', 'browser-skills'),
   };
 }

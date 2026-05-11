@@ -127,17 +127,17 @@ Edit the stub extension to add custom tools and behavior. See [Writing Extension
 
 ### Running the Agent
 
-After running `dotpi sync`, standalone agents are available as direct commands:
+After postinstall or `dotpi relink`, standalone agents are available as direct commands:
 
 ```bash
-dotpi sync
+dotpi relink
 my-agent "hello"
 ```
 
 Or set the environment variable directly:
 
 ```bash
-PI_CODING_AGENT_DIR=~/.dot-pi/agents/my-agent pi "hello"
+PI_CODING_AGENT_DIR=/path/to/dot-pi/agents/my-agent pi "hello"
 ```
 
 ## Examples

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# dotpi sync is retained as a narrow compatibility alias for postinstall-style
-# relinking. It must not merge settings or mutate user-owned overlay files.
+set -euo pipefail
+
+DOT_PI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export DOT_PI_DIR
 
 # shellcheck source=core/install/lib.sh
 source "$DOT_PI_DIR/core/install/lib.sh"

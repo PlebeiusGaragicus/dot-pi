@@ -9,6 +9,16 @@ export function findDotPiRoot() {
 	return process.env.DOT_PI_DIR;
 }
 
+export function findDotPiOverlay() {
+	return process.env.DOT_PI_OVERLAY || path.join(process.env.HOME || "", ".pi", "dot-pi");
+}
+
+function overlayFirstFile(name) {
+	const overlayPath = path.join(findDotPiOverlay(), name);
+	if (fs.existsSync(overlayPath)) return overlayPath;
+	return path.join(findDotPiRoot(), name);
+}
+
 /** Parses KEY=value lines; supports # comments and blank lines. */
 export function parseEnvFile(envPath) {
 	const out = {};
@@ -41,7 +51,7 @@ export function normalizeBaseUrl(url) {
 }
 
 export function loadNtfyConfig() {
-	const filePath = path.join(findDotPiRoot(), ".ntfy.env");
+	const filePath = overlayFirstFile(".ntfy.env");
 	const fileVars = parseEnvFile(filePath);
 
 	function pick(key) {
@@ -62,7 +72,7 @@ export function requireNtfyConfig() {
 	if (!config.baseUrl) {
 		console.error("Error: ntfy is not configured.");
 		console.error(
-			"Export NTFY_BASE_URL or create repo-root .ntfy.env with NTFY_BASE_URL=<url> (and optional NTFY_USER / NTFY_PASSWORD).",
+			"Export NTFY_BASE_URL or create $DOT_PI_OVERLAY/.ntfy.env with NTFY_BASE_URL=<url> (and optional NTFY_USER / NTFY_PASSWORD).",
 		);
 		process.exit(1);
 	}

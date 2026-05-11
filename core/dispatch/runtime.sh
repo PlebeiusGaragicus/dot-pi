@@ -3,6 +3,7 @@
 
 export DOT_PI_DIR
 export PI_TELEMETRY="${PI_TELEMETRY:-0}"
+export DOT_PI_OVERLAY="${DOT_PI_OVERLAY:-$HOME/.pi/dot-pi}"
 
 if [ -z "${B:-}" ]; then
   _dotpi_browser_control_bin="$DOT_PI_DIR/core/utilities/browser-runtime/dist/browser-control"

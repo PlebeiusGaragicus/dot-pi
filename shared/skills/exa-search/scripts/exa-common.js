@@ -11,11 +11,21 @@ export function findDotPiRoot() {
 	return process.env.DOT_PI_DIR;
 }
 
+export function findDotPiOverlay() {
+	return process.env.DOT_PI_OVERLAY || path.join(process.env.HOME || "", ".pi", "dot-pi");
+}
+
+function overlayFirstFile(name) {
+	const overlayPath = path.join(findDotPiOverlay(), name);
+	if (fs.existsSync(overlayPath)) return overlayPath;
+	return path.join(findDotPiRoot(), name);
+}
+
 export function loadExaKey() {
 	const envKey = process.env.EXA_API_KEY?.trim();
 	if (envKey && envKey !== "$EXA_API_KEY") return envKey;
 
-	const keyPath = path.join(findDotPiRoot(), ".exa.env");
+	const keyPath = overlayFirstFile(".exa.env");
 	if (!fs.existsSync(keyPath)) return null;
 
 	const content = fs.readFileSync(keyPath, "utf8").trim();
@@ -28,7 +38,7 @@ export function requireExaKey() {
 	if (apiKey) return apiKey;
 
 	console.error("Error: Exa API key is not configured.");
-	console.error("Run /exa-api-key, export EXA_API_KEY, or create repo-root .exa.env with EXA_API_KEY=<key>.");
+	console.error("Run /exa-api-key, export EXA_API_KEY, or create $DOT_PI_OVERLAY/.exa.env with EXA_API_KEY=<key>.");
 	console.error("Get your key from: https://dashboard.exa.ai/api-keys");
 	process.exit(1);
 }

@@ -1,8 +1,8 @@
 # Terminal Dispatch
 
-`dotpi sync` creates shell commands in `core/bin/` such as `lm`, `browser`, and `deepresearch`. Each **agent** command is a symlink to `dispatch-agent`; the symlink name selects `agents/<name>/` as `PI_CODING_AGENT_DIR`, loads that agent's `pi-args`, sources `bootstrap.sh` when present, and then invokes `pi`. **`core/bin/todo`** is different: it points at **`core/utilities/todo/todo`** (the JSONL todo CLI), unless an agent config named `todo` exists.
+Agent commands in `core/bin/` are symlinks to `dispatch-agent`. The symlink name selects `agents/<name>/` as `PI_CODING_AGENT_DIR`, loads that agent's `pi-args`, sets `DOT_PI_OVERLAY` when missing, adds an overlay-backed `--session-dir`, and invokes `pi`.
 
-This page documents the terminal contract shared by top-level standalone agents and MAS launchers.
+`core/bin/todo` is different unless an agent named `todo` exists: it points at the JSONL todo CLI.
 
 ## Core Forms
 
@@ -10,13 +10,13 @@ This page documents the terminal contract shared by top-level standalone agents 
 agent
 ```
 
-Starts an interactive pi session with the selected agent config.
+Starts an interactive pi session in the current working directory.
 
 ```bash
 agent - prompt words...
 ```
 
-Starts an interactive pi session with `prompt words...` as the first human message. The lone `-` is dot-pi's prompt separator; it is preferred over raw positional `agent "prompt"` because it leaves room for dot-pi options such as `-n`.
+Starts an interactive session with `prompt words...` as the first user message. The lone `-` is dot-pi's prompt separator.
 
 ```bash
 agent -p prompt words...
@@ -30,7 +30,7 @@ agent -p -v prompt words...
 agent --print --verbose prompt words...
 ```
 
-Also runs non-interactively, but prints progress markers such as tool starts and `[agent done]` to stderr. The final assistant reply still goes to stdout.
+Also prints progress markers to stderr.
 
 ## stdin
 
@@ -40,65 +40,30 @@ Piped stdin is treated as prompt text only when no prompt was supplied:
 echo "summarize this directory" | ask -p
 ```
 
-Use `-p` for piped input. A pipe is inherently non-interactive: once the launcher consumes stdin as the initial prompt, there is no terminal input left for pi's TUI. For interactive sessions, use the separator form:
+## Sessions
 
-```bash
-ask - summarize this directory
+Dispatch always passes `--session-dir` outside the package clone:
+
+```text
+$DOT_PI_OVERLAY/<agent>/sessions/<current-working-directory-key>/
 ```
 
-## stdout And stderr
+`agent ls` lists sessions for the current working directory.
 
-Print mode is designed for shell scripts:
-
-- stdout: final assistant reply
-- stderr: progress, workspace paths, errors, and verbose markers
-
-Examples:
-
-```bash
-answer="$(lm -p "say hi")"
-lm -p "write a summary" > summary.md
-lm -p -v "debug this" > answer.md 2> progress.log
-```
-
-Without `-v`, `_json_filter` suppresses normal progress markers. Tool errors may still cause pi or the launcher to return non-zero.
-
-## Workspace Agents
-
-Agents with `WORKSPACE_AGENT=1` in `bootstrap.sh` run inside dated workspaces:
-
-```bash
-browser
-browser - open https://example.org and summarize it
-browser -p open https://example.org and summarize it
-```
-
-Name a workspace with `-n` / `--name`:
-
-```bash
-browser -n docs-audit - open https://example.org
-browser -p -n docs-audit open https://example.org
-```
-
-List and resume workspaces:
-
-```bash
-browser ls
-browser resume
-browser resume 2026-04-29-120000--docs-audit
-browser resume 2026-04-29-120000--docs-audit - continue from the last page
-browser resume 2026-04-29-120000--docs-audit -p summarize the current state
-```
-
-`resume` with no argument opens an interactive picker. With an argument, it requires an exact workspace directory basename or path. `resume` changes into the existing workspace and invokes pi with `--continue`. If the workspace contains `sessions/`, that directory is passed as `--session-dir` so orchestration traces stay with the workspace.
+Workspace mode, `-n/--name`, agent `resume`, and the global `resume` picker have been removed.
 
 ## Bootstrap Output
 
-If an agent has `bootstrap.sh`, it is sourced before pi starts. The script can export environment variables and prepare directories.
+If an agent has `bootstrap.sh`, it is sourced before pi starts as an in-situ launch hook. The launcher provides:
 
-Bootstrap output is written to `bootstrap.log`; the file is replaced on each launch rather than appended. For workspace agents the log is under the workspace. For in-situ agents the default is `agents/<name>/sessions/bootstrap.log`.
+- `DOT_PI_DIR`
+- `DOT_PI_OVERLAY`
+- `AGENT_NAME`
+- `AGENT_DIR`
+- `DOTPI_BOOTSTRAP_PHASE`
+- `BOOTSTRAP_LOG`
 
-Bootstrap output is replayed to stdout only for fully interactive startup (`agent` with no prompt and no `-p`). Prompted and print-mode runs keep stdout clean for the assistant reply.
+Bootstrap output is captured in the current overlay session directory as `bootstrap.log`. Output is replayed only for fully interactive startup.
 
 ## Help
 
@@ -109,4 +74,4 @@ agent -h
 agent --help
 ```
 
-These print the agent root's `USAGE.md`. If it is missing, the launcher reports that the agent has no `USAGE.md`; `README.md` remains for human and agent-facing prose.
+These print the agent root's `USAGE.md`.

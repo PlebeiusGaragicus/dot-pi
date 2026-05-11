@@ -12,7 +12,7 @@
  *
  * API key resolution (in priority order):
  *   1. TAVILY_API_KEY environment variable
- *   2. repo-root `.tavily.env` file (written by /tavily-api-key command)
+ *   2. `$DOT_PI_OVERLAY/.tavily.env`, falling back to repo-root `.tavily.env`
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
@@ -20,24 +20,17 @@ import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
 import { Type } from "typebox";
 import * as fs from "node:fs";
-import * as path from "node:path";
+import { ensureOverlayDir, overlayFile, overlayFirstFile } from "../lib/dotpi-paths.js";
 
 const API_URL = "https://api.tavily.com/search";
 const USAGE_API_URL = "https://api.tavily.com/usage";
 const STATUS_KEY = "tavily-usage";
 const TAVILY_KEY_FILE = ".tavily.env";
 
-function findDotPiRoot(): string {
-    if (!process.env.DOT_PI_DIR) {
-        throw new Error("DOT_PI_DIR is not set; run this extension through dispatch-agent.");
-    }
-    return process.env.DOT_PI_DIR;
-}
-
 function loadTavilyKey(): string | null {
     const envKey = process.env.TAVILY_API_KEY?.trim();
     if (envKey && envKey !== "$TAVILY_API_KEY") return envKey;
-    const keyPath = path.join(findDotPiRoot(), TAVILY_KEY_FILE);
+    const keyPath = overlayFirstFile(TAVILY_KEY_FILE);
     if (!fs.existsSync(keyPath)) return null;
     const content = fs.readFileSync(keyPath, "utf-8").trim();
     const match = content.match(/^(?:TAVILY_API_KEY\s*=\s*)?(.+)$/m);
@@ -45,7 +38,8 @@ function loadTavilyKey(): string | null {
 }
 
 function saveTavilyKey(key: string): string {
-    const keyPath = path.join(findDotPiRoot(), TAVILY_KEY_FILE);
+    ensureOverlayDir();
+    const keyPath = overlayFile(TAVILY_KEY_FILE);
     fs.writeFileSync(keyPath, `TAVILY_API_KEY=${key}\n`, "utf-8");
     return keyPath;
 }

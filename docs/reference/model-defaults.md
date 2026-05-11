@@ -4,9 +4,9 @@ dot-pi uses `pi-args` as the canonical place where each agent chooses its model 
 
 ## Files And Commands
 
-### `model-defaults`
+### `$DOT_PI_OVERLAY/model-defaults`
 
-Required repo-root local config. It is created by `dotpi sync` (with empty defaults) if missing, and can be managed with:
+Overlay-owned local config. It is created by postinstall/relink or `dotpi model-defaults` if missing, and can be managed with:
 
 ```bash
 dotpi model-defaults
@@ -22,7 +22,7 @@ export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
 
 The `${VAR:-...}` form is intentional: inline environment variables keep priority over the file.
 
-`model-defaults` is loaded at agent launch time by `dispatch-agent` and, for subagents, by `agent-orchestrator`, after the current agent config root is known. That allows agent-local `.model` files to override repo defaults without masking true inline environment overrides.
+`model-defaults` is loaded at agent launch time by `dispatch-agent` and, for subagents, by `agent-orchestrator`, after the current agent config root is known. The overlay path is preferred; clone-local files are only a development fallback.
 
 ### Agent `.model`
 
@@ -32,7 +32,7 @@ Optional agent-local override file, written by the in-agent command:
 /model-default
 ```
 
-Agent `.model` files live in config roots such as `agents/lm/.model`, `agents/deepresearch/.model`, or `subagents/scout/.model`. They contain one raw model id and only affect that specific agent config root. They are gitignored:
+Agent `.model` files live under `$DOT_PI_OVERLAY` and contain one raw model id for that specific agent config root:
 
 ```text
 lmstudio/nvidia/nemotron-3-super
@@ -86,7 +86,7 @@ Model selection resolves in this order:
    ```
 
 2. Agent-local `.model` overrides written by `/model-default`.
-3. Required repo-root `model-defaults` values written by `dotpi model-defaults`.
+3. Overlay `model-defaults` values written by `dotpi model-defaults`.
 4. Pi's `settings.json` default, reached when no non-empty model value resolves.
 
 ## Target Behavior

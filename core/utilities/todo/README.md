@@ -51,7 +51,7 @@ After a successful **`todo new`**, **`todo edit`**, **`todo finish`**, or **`tod
 
 ## install
 
-**Recommended:** put dot-pi’s `core/bin` on your `PATH` (same as agent commands), then run `dotpi sync`. That creates `core/bin/todo` → `core/utilities/todo/todo` unless you have an agent config directory literally named `agents/todo` (that name reserves `core/bin/todo` for the dispatcher).
+**Recommended:** put dot-pi’s installed `core/bin` on your `PATH` (same as agent commands), then run `dotpi relink`. That creates `core/bin/todo` → `core/utilities/todo/todo` unless you have an agent config directory literally named `agents/todo` (that name reserves `core/bin/todo` for the dispatcher).
 
 **Manual:** create `~/.local/bin` if needed, symlink this repo’s `todo` script there, and ensure that directory is on your `PATH`:
 

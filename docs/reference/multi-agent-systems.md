@@ -58,7 +58,7 @@ Key files:
 - `SYSTEM.md`: parent prompt. Put workflow policy, delegation rules, artifact expectations, resume behavior, and final response style here.
 - `pi-args`: parent tool restrictions and model defaults. MAS roots usually need the `subagent` tool plus enough read/list/search capability to inspect workspace artifacts.
 - `extensions/agent-orchestrator`: registers the `subagent` tool and handles discovery, prompt augmentation, scheduling, and child process launches.
-- `bootstrap.sh`: optional, but common for MAS configs that create durable artifacts. `WORKSPACE_AGENT=1` enables workspace mode; the script can create directories, export environment variables, initialize daemons, and run preflight checks before pi starts. Its stdout/stderr is captured in `BOOTSTRAP_LOG`.
+- `bootstrap.sh`: optional in-situ launch hook. The script can create directories, export environment variables, initialize daemons, and run preflight checks before pi starts. Its stdout/stderr is captured in `BOOTSTRAP_LOG` under the overlay session directory.
 
 The optional repo-level `agent-orchestrator.conf` file configures local-provider limits for physical subagent concurrency.
 
@@ -81,7 +81,7 @@ Recommended files:
 - `README.md`: short description used in orchestrator listings.
 - `USAGE.md`: invocation contract appended to the orchestrator prompt.
 - `pi-args`: tool, model, context-file, and skill restrictions for this subagent.
-Subagents do not get the top-level common extension bundle. They are non-interactive child processes, so only extensions in `shared/extensions-subagents/` are wired into them by `dotpi sync`. For reusable symlinked subagents, `sync` wires the canonical `subagents/<name>/` directory rather than treating the MAS link as the source of truth.
+Subagents do not get the top-level common extension bundle. They are non-interactive child processes, so only extensions in `shared/extensions-subagents/` are wired into them by postinstall/relink. For reusable symlinked subagents, relink wires the canonical `subagents/<name>/` directory rather than treating the MAS link as the source of truth.
 
 The `USAGE.md` file is especially important. It tells the orchestrator how to call the subagent, what input the subagent expects, what artifacts it may read or write, and what it should return.
 
@@ -251,10 +251,10 @@ For research workflows, preserve artifact contracts when migrating from workflow
 
 ## Workspace And Artifact Handoffs
 
-MAS configs often run in workspace mode. A workspace gives all subagents a shared filesystem for durable artifacts:
+MAS configs run in the current working directory. Use ordinary project directories for durable artifacts:
 
 ```text
-agents/deepresearch/workspaces/2026-04-28-120000/
+./
 ├── sources/
 ├── drafts/
 ├── sessions/

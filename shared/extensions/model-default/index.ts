@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { agentOverlayFile, agentOverlayFirstFile, ensureOverlayDir, overlayFile, overlayFirstFile } from "../lib/dotpi-paths.js";
 
 const MODEL_FILE = ".model";
 const DEFAULTS_FILE = "model-defaults";
@@ -14,13 +15,6 @@ const ROLES = [
 type Role = (typeof ROLES)[number];
 
 type CommandContext = Parameters<Parameters<ExtensionAPI["registerCommand"]>[1]["handler"]>[1];
-
-function findDotPiRoot(): string {
-	if (!process.env.DOT_PI_DIR) {
-		throw new Error("DOT_PI_DIR is not set; run this extension through dispatch-agent.");
-	}
-	return process.env.DOT_PI_DIR;
-}
 
 function readModels(): string[] {
 	const modelsPath = path.join(getAgentDir(), "models.json");
@@ -61,7 +55,7 @@ function parseExports(filePath: string): Record<string, string> {
 }
 
 function readAgentModel(): string {
-	const filePath = path.join(getAgentDir(), MODEL_FILE);
+	const filePath = agentOverlayFirstFile(getAgentDir(), MODEL_FILE);
 	if (!fs.existsSync(filePath)) return "";
 	for (const rawLine of fs.readFileSync(filePath, "utf-8").split(/\r?\n/)) {
 		const line = rawLine.trim();
@@ -72,8 +66,7 @@ function readAgentModel(): string {
 }
 
 function readResolvedDefaults(): Record<string, string> {
-	const root = findDotPiRoot();
-	const defaults = parseExports(path.join(root, DEFAULTS_FILE));
+	const defaults = parseExports(overlayFirstFile(DEFAULTS_FILE));
 	const agentModel = readAgentModel();
 	const currentRole = detectCurrentAgentRole();
 	const resolved = {
@@ -103,7 +96,8 @@ function writeExports(filePath: string, values: Record<string, string>, header: 
 }
 
 function writeAgentModel(value: string): string {
-	const filePath = path.join(getAgentDir(), MODEL_FILE);
+	const filePath = agentOverlayFile(getAgentDir(), MODEL_FILE);
+	fs.mkdirSync(path.dirname(filePath), { recursive: true });
 	if (!value) {
 		if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 		return filePath;
@@ -113,7 +107,8 @@ function writeAgentModel(value: string): string {
 }
 
 function writeGlobalDefaults(values: Record<string, string>): string {
-	return writeExports(path.join(findDotPiRoot(), DEFAULTS_FILE), values, [
+	ensureOverlayDir();
+	return writeExports(overlayFile(DEFAULTS_FILE), values, [
 		"# Local fallback model aliases used by pi-args files.",
 		"# Leave a value empty to let pi fall back to its settings.json default.",
 	], false);
@@ -143,14 +138,14 @@ function detectCurrentAgentRole(): Role | undefined {
 }
 
 function formatReport(): string {
-	const root = findDotPiRoot();
-	const defaults = parseExports(path.join(root, DEFAULTS_FILE));
+	const defaultsPath = overlayFirstFile(DEFAULTS_FILE);
+	const defaults = parseExports(defaultsPath);
 	const agentModel = readAgentModel();
 	const currentRole = detectCurrentAgentRole();
 	const resolved = readResolvedDefaults();
 	const lines = [
-		`model-defaults: ${path.join(root, DEFAULTS_FILE)}`,
-		`agent .model: ${path.join(getAgentDir(), MODEL_FILE)}`,
+		`model-defaults: ${defaultsPath}`,
+		`agent .model: ${agentOverlayFirstFile(getAgentDir(), MODEL_FILE)}`,
 		`current agent model: ${agentModel || "(unset)"}`,
 		"",
 	];
@@ -179,7 +174,7 @@ async function selectModelForRole(role: Role, ctx: CommandContext, scope: "agent
 	const selected = await ctx.ui.select(scope === "agent" ? "Select current agent model" : `Select ${role.label} model`, choices);
 	if (!selected) return;
 
-	const targetPath = scope === "agent" ? path.join(getAgentDir(), MODEL_FILE) : path.join(findDotPiRoot(), DEFAULTS_FILE);
+	const targetPath = scope === "agent" ? agentOverlayFirstFile(getAgentDir(), MODEL_FILE) : overlayFirstFile(DEFAULTS_FILE);
 	const selectedModel = selected.startsWith("(unset") ? "" : selected.replace(/ \(current\)$/, "");
 	const overrides = scope === "agent" ? {} : parseExports(targetPath);
 	if (scope === "global") {

@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Todo CLI
 
-Use Bash to call `todo`; with dot-pi’s `core/bin` on `PATH`, run `dotpi sync` so `todo` is symlinked there (see `core/utilities/todo/README.md`).
+Use Bash to call `todo`; with dot-pi’s `core/bin` on `PATH`, run `dotpi relink` so `todo` is symlinked there (see `core/utilities/todo/README.md`).
 
 Before using other todo commands, run bare `todo` to see the built-in usage:
 

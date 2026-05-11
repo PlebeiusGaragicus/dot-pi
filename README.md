@@ -1,37 +1,44 @@
 # dot-pi
 
-Custom [pi](https://github.com/PlebeiusGaragicus/pi-mono) agent configs as dotfiles.
-
-Manage multiple pi coding agent configurations without touching `~/.pi/`. Each multi-agent system (MAS) or standalone agent gets its own isolated directory with extensions, subagents, prompts, skills, and session history. A shell function sets `PI_CODING_AGENT_DIR` and you're running a fully isolated agent from any working directory.
+Custom [pi](https://github.com/PlebeiusGaragicus/pi-mono) agent configs as a Pi-installable package.
 
 ## Quick Start
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/PlebeiusGaragicus/dot-pi/main/install)"
+pi install git:https://github.com/PlebeiusGaragicus/dot-pi
 ```
 
-Or install manually — see [docs/install.md](docs/install.md) for details.
+Add the installed `core/bin` directory printed by postinstall to your `PATH`, then run any shipped agent command from a project directory:
 
-### Shell integration
+```bash
+ask -p "What does this project do?"
+```
 
-Commands are available directly on `PATH` via symlinks in `core/bin/`. Run `dotpi sync` to rebuild symlinks after adding or removing agent configs. Commands on PATH get native shell completion automatically.
+Updates use ordinary Pi package management:
 
-## Create a Multi-Agent System
+```bash
+pi update
+```
+
+Mutable user state lives under `$DOT_PI_OVERLAY` (default `~/.pi/dot-pi`) so `pi update` can reset and clean the package clone without touching sessions, model defaults, API-key env files, prompts, skills, extensions, themes, or shared dot-pi `settings.json`.
+
+## Shell Integration
+
+Commands are available through symlinks in the installed package's `core/bin/`. If you add or remove local overlay resources manually, run:
+
+```bash
+dotpi relink
+```
+
+## Create Agents
 
 ```bash
 dotpi create my-research-mas
-# Add or link subagents under agents/my-research-mas/agents/
-# Edit agents/my-research-mas/SYSTEM.md for the orchestrator
+dotpi create-agent my-agent
 ```
 
-## Version
-
-```bash
-dotpi --version
-```
-
-Tracked in [VERSION](VERSION); bump on releases.
+Both create in-situ agents. Workspace mode has been removed; sessions are stored under `$DOT_PI_OVERLAY/<agent>/sessions/`.
 
 ## Docs
 
-See the [documentation site](https://PlebeiusGaragicus.github.io/dot-pi/) for architecture, usage, extension API, and MAS details.
+See the [documentation site](https://PlebeiusGaragicus.github.io/dot-pi/) for installation, usage, extension API, and MAS details.

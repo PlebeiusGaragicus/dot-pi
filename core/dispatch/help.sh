@@ -14,8 +14,7 @@ _show_help() {
 }
 
 _show_agent_usage() {
-  local config_dir="$1" is_workspace=false
-  _is_workspace_agent "$config_dir" && is_workspace=true
+  local config_dir="$1"
   echo "Usage:"
   echo "  $AGENT_NAME [help|usage|-h|--help]"
   echo "  $AGENT_NAME"
@@ -23,13 +22,5 @@ _show_agent_usage() {
   echo "  $AGENT_NAME -p <prompt>        # print final reply and exit"
   echo "  $AGENT_NAME -p -v <prompt>     # print final reply plus progress"
   echo "  $AGENT_NAME ls                 # list sessions"
-  if [ "$is_workspace" = true ]; then
-    echo "  $AGENT_NAME -n <name> - <prompt>"
-    echo "  $AGENT_NAME --name <name> - <prompt>"
-    echo "  $AGENT_NAME -p -n <name> <prompt>"
-    echo "  $AGENT_NAME resume [workspace-name-or-path]"
-    echo "  $AGENT_NAME resume [workspace-name-or-path] - <prompt>"
-    echo "  $AGENT_NAME resume [workspace-name-or-path] -p <prompt>"
-  fi
 }
 

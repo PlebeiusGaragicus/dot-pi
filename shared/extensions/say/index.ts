@@ -16,7 +16,7 @@
  * - Fenced code blocks (```) are omitted from speech entirely; exception: ```txt and ```markdown
  *   fences have their content spoken (fence lines themselves are always omitted).
  * - Only runs when `ctx.hasUI` (interactive TUI) and a TTS backend is available.
- * - Speech rate: per-device WPM stored in `~/.dot-pi/.tts-wpm` (default 250). Adjust with `/tts-wpm`.
+ * - Speech rate: per-device WPM stored in `$DOT_PI_OVERLAY/.tts-wpm` (default 250). Adjust with `/tts-wpm`.
  * - A new user prompt, `/stop-speaking`, `/tts-toggle off`, or pi exiting all cancel speech.
  *
  * Platform backends are selected inline. Currently: macOS `say`, Linux `espeak-ng`.
@@ -25,7 +25,7 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
-import * as path from "node:path";
+import { ensureOverlayDir, overlayFile, overlayFirstFile } from "../lib/dotpi-paths.js";
 
 interface TtsBackend {
 	name: string;
@@ -80,16 +80,9 @@ const MAX_CHARS = 32_000;
 const DEFAULT_WPM = 250;
 const TTS_WPM_FILE = ".tts-wpm";
 
-function findDotPiRoot(): string {
-	if (!process.env.DOT_PI_DIR) {
-		throw new Error("DOT_PI_DIR is not set; run this extension through dispatch-agent.");
-	}
-	return process.env.DOT_PI_DIR;
-}
-
 function loadWpm(): number {
 	try {
-		const wpmPath = path.join(findDotPiRoot(), TTS_WPM_FILE);
+		const wpmPath = overlayFirstFile(TTS_WPM_FILE);
 		if (!fs.existsSync(wpmPath)) return DEFAULT_WPM;
 		const val = parseInt(fs.readFileSync(wpmPath, "utf-8").trim(), 10);
 		return Number.isFinite(val) && val > 0 ? val : DEFAULT_WPM;
@@ -100,7 +93,8 @@ function loadWpm(): number {
 
 function saveWpm(wpm: number): void {
 	try {
-		fs.writeFileSync(path.join(findDotPiRoot(), TTS_WPM_FILE), String(wpm) + "\n", "utf-8");
+		ensureOverlayDir();
+		fs.writeFileSync(overlayFile(TTS_WPM_FILE), String(wpm) + "\n", "utf-8");
 	} catch {
 		/* ignore — root dir may not be writable */
 	}
@@ -413,7 +407,7 @@ export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async () => {
 		autoTtsEnabled = pi.getFlag("tts-enable") === true;
 		currentWpm = loadWpm();
-		const wpmPath = path.join(findDotPiRoot(), TTS_WPM_FILE);
+		const wpmPath = overlayFile(TTS_WPM_FILE);
 		if (!fs.existsSync(wpmPath)) saveWpm(DEFAULT_WPM);
 	});
 

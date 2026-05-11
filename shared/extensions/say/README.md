@@ -29,7 +29,7 @@ Future backends (piper, mimic3, etc.) can be added to the `resolveBackend()` fun
 
 ## Tunables
 
-- **WPM** -- words per minute, stored per-device in `~/.dot-pi/.tts-wpm` (default 250). Bootstrapped on first `session_start`. Adjust at runtime with `/tts-wpm [50-600]`; changes persist across sessions.
+- **WPM** -- words per minute, stored per-device in `$DOT_PI_OVERLAY/.tts-wpm` (default 250). Bootstrapped on first `session_start`. Adjust at runtime with `/tts-wpm [50-600]`; changes persist across sessions.
 - `MAX_CHARS` -- per-utterance character cap (default 32_000)
 
 ## Commands

@@ -13,7 +13,7 @@ dot-pi separates extension implementation from default wiring:
 - `shared/extensions-subagents/` contains symlinks for extensions that subagent config roots should load.
 - Agent-specific and workflow-specific extensions are linked explicitly into the relevant agent.
 
-Top-level MAS and standalone agents get the common bundle. `dotpi create`, `dotpi create-agent`, and `dotpi sync` wire every entry in `shared/extensions-common/` into `agents/<name>/extensions/`.
+Top-level MAS and standalone agents get the common bundle. `dotpi create`, `dotpi create-agent`, postinstall, and `dotpi relink` wire every entry in `shared/extensions-common/` into `agents/<name>/extensions/`.
 
 Current common extensions:
 
@@ -26,13 +26,13 @@ Current common extensions:
 | `say` | Provide text-to-speech / `say` behavior. |
 | `model-default` | View and override agent-local `.model` values or repo-local `model-defaults`. |
 
-Subagents are not interactive, so they do not get the top-level common bundle. `dotpi sync` wires only `shared/extensions-subagents/` into subagent config roots. For reusable subagents, the canonical root is `subagents/<name>/`, and MAS configs link those directories into `agents/<mas>/agents/`. MAS-specific local subagents can live directly under `agents/<mas>/agents/<name>/`.
+Subagents are not interactive, so they do not get the top-level common bundle. Postinstall and `dotpi relink` wire only `shared/extensions-subagents/` into subagent config roots. For reusable subagents, the canonical root is `subagents/<name>/`, and MAS configs link those directories into `agents/<mas>/agents/`. MAS-specific local subagents can live directly under `agents/<mas>/agents/<name>/`.
 
 Specialized extensions stay out of the default bundles. Examples include `agent-orchestrator`, `agent-prompt`, `tavily`, `personas`, `plan-mode`, `questionnaire`, `bash-guardrails`, `auto-theme`, and `theme-cycler`.
 
 ### Repo-root service credentials
 
-Extensions that support repo-local API keys use files named **`.service-name.env`** at the dot-pi repo root, for example `.exa.env` and `.tavily.env`. Environment variables for the same keys always win when set. These files are gitignored.
+Extensions that support local API keys use files named **`.service-name.env`** under `$DOT_PI_OVERLAY`, for example `.exa.env` and `.tavily.env`. Environment variables for the same keys always win when set. Repo-root files are read only as development fallbacks.
 
 ## Extension Structure
 

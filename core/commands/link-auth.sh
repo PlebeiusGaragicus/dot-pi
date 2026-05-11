@@ -9,7 +9,7 @@ dst="$2"
 if [ "$src" = "shared" ]; then
   src_path="$DOT_PI_DIR/shared/auth.json"
   if [ ! -f "$src_path" ]; then
-    echo "Error: shared/auth.json missing — run dotpi sync"
+    echo "Error: shared/auth.json missing — run dotpi relink"
     exit 1
   fi
 elif [ -f "$src" ]; then

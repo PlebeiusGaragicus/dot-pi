@@ -23,6 +23,7 @@ import { type ExtensionAPI, getAgentDir, getMarkdownTheme } from "@mariozechner/
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
 import { Type } from "typebox";
 import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.js";
+import { agentOverlayFirstFile, overlayFirstFile } from "../lib/dotpi-paths.js";
 
 const MODEL_DEFAULT_ALIASES = ["DEFAULT_AGENTIC_MODEL", "DEFAULT_FAST_MODEL", "DEFAULT_VLM_MODEL"] as const;
 
@@ -306,9 +307,8 @@ function loadEnvFile(filePath: string, env: Record<string, string>): void {
 }
 
 function modelEnvForAgent(): Record<string, string> {
-	const root = findDotPiRoot();
 	const env = { ...process.env } as Record<string, string>;
-	loadEnvFile(path.join(root, "model-defaults"), env);
+	loadEnvFile(overlayFirstFile("model-defaults"), env);
 	return env;
 }
 
@@ -317,7 +317,7 @@ function inlineDefaultAliases(): Set<string> {
 }
 
 function readAgentModel(agentDir: string): string {
-	const modelPath = path.join(agentDir, ".model");
+	const modelPath = agentOverlayFirstFile(agentDir, ".model");
 	if (!fs.existsSync(modelPath)) return "";
 	for (const rawLine of fs.readFileSync(modelPath, "utf-8").split(/\r?\n/)) {
 		const line = rawLine.trim();
@@ -419,7 +419,7 @@ function sanitizeProvider(provider: string): string {
 }
 
 function readLocalProviders(): Set<string> {
-	const configPath = path.join(findDotPiRoot(), "local-providers.conf");
+	const configPath = overlayFirstFile("local-providers.conf");
 	if (!fs.existsSync(configPath)) return new Set(DEFAULT_LOCAL_PROVIDERS);
 
 	const providers = new Set<string>();
@@ -438,8 +438,7 @@ function readLocalProviders(): Set<string> {
 }
 
 function readResourcePoolLimits(): Record<string, number> {
-	const root = findDotPiRoot();
-	const configPath = path.join(root, "agent-orchestrator.conf");
+	const configPath = overlayFirstFile("agent-orchestrator.conf");
 	const limits: Record<string, number> = { default: 1, local: 1 };
 	if (!fs.existsSync(configPath)) return limits;
 

@@ -6,7 +6,7 @@ disable-model-invocation: false
 
 # Exa CLI
 
-Use the scripts in `scripts/` for Exa web search. They read the API key from `EXA_API_KEY` first, then repo-root `.exa.env`. If no key is configured, ask the user to run `/exa-api-key`, export `EXA_API_KEY`, or create `.exa.env` at the dot-pi repo root.
+Use the scripts in `scripts/` for Exa web search. They read the API key from `EXA_API_KEY` first, then `$DOT_PI_OVERLAY/.exa.env`, then repo-root `.exa.env` as a development fallback. If no key is configured, ask the user to run `/exa-api-key`, export `EXA_API_KEY`, or create `$DOT_PI_OVERLAY/.exa.env`.
 
 Run commands from this skill directory unless you provide an absolute script path. The scripts are intentionally verbose on failure: missing keys, unknown options, missing option values, and Exa HTTP errors print a specific `Error:` line to stderr and exit nonzero.
 

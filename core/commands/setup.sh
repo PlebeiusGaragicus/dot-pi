@@ -440,7 +440,7 @@ else
 fi
 echo ""
 
-defaults_file="$DOT_PI_DIR/model-defaults"
+defaults_file="$(resolve_model_defaults_file)"
 if [ -f "$defaults_file" ]; then
   for role in DEFAULT_AGENTIC_MODEL DEFAULT_FAST_MODEL DEFAULT_VLM_MODEL; do
     v=$(_setup_read_env_var "$defaults_file" "$role")
@@ -473,7 +473,7 @@ if grep -qF "dot-pi" "$_rc" 2>/dev/null; then
 else
   echo "  Shell: not configured yet. Add to $(basename "$_rc"):"
   echo ""
-  echo "       export PATH=\"\$HOME/.dot-pi/core/bin:\$PATH\""
+  echo "       export PATH=\"$DOT_PI_DIR/core/bin:\$PATH\""
   echo ""
   echo "  Then restart your shell and run:  lm"
 fi

@@ -1,11 +1,5 @@
-# dotpi create — create a new multi-agent system with shared extension symlinks
+# dotpi create — create a new in-situ multi-agent system with shared extension symlinks
 # Sourced by the dotpi dispatcher — do not execute directly.
-
-workspace=false
-if [ "${1:-}" = "--workspace" ]; then
-  workspace=true
-  shift
-fi
 
 [ $# -lt 1 ] && { echo "Error: MAS name required"; exit 1; }
 mas_name="$1"
@@ -17,7 +11,7 @@ if [ -d "$mas_dir" ]; then
 fi
 
 echo "Creating multi-agent system '$mas_name'..."
-mkdir -p "$mas_dir/extensions" "$mas_dir/agents" "$mas_dir/prompts" "$mas_dir/skills" "$mas_dir/sessions"
+mkdir -p "$mas_dir/extensions" "$mas_dir/agents" "$mas_dir/prompts" "$mas_dir/skills"
 
 ln -sf "../../../shared/prompts/introduction.md" "$mas_dir/prompts/introduction.md"
 
@@ -50,74 +44,17 @@ $mas_name multi-agent system. Edit this file for a human-readable overview of th
 $mas_name - "your task"       # send prompt and stay interactive
 $mas_name -p "task"           # print final reply and exit
 $mas_name -p -v "task"        # print final reply plus progress
-$mas_name ls                  # list past workspaces (if workspace MAS)
-$mas_name resume              # choose a workspace to resume
+$mas_name ls                  # list sessions for the current directory
 $mas_name -h                  # show USAGE.md
 \`\`\`
 README
 
 _usage_title=$(printf '%s' "$mas_name" | tr '[:lower:]' '[:upper:]')
-if [ "$workspace" = true ]; then
-  cat > "$mas_dir/USAGE.md" <<USAGE
+cat > "$mas_dir/USAGE.md" <<USAGE
 ${_usage_title}(1)                          dot-pi                          ${_usage_title}(1)
 
 NAME
-       $mas_name — multi-agent orchestrator (workspace mode)
-
-SYNOPSIS
-       $mas_name help | usage | -h | --help
-
-       $mas_name
-       $mas_name [-n name | --name name] - prompt words...
-       $mas_name -p [-n name | --name name] prompt words...
-       $mas_name -p -v [-n name | --name name] prompt words...
-
-       $mas_name ls
-
-       $mas_name resume [workspace-name-or-path]
-       $mas_name resume [workspace-name-or-path] - prompt words...
-       $mas_name resume [workspace-name-or-path] -p prompt words...
-
-DESCRIPTION
-       Coordinates subagents under agents/$mas_name/agents/.  Each fresh
-       launch creates agents/$mas_name/workspaces/<timestamp>/ (optional --name
-       slug).  Subagent prompts use each subagent’s README.md and USAGE.md
-       (orchestrator reads contracts via agent-orchestrator).
-
-OPTIONS
-       -p, --print
-              Non-interactive run.  Print the final assistant reply and exit.
-              Accepts prompt words or piped stdin.
-
-       -v, --verbose
-              With -p/--print, also show turn/tool progress on stderr.
-
-       -n name, --name name
-              Slug suffix for the new workspace directory.
-
-COMMANDS
-       help, usage, -h, --help
-              Print this file on standard output.
-
-       ls     List workspaces.
-
-       resume [workspace-name-or-path]
-              With no argument, choose a workspace by number.  With an
-              argument, resume the exact workspace basename or path.
-
-FILES
-       agents/$mas_name/workspaces/<timestamp>[--<slug>]/
-              Workspace root (edit bootstrap.sh for layout).
-
-SEE ALSO
-       agents/$mas_name/README.md, agents/$mas_name/SYSTEM.md
-USAGE
-else
-  cat > "$mas_dir/USAGE.md" <<USAGE
-${_usage_title}(1)                          dot-pi                          ${_usage_title}(1)
-
-NAME
-       $mas_name — multi-agent orchestrator (in-situ)
+       $mas_name — multi-agent orchestrator
 
 SYNOPSIS
        $mas_name help | usage | -h | --help
@@ -126,10 +63,12 @@ SYNOPSIS
        $mas_name - prompt words...
        $mas_name -p prompt words...
        $mas_name -p -v prompt words...
+       $mas_name ls
 
 DESCRIPTION
        Coordinates subagents under agents/$mas_name/agents/.  Runs in the
-       current working directory unless you add workspace bootstrap later.
+       current working directory.  Session files are stored outside the package
+       clone under DOT_PI_OVERLAY.
 
 OPTIONS
        -p, --print
@@ -143,10 +82,11 @@ COMMANDS
        help, usage, -h, --help
               Print this file on standard output.
 
+       ls     List sessions for this agent and current directory.
+
 SEE ALSO
        agents/$mas_name/README.md, agents/$mas_name/SYSTEM.md
 USAGE
-fi
 
 cat > "$mas_dir/pi-args" <<'PIARGS'
 # Default CLI flags (read by dispatch-agent). One flag per line; # starts a comment.
@@ -168,29 +108,7 @@ The available subagents and their invocation contracts are appended automaticall
 SYSTEMMD
 echo "Created SYSTEM.md (edit to customize)"
 
-if [ "$workspace" = true ]; then
-  cat > "$mas_dir/bootstrap.sh" <<'BOOTSTRAP'
-#!/usr/bin/env bash
-
-WORKSPACE_AGENT=1
-export WORKSPACE_AGENT
-
-if [ -z "${WORKSPACE_DIR:-}" ]; then
-  echo "bootstrap: WORKSPACE_DIR is required" >&2
-  return 1
-fi
-
-mkdir -p "$WORKSPACE_DIR/sessions"
-
-echo "bootstrap: workspace ready at $WORKSPACE_DIR"
-BOOTSTRAP
-  echo "Created bootstrap.sh (edit to add directories, environment, and preflight checks)"
-fi
-
-mode_label="in-situ"
-[ "$workspace" = true ] && mode_label="workspace"
-
-echo "Created $mode_label MAS at $mas_dir"
+echo "Created MAS at $mas_dir"
 echo ""
 echo "Directory layout:"
 echo "  $mas_dir/"
@@ -201,25 +119,18 @@ echo "    prompts/             (shared introduction.md symlinked; add workflow t
 echo "    skills/              (empty — use dotpi link-skill $mas_name <skill>)"
 echo "    themes/              (individual themes symlinked from shared)"
 echo "    bin/                 (symlinked to shared/bin, gitignored contents)"
-echo "    sessions/            (runtime session data, gitignored)"
+echo "    sessions/            (not used; sessions live under DOT_PI_OVERLAY)"
 echo "    SYSTEM.md            (orchestrator system prompt)"
 echo "    banner.txt           (startup branding -- edit to customize)"
 echo "    models.json          (symlinked to shared)"
 echo "    auth.json            (symlink → shared/auth.json)"
 echo "    settings.json        (symlink → shared/settings.json)"
 echo "    pi-args              (optional default CLI flags; see IMPORTANT line inside)"
-[ "$workspace" = true ] && echo "    bootstrap.sh         (workspace setup, environment, and preflight checks)"
 echo ""
 echo "Next steps:"
 echo "  1. Add or link subagent config directories under $mas_dir/agents/"
 echo "  2. Edit $mas_dir/USAGE.md (launcher CLI) and $mas_dir/SYSTEM.md with the orchestrator workflow"
-if [ "$workspace" = true ]; then
-  echo "  3. Link skills as needed: dotpi link-skill $mas_name <skill>"
-  echo "  4. Edit bootstrap.sh to configure workspace directories, environment, and preflight checks"
-  echo "  5. Run: $mas_name \"your task\""
-else
-  echo "  3. Link skills as needed: dotpi link-skill $mas_name <skill>"
-  echo "  4. Run: $mas_name \"your task\""
-fi
+echo "  3. Link skills as needed: dotpi link-skill $mas_name <skill>"
+echo "  4. Run: $mas_name \"your task\""
 
 source "$COMMANDS_DIR/sync.sh"

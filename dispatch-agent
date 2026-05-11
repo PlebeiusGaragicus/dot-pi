@@ -32,7 +32,6 @@ _dispatch_source pi-args.sh
 _dispatch_source bootstrap.sh
 _dispatch_source help.sh
 _dispatch_source cli.sh
-_dispatch_source workspace.sh
 _dispatch_source main.sh
 
 _dispatch_main "$@"

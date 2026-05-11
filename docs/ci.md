@@ -13,7 +13,7 @@ dot-pi has **two** workflows:
 
 **Continuous Integration** is a fancy name for "the robot runs your tests every time you push code." For a small project like dot-pi, the goal is simple: catch obvious mistakes before they hit `main`. Things like:
 
-- A typo in a bash script that breaks `dotpi sync` for everyone.
+- A typo in a bash script that breaks `postinstall` or `dotpi relink` for everyone.
 - A `git rm` that you forgot to do, leaving a tracked-but-gitignored file confusing future you.
 - A doc page link that points to a file that no longer exists.
 
@@ -26,10 +26,10 @@ GitHub Actions runs the CI workflow in a fresh Ubuntu VM in the cloud. If any jo
 Runs [shellcheck](https://www.shellcheck.net/) on every shell script in the repo:
 
 - `dotpi`
-- `install`
 - `dispatch-agent`
 - `core/commands/*.sh`
 - `core/dispatch/*.sh`
+- `core/install/*.sh`
 
 shellcheck catches things bash itself silently accepts but that almost certainly mean a bug:
 
@@ -50,7 +50,7 @@ The cheapest possible "does it even start" tests:
 
 - `./dotpi --version` — must print something and exit 0.
 - `./dotpi --help` — must parse and run usage (exit 0 or 1).
-- `bash install --help` — must parse and print usage.
+- `bash core/install/postinstall.sh` in smoke fixtures — must repair local links without touching overlay-owned files.
 - `bash -n` (parse-only check) on every shell script.
 
 This catches the embarrassing case where you push a script with a stray `fi` or unmatched quote — it would crash the moment a user runs it. Now it crashes the CI instead.
@@ -85,13 +85,14 @@ You don't need to wait for the cloud. Each job is one command:
 ```bash
 # shellcheck (install with: brew install shellcheck)
 shellcheck --shell=bash --severity=warning --external-sources \
-  dotpi install dispatch-agent core/commands/*.sh core/dispatch/*.sh
+  dotpi dispatch-agent core/commands/*.sh core/dispatch/*.sh core/install/*.sh
 
 # smoke tests
 ./dotpi --version
 ./dotpi --help
-bash install --help
-bash -n dotpi install dispatch-agent core/commands/*.sh core/dispatch/*.sh
+bash core/tests/dispatch-agent-smoke.sh
+bash core/tests/postinstall-smoke.sh
+bash -n dotpi dispatch-agent core/commands/*.sh core/dispatch/*.sh core/install/*.sh
 
 # extension typecheck
 (cd core/tests && npm ci && npx tsc --noEmit)

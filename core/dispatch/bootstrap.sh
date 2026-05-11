@@ -1,31 +1,5 @@
-# Agent bootstrap.sh handling.
-
-_bootstrap_declares_workspace() {
-  local config_dir="$1" file line value
-  file="$(_bootstrap_file "$config_dir")"
-  [ -n "$file" ] || return 1
-  while IFS= read -r line || [ -n "$line" ]; do
-    line="$(_trim "$line")"
-    [[ -z "$line" || "$line" == \#* ]] && continue
-    if [[ "$line" =~ ^export[[:space:]]+(.+)$ ]]; then
-      line="$(_trim "${BASH_REMATCH[1]}")"
-    fi
-    [[ "$line" =~ ^WORKSPACE_AGENT=(.*)$ ]] || continue
-    value="$(_trim "${BASH_REMATCH[1]}")"
-    if [[ "$value" == \"*\" && "$value" == *\" ]]; then
-      value="${value:1:${#value}-2}"
-    elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
-      value="${value:1:${#value}-2}"
-    fi
-    [ "$value" = "1" ] && return 0
-  done < "$file"
-  return 1
-}
-
-_is_workspace_agent() {
-  local config_dir="$1"
-  _bootstrap_declares_workspace "$config_dir"
-}
+# Agent bootstrap.sh handling. Bootstrap files are ordinary in-situ launch hooks;
+# workspace mode is no longer part of the supported dispatch model.
 
 _source_one_bootstrap() {
   local file="$1" label="$2"
@@ -59,26 +33,19 @@ _source_one_bootstrap() {
 }
 
 _source_bootstrap() {
-  local config_dir="$1" phase="$2" ws_path="${3:-}" agent_name="${4:-$AGENT_NAME}"
+  local config_dir="$1" phase="$2" session_dir="${3:-}" agent_name="${4:-$AGENT_NAME}"
   local agent_file log_dir has_hooks=false
 
   export DOT_PI_DIR
+  export DOT_PI_OVERLAY
   export AGENT_NAME="$agent_name"
   export AGENT_DIR="$config_dir"
   export DOTPI_BOOTSTRAP_PHASE="$phase"
-  if _bootstrap_declares_workspace "$config_dir"; then
-    export WORKSPACE_AGENT=1
-  else
-    export WORKSPACE_AGENT=0
-  fi
-  if [ -n "$ws_path" ]; then
-    export WORKSPACE_DIR="$ws_path"
-    export BOOTSTRAP_LOG="${BOOTSTRAP_LOG:-$WORKSPACE_DIR/bootstrap.log}"
-  else
-    unset WORKSPACE_DIR
-    mkdir -p "$config_dir/sessions"
-    export BOOTSTRAP_LOG="${BOOTSTRAP_LOG:-$config_dir/sessions/bootstrap.log}"
-  fi
+  unset WORKSPACE_AGENT
+  unset WORKSPACE_DIR
+  [ -n "$session_dir" ] || session_dir="$DOT_PI_OVERLAY/$agent_name/sessions"
+  mkdir -p "$session_dir"
+  export BOOTSTRAP_LOG="${BOOTSTRAP_LOG:-$session_dir/bootstrap.log}"
 
   agent_file="$(_bootstrap_file "$config_dir")"
   [ -n "$agent_file" ] && has_hooks=true

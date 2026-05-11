@@ -6,7 +6,7 @@ command -v jq &>/dev/null || {
   exit 1
 }
 
-defaults_file="$DOT_PI_DIR/model-defaults"
+defaults_file="$(resolve_model_defaults_file)"
 write_model_defaults_file "$defaults_file"
 
 models_file="$(resolve_models_file)"

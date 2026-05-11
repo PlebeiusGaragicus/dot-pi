@@ -1,11 +1,5 @@
-# dotpi create-agent — create a standalone agent directory with a stub extension
+# dotpi create-agent — create an in-situ standalone agent directory with a stub extension
 # Sourced by the dotpi dispatcher — do not execute directly.
-
-workspace=false
-if [ "${1:-}" = "--workspace" ]; then
-  workspace=true
-  shift
-fi
 
 [ $# -lt 1 ] && { echo "Error: agent name required"; exit 1; }
 agent_name="$1"
@@ -17,7 +11,7 @@ if [ -d "$agent_dir" ]; then
 fi
 
 echo "Creating standalone agent '$agent_name'..."
-mkdir -p "$agent_dir/extensions/$agent_name" "$agent_dir/skills" "$agent_dir/sessions" "$agent_dir/prompts"
+mkdir -p "$agent_dir/extensions/$agent_name" "$agent_dir/skills" "$agent_dir/prompts"
 
 ln -sf "../../../shared/prompts/introduction.md" "$agent_dir/prompts/introduction.md"
 
@@ -60,71 +54,17 @@ $agent_name - "your prompt"     # send prompt and stay interactive
 $agent_name -p "prompt"         # print final reply and exit
 $agent_name -p -v "prompt"      # print final reply plus progress
 echo "input" | $agent_name -p   # pipe input as prompt
+$agent_name ls                  # list sessions for the current directory
 $agent_name -h                  # show USAGE.md
 \`\`\`
 README
 
 _usage_title=$(printf '%s' "$agent_name" | tr '[:lower:]' '[:upper:]')
-if [ "$workspace" = true ]; then
-  cat > "$agent_dir/USAGE.md" <<USAGE
+cat > "$agent_dir/USAGE.md" <<USAGE
 ${_usage_title}(1)                          dot-pi                          ${_usage_title}(1)
 
 NAME
-       $agent_name — standalone agent (workspace mode)
-
-SYNOPSIS
-       $agent_name help | usage | -h | --help
-
-       $agent_name
-       $agent_name [-n name | --name name] - prompt words...
-       $agent_name -p [-n name | --name name] prompt words...
-       $agent_name -p -v [-n name | --name name] prompt words...
-
-       $agent_name ls
-
-       $agent_name resume [workspace-name-or-path]
-       $agent_name resume [workspace-name-or-path] - prompt words...
-       $agent_name resume [workspace-name-or-path] -p prompt words...
-
-DESCRIPTION
-       Fresh launches create agents/$agent_name/workspaces/<timestamp>/ (with an
-       optional --name slug).  Edit bootstrap.sh to export env vars and
-       prepare directories.
-
-OPTIONS
-       -p, --print
-              Non-interactive run.  Print the final assistant reply and exit.
-              Accepts prompt words or piped stdin.
-
-       -v, --verbose
-              With -p/--print, also show turn/tool progress on stderr.
-
-       -n name, --name name
-              Slug suffix for the new workspace directory.
-
-COMMANDS
-       help, usage, -h, --help
-              Print this file on standard output.
-
-       ls     List workspaces.
-
-       resume [workspace-name-or-path]
-              With no argument, choose a workspace by number.  With an
-              argument, resume the exact workspace basename or path.
-
-FILES
-       agents/$agent_name/workspaces/<timestamp>[--<slug>]/
-              Workspace root (edit bootstrap.sh for layout).
-
-SEE ALSO
-       agents/$agent_name/README.md, agents/$agent_name/SYSTEM.md
-USAGE
-else
-  cat > "$agent_dir/USAGE.md" <<USAGE
-${_usage_title}(1)                          dot-pi                          ${_usage_title}(1)
-
-NAME
-       $agent_name — standalone agent (in-situ)
+       $agent_name — standalone agent
 
 SYNOPSIS
        $agent_name help | usage | -h | --help
@@ -133,9 +73,11 @@ SYNOPSIS
        $agent_name - prompt words...
        $agent_name -p prompt words...
        $agent_name -p -v prompt words...
+       $agent_name ls
 
 DESCRIPTION
-       Runs pi with this config in the current working directory.
+       Runs pi with this config in the current working directory.  Session
+       files are stored outside the package clone under DOT_PI_OVERLAY.
 
 OPTIONS
        -p, --print
@@ -149,10 +91,11 @@ COMMANDS
        help, usage, -h, --help
               Print this file on standard output.
 
+       ls     List sessions for this agent and current directory.
+
 SEE ALSO
        agents/$agent_name/README.md, agents/$agent_name/SYSTEM.md
 USAGE
-fi
 
 cat > "$agent_dir/pi-args" <<'PIARGS'
 # Default CLI flags (read by dispatch-agent). One flag per line; # starts a comment.
@@ -171,29 +114,7 @@ else
   echo "Warning: figlet not installed -- skipping banner.txt (brew install figlet)"
 fi
 
-if [ "$workspace" = true ]; then
-  cat > "$agent_dir/bootstrap.sh" <<'BOOTSTRAP'
-#!/usr/bin/env bash
-
-WORKSPACE_AGENT=1
-export WORKSPACE_AGENT
-
-if [ -z "${WORKSPACE_DIR:-}" ]; then
-  echo "bootstrap: WORKSPACE_DIR is required" >&2
-  return 1
-fi
-
-mkdir -p "$WORKSPACE_DIR/sessions"
-
-echo "bootstrap: workspace ready at $WORKSPACE_DIR"
-BOOTSTRAP
-  echo "Created bootstrap.sh (edit to add directories, environment, and preflight checks)"
-fi
-
-mode_label="in-situ"
-[ "$workspace" = true ] && mode_label="workspace"
-
-echo "Created $mode_label standalone agent at $agent_dir"
+echo "Created standalone agent at $agent_dir"
 echo ""
 echo "Directory layout:"
 echo "  $agent_dir/"
@@ -203,24 +124,18 @@ echo "    prompts/                 (shared introduction.md symlinked; add agent-
 echo "    USAGE.md                 (man-style text for agent help / -h / --help)"
 echo "    themes/                  (individual themes symlinked from shared)"
 echo "    bin/                     (symlinked to shared/bin, gitignored contents)"
-echo "    sessions/                (runtime session data, gitignored)"
+echo "    sessions/                (not used; sessions live under DOT_PI_OVERLAY)"
 echo "    models.json              (symlinked to shared)"
 echo "    auth.json                (symlink → shared/auth.json)"
 echo "    settings.json            (symlink → shared/settings.json)"
 echo "    pi-args                  (optional default CLI flags; see IMPORTANT line inside)"
 echo "    SYSTEM.md                (system prompt — edit to customize)"
 echo "    banner.txt               (startup branding -- edit to customize)"
-[ "$workspace" = true ] && echo "    bootstrap.sh             (workspace setup, environment, and preflight checks)"
 echo ""
 echo "Next steps:"
 echo "  1. Edit $agent_dir/USAGE.md (launcher help) and $agent_dir/SYSTEM.md (and optionally pi-args)"
 echo "  2. Edit $agent_dir/extensions/$agent_name/index.ts if you need custom tools"
 echo "  3. Link skills as needed: dotpi link-skill $agent_name <skill>"
-if [ "$workspace" = true ]; then
-  echo "  4. Edit bootstrap.sh to configure workspace directories, environment, and preflight checks"
-  echo "  5. Run: $agent_name \"your task\""
-else
-  echo "  4. Run: $agent_name \"your task\""
-fi
+echo "  4. Run: $agent_name \"your task\""
 
 source "$COMMANDS_DIR/sync.sh"
