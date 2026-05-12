@@ -15,6 +15,13 @@ export HOME="$TMP"
 export DOT_PI_DIR="$ROOT"
 export SHELL=/bin/bash
 
+# core/bin/ is gitignored; CI checkouts have no bin dir until postinstall/relink.
+mkdir -p "$ROOT/core/bin"
+if [ ! -e "$ROOT/core/bin/ask" ] && [ -e "$ROOT/dispatch-agent" ]; then
+  ln -sf ../../dispatch-agent "$ROOT/core/bin/ask"
+fi
+[ -d "$ROOT/core/bin" ] || fail "expected $ROOT/core/bin"
+
 # shellcheck source=core/install/lib.sh
 source "$ROOT/core/install/lib.sh"
 
