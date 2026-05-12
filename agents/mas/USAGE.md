@@ -17,7 +17,9 @@ DESCRIPTION
        writer, coder, and web through the subagent tool.
 
        The agent runs in the current working directory. Worker traces are
-       grouped under agents/mas/subagent-traces/ in this dot-pi checkout.
+       grouped under $DOT_PI_OVERLAY/mas/subagent-traces/<run-id>/ (default
+       ~/.pi/dot-pi/mas/subagent-traces/), not under the Pi-managed dot-pi
+       git checkout.
 
 OPTIONS
        -p, --print

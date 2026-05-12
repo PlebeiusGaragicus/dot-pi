@@ -282,25 +282,20 @@ Top-level `mas` session files and worker trace files have different jobs and sho
 
 The top-level `mas` agent's own JSONL sessions should remain in its normal `sessions/` directory so user-initiated conversations can be resumed normally. A worker invocation of `ask`, `scout`, `writer`, `coder`, or `web` is not a user-resumable conversation. Those child JSONL files are retrospective execution traces for the MAS trajectory, and they should not be written into the selected worker agent's config-root `sessions/` directory.
 
-For every top-level MAS run, the extension should create or select a dedicated trace bundle directory for all worker sessions from that run. For in-situ `mas`, the first-version convention should be:
+For every top-level MAS run, the extension should create or select a dedicated trace bundle directory for all worker sessions from that run. Trace bundles live under **`$DOT_PI_OVERLAY`** (default **`~/.pi/dot-pi`**) so they are not removed when Pi resets the git package clone. The convention is:
 
 ```text
-agents/mas/subagent-traces/<mas-run-id>/
+$DOT_PI_OVERLAY/mas/subagent-traces/<mas-run-id>/
 ```
 
-The sibling `agents/mas/sessions/` directory remains reserved for user-resumable `mas` conversations:
+The top-level **`mas`** agent's own JSONL sessions remain under **`$DOT_PI_OVERLAY/mas/sessions/<cwd-key>/`** (wired by `dispatch-agent`) so user-initiated conversations can be resumed. That directory is separate from worker traces:
 
 ```text
-agents/mas/sessions/          # top-level user-resumable MAS sessions
-agents/mas/subagent-traces/   # grouped worker JSONL traces
+$DOT_PI_OVERLAY/mas/sessions/          # user-resumable MAS sessions (per cwd)
+$DOT_PI_OVERLAY/mas/subagent-traces/   # grouped worker JSONL traces (per MAS run)
 ```
 
-For workspace MAS runs in a later version, the same layout can move under the workspace:
-
-```text
-<workspace>/sessions/              # top-level user-resumable MAS sessions
-<workspace>/subagent-traces/<run>/ # grouped worker JSONL traces
-```
+Workspace-scoped MAS layouts are no longer used; all shipped agents run in-situ with overlay-backed paths as above.
 
 The extension should derive one `mas-run-id` at the start of a MAS process and reuse it for every worker launch in that top-level run. If pi exposes a parent session identifier, the run id should include or mirror it. Otherwise, a timestamp plus short random suffix is sufficient, such as:
 
@@ -471,7 +466,7 @@ Recommended conventions:
 - `drafts/` for intermediate writing.
 - `reports/` or a named root file for final deliverables.
 - `screenshots/` for browser evidence.
-- `subagent-traces/` for grouped worker JSONL traces managed by the MAS extension.
+- `subagent-traces/` under **`$DOT_PI_OVERLAY/<mas>/`** for grouped worker JSONL traces managed by the MAS extension (distinct from workflow prompts creating a `subagent-traces/` folder in the project cwd).
 
 The exact artifact directories should be chosen by each workflow prompt. Worker agents should not assume workflow-specific directories unless the invocation gives them. Session trace directories are different from workflow artifacts and should be managed by the MAS extension, not by individual workflow prompts.
 

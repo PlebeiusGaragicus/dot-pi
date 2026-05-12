@@ -14,7 +14,7 @@ import type { Message } from "@mariozechner/pi-ai";
 import { type ExtensionAPI, getAgentDir, getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
 import { Type } from "typebox";
-import { agentOverlayFirstFile, overlayFirstFile } from "../lib/dotpi-paths.js";
+import { agentOverlayDir, agentOverlayFirstFile, overlayFirstFile } from "../lib/dotpi-paths.js";
 
 const CORE_AGENT_NAMES = ["ask", "scout", "writer", "coder", "web"] as const;
 const MODEL_DEFAULT_ALIASES = ["DEFAULT_AGENTIC_MODEL", "DEFAULT_FAST_MODEL", "DEFAULT_VLM_MODEL"] as const;
@@ -295,7 +295,7 @@ class TraceManager {
 	) {}
 
 	get traceDir(): string {
-		return path.join(this.parentAgentDir, "subagent-traces", this.runId);
+		return path.join(agentOverlayDir(this.parentAgentDir), "subagent-traces", this.runId);
 	}
 
 	private get manifestPath(): string {

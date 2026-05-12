@@ -12,4 +12,4 @@ Unlike workflow-specific MAS configs that own a nested worker pool, `mas` delega
 
 Workflow prompts in `prompts/` define task-specific orchestration. For example, `/deepresearch` can ask `web` to find and inspect sources, `writer` to create a report, and `ask` with the `judge` persona to validate quality gates. `/pdf-ocr` drives PDF ingestion, per-page OCR via `coder`, optional assembly via `writer`, and URL fetch via `web` when needed; page renders go under `pages-png/` and transcripts under `pages-ocr/`. `/workflow-builder` helps create or revise project-local workflows under `.pi/prompts/`. The workers remain general-purpose capability agents.
 
-Worker traces are grouped under `subagent-traces/<run-id>/` with a manifest for retrospective inspection. User-resumable `mas` sessions remain separate in `sessions/`.
+Worker traces (JSONL plus `manifest.json`) are grouped under **`$DOT_PI_OVERLAY/mas/subagent-traces/<run-id>/`** (default **`~/.pi/dot-pi/mas/subagent-traces/...`**) so they survive **`pi update`** on the package clone. User-resumable `mas` sessions stay under **`$DOT_PI_OVERLAY/mas/sessions/`** (see dispatch-agent).

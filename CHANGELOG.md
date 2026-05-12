@@ -13,7 +13,11 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ## [Unreleased]
 
-_No entries yet._
+### Changed
+
+- **MAS** (`top-level-agent-orchestrator`): worker **`subagent`** trace JSONL and
+  **`manifest.json`** are written under **`$DOT_PI_OVERLAY/<agent>/subagent-traces/<run-id>/`**
+  (e.g. **`~/.pi/dot-pi/mas/subagent-traces/...`**) instead of under the dot-pi git clone.
 
 ---
 
