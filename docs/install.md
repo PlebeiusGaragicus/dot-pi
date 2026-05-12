@@ -26,6 +26,8 @@ pi remove git:https://github.com/PlebeiusGaragicus/dot-pi
 
 The old curl installer and `~/.dot-pi` product install are no longer supported.
 
+**Contributors** developing from a git clone (without reinstalling through Pi on every change): see **Local development** in the repository [README](https://github.com/PlebeiusGaragicus/dot-pi#local-development) on GitHub, or the same section in a checkout’s `README.md`.
+
 ## What Install Does
 
 Pi clones this repository under `~/.pi/agent/git/...` and runs `npm install`, which triggers dot-pi's `postinstall` script. The script is idempotent and safe to run after every `pi update`.

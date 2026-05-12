@@ -203,7 +203,7 @@ The **Pi-managed clone** is the **only** supported tree for **using** dot-pi as 
 
 ### 3.1 Repository development vs `pi install`
 
-**Contributors** edit this repository with a normal **`git clone`** of the source and run tests locally; that checkout is **not** a second “supported install” for end users and is unrelated to **`pi update`**. **Consumers** rely solely on **`pi install`** / **`pi update`** against the published git (or npm) package.
+**Contributors** edit this repository with a normal **`git clone`** of the source and run tests locally; that checkout is **not** a second “supported install” for end users and is unrelated to **`pi update`**. Put the clone’s **`core/bin`** first on **`PATH`** after **`npm install`** in the clone so **`DOT_PI_DIR`** resolves to that tree (see **Local development** in **`README.md`**). **Consumers** rely solely on **`pi install`** / **`pi update`** against the published git (or npm) package.
 
 ### 3.2 `dispatch-agent` and “copy over”
 

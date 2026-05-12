@@ -17,6 +17,10 @@ ask -p "Explain this repository"
 
 Use `pi update` for upgrades.
 
+## Local development
+
+To hack on dot-pi from a **git clone**, put **that clone’s** `core/bin` first on `PATH` after `npm install` in the clone—no `pi update` per edit. See the [README](https://github.com/PlebeiusGaragicus/dot-pi#local-development) **Local development** section for steps and the optional `core/tests` TypeScript check.
+
 ## How It Works
 
 - Pi owns the package clone under `~/.pi/agent/git/...`.

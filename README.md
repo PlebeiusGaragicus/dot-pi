@@ -36,6 +36,23 @@ Commands are available through symlinks in the installed package's `core/bin/`. 
 dotpi relink
 ```
 
+## Local development
+
+You can iterate on this repository from a normal **`git clone`** without running **`pi update`** after every edit. The dispatcher sets **`DOT_PI_DIR`** from the resolved path of **`dispatch-agent`**, so whichever clone’s **`core/bin`** is **first on your `PATH`** is the tree Pi loads (`agents/<name>/`, `shared/`, extensions, and so on).
+
+1. Clone the repo to any directory and **`cd`** into it.
+2. Run **`npm install`** in the repo root so **`postinstall`** runs (symlinks, overlay wiring—same as after **`pi install`**).
+3. **Prepend** this clone’s **`core/bin`** to **`PATH`** (before any Pi-installed dot-pi **`core/bin`** if you have both).
+4. Run **`ask`**, **`mas`**, **`dotpi`**, etc. as usual. You still need a working **`pi`** binary and the usual **`~/.pi/agent`** auth and model files.
+
+Optional TypeScript check for shared extensions:
+
+```bash
+(cd core/tests && npx tsc --noEmit)
+```
+
+The supported **consumer** flow remains **`pi install`** / **`pi update`** as in [Quick Start](#quick-start). See **`PI_INSTALL.md`** in this repo for architecture notes (including how this differs from the Pi-managed package tree).
+
 ## Create Agents
 
 ```bash

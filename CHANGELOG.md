@@ -17,6 +17,10 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 - **`top-level-agent-orchestrator`**: cap concurrent worker child processes for **`lmstudio`** and **`ollama`** (shared slot, default one) so parallel `subagent` `tasks[]` does not overload local inference; other providers stay parallel up to the existing task cap.
 
+### Changed
+
+- Document contributor **local development** (git clone, `npm install`, prepend clone `core/bin` to `PATH`) in **`README.md`**; cross-references in **`docs/install.md`**, **`docs/index.md`**, and **`PI_INSTALL.md`**.
+
 ---
 
 ## [0.8.0] — 2026-05-11
