@@ -107,7 +107,7 @@ $DEFAULT_FAST_MODEL
 off
 ```
 
-If `$DEFAULT_FAST_MODEL` is empty, `dispatch-agent` skips `--model` so pi falls back to its `settings.json` default. Use `/model-default` to persist an agent-local `.model` override containing a raw `provider/model` id.
+If `$DEFAULT_FAST_MODEL` is empty, `dispatch-agent` skips `--model` so pi falls back to its `settings.json` default. Use `/model-default` to persist an agent-local **`env.model`** override containing a raw `provider/model` id.
 
 **Optional: `AGENT.md` (via manually linked `agent-prompt` extension)**
 

@@ -97,7 +97,7 @@ Configure fallback model aliases:
 dotpi model-defaults
 ```
 
-These aliases are stored in `$DOT_PI_OVERLAY/model-defaults`. Agent-local `.model` overrides are stored under the overlay as well.
+These aliases are stored in `$DOT_PI_OVERLAY/model-defaults`. Agent-local **`env.model`** overrides are stored under the overlay as well.
 
 Auth and model provider catalogs use Pi's standard files:
 

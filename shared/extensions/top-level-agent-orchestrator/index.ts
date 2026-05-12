@@ -208,7 +208,7 @@ function inlineDefaultAliases(): Set<string> {
 }
 
 function readAgentModel(agentDir: string): string {
-	const modelPath = agentOverlayFirstFile(agentDir, ".model");
+	const modelPath = agentOverlayFirstFile(agentDir, "env.model");
 	if (!fs.existsSync(modelPath)) return "";
 	for (const rawLine of fs.readFileSync(modelPath, "utf-8").split(/\r?\n/)) {
 		const line = rawLine.trim();

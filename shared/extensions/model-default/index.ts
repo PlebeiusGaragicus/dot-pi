@@ -4,7 +4,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { agentOverlayFile, agentOverlayFirstFile, ensureOverlayDir, overlayFile, overlayFirstFile } from "../lib/dotpi-paths.js";
 
-const MODEL_FILE = ".model";
+const MODEL_FILE = "env.model";
 const DEFAULTS_FILE = "model-defaults";
 const ROLES = [
 	{ id: "agentic", env: "DEFAULT_AGENTIC_MODEL", label: "Agentic" },
@@ -145,12 +145,12 @@ function formatReport(): string {
 	const resolved = readResolvedDefaults();
 	const lines = [
 		`model-defaults: ${defaultsPath}`,
-		`agent .model: ${agentOverlayFirstFile(getAgentDir(), MODEL_FILE)}`,
+		`agent env.model: ${agentOverlayFile(getAgentDir(), MODEL_FILE)}`,
 		`current agent model: ${agentModel || "(unset)"}`,
 		"",
 	];
 	for (const role of ROLES) {
-		const source = agentModel && currentRole?.env === role.env ? "agent .model" : defaults[role.env] ? "model-defaults" : process.env[role.env] ? "env" : "pi settings";
+		const source = agentModel && currentRole?.env === role.env ? "agent env.model" : defaults[role.env] ? "model-defaults" : process.env[role.env] ? "env" : "pi settings";
 		lines.push(`${role.env}: ${resolved[role.env] || "(unset)"} [${source}]`);
 	}
 	lines.push("", "Commands:", "/model-default agentic", "/model-default fast", "/model-default vlm", "/model-default reset");
@@ -174,7 +174,7 @@ async function selectModelForRole(role: Role, ctx: CommandContext, scope: "agent
 	const selected = await ctx.ui.select(scope === "agent" ? "Select current agent model" : `Select ${role.label} model`, choices);
 	if (!selected) return;
 
-	const targetPath = scope === "agent" ? agentOverlayFirstFile(getAgentDir(), MODEL_FILE) : overlayFirstFile(DEFAULTS_FILE);
+	const targetPath = scope === "agent" ? agentOverlayFile(getAgentDir(), MODEL_FILE) : overlayFirstFile(DEFAULTS_FILE);
 	const selectedModel = selected.startsWith("(unset") ? "" : selected.replace(/ \(current\)$/, "");
 	const overrides = scope === "agent" ? {} : parseExports(targetPath);
 	if (scope === "global") {

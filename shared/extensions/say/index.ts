@@ -16,7 +16,7 @@
  * - Fenced code blocks (```) are omitted from speech entirely; exception: ```txt and ```markdown
  *   fences have their content spoken (fence lines themselves are always omitted).
  * - Only runs when `ctx.hasUI` (interactive TUI) and a TTS backend is available.
- * - Speech rate: per-device WPM stored in `$DOT_PI_OVERLAY/.tts-wpm` (default 250). Adjust with `/tts-wpm`.
+ * - Speech rate: per-device WPM stored in `$DOT_PI_OVERLAY/env.tts-wpm` (default 250). Adjust with `/tts-wpm`.
  * - A new user prompt, `/stop-speaking`, `/tts-toggle off`, or pi exiting all cancel speech.
  *
  * Platform backends are selected inline. Currently: macOS `say`, Linux `espeak-ng`.
@@ -78,7 +78,7 @@ const backend = resolveBackend();
 const URL_REDACTED = "URL redacted";
 const MAX_CHARS = 32_000;
 const DEFAULT_WPM = 250;
-const TTS_WPM_FILE = ".tts-wpm";
+const TTS_WPM_FILE = "env.tts-wpm";
 
 function loadWpm(): number {
 	try {
@@ -100,7 +100,7 @@ function saveWpm(wpm: number): void {
 	}
 }
 
-/** Words per minute; loaded from .tts-wpm on session_start, adjustable via /tts-wpm */
+/** Words per minute; loaded from env.tts-wpm on session_start, adjustable via /tts-wpm */
 let currentWpm = DEFAULT_WPM;
 
 /** In-memory; synced from `--tts-enable` on every session_start; `/tts-toggle` until next session_start */
@@ -536,7 +536,7 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("tts-wpm", {
-		description: "Get or set TTS words-per-minute (persists to .tts-wpm)",
+		description: "Get or set TTS words-per-minute (persists to env.tts-wpm)",
 		handler: async (args, ctx) => {
 			if (!ctx.hasUI) return;
 			const a = args.trim();

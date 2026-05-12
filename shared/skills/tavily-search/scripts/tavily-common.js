@@ -15,17 +15,20 @@ export function findDotPiOverlay() {
 	return process.env.DOT_PI_OVERLAY || path.join(process.env.HOME || "", ".pi", "dot-pi");
 }
 
-function overlayFirstFile(name) {
-	const overlayPath = path.join(findDotPiOverlay(), name);
-	if (fs.existsSync(overlayPath)) return overlayPath;
-	return path.join(findDotPiRoot(), name);
+function overlayFirstFile(...names) {
+	const overlay = findDotPiOverlay();
+	for (const name of names) {
+		const p = path.join(overlay, name);
+		if (fs.existsSync(p)) return p;
+	}
+	return path.join(overlay, names[0]);
 }
 
 export function loadTavilyKey() {
 	const envKey = process.env.TAVILY_API_KEY?.trim();
 	if (envKey && envKey !== "$TAVILY_API_KEY") return envKey;
 
-	const keyPath = overlayFirstFile(".tavily.env");
+	const keyPath = overlayFirstFile("env.tavily");
 	if (!fs.existsSync(keyPath)) return null;
 
 	const content = fs.readFileSync(keyPath, "utf8").trim();
@@ -38,7 +41,7 @@ export function requireTavilyKey() {
 	if (apiKey) return apiKey;
 
 	console.error("Error: Tavily API key is not configured.");
-	console.error("Run /tavily-api-key, export TAVILY_API_KEY, or create $DOT_PI_OVERLAY/.tavily.env with TAVILY_API_KEY=<key>.");
+	console.error("Run /tavily-api-key, export TAVILY_API_KEY, or create $DOT_PI_OVERLAY/env.tavily with TAVILY_API_KEY=<key>.");
 	console.error("Get your key from: https://app.tavily.com");
 	process.exit(1);
 }

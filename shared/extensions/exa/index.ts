@@ -6,14 +6,14 @@
  *
  * API key resolution (in priority order):
  *   1. EXA_API_KEY environment variable
- *   2. `$DOT_PI_OVERLAY/.exa.env`, falling back to repo-root `.exa.env`
+ *   2. `$DOT_PI_OVERLAY/env.exa` (overlay only)
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import * as fs from "node:fs";
 import { ensureOverlayDir, overlayFile, overlayFirstFile } from "../lib/dotpi-paths.js";
 
-const EXA_KEY_FILE = ".exa.env";
+const EXA_KEY_FILE = "env.exa";
 
 function loadExaKey(): string | null {
 	const envKey = process.env.EXA_API_KEY?.trim();

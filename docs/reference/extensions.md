@@ -23,7 +23,7 @@ Current common extensions:
 | `startup-branding` | Render `banner.txt` at startup. |
 | `save` | Provide the shared save tool. |
 | `say` | Provide text-to-speech / `say` behavior. |
-| `model-default` | View and override agent-local `.model` values or repo-local `model-defaults`. |
+| `model-default` | View and override agent-local **`env.model`** values or repo-local `model-defaults`. |
 
 MAS orchestrators link **`top-level-agent-orchestrator`** explicitly (plus the common bundle). Worker agents (`ask`, `scout`, etc.) are ordinary top-level configs with the same bundle and their own custom extensions as needed.
 
@@ -31,7 +31,7 @@ Specialized extensions stay out of the default bundles. Examples include **`top-
 
 ### Repo-root service credentials
 
-Extensions that support local API keys use files named **`.service-name.env`** under `$DOT_PI_OVERLAY`, for example `.exa.env` and `.tavily.env`. Environment variables for the same keys always win when set. Repo-root files are read only as development fallbacks.
+Extensions that support local API keys use **`env.<service>`** files under **`$DOT_PI_OVERLAY`** only (for example **`env.exa`** and **`env.tavily`**). Environment variables for the same keys always win when set.
 
 ## Extension Structure
 
@@ -339,7 +339,7 @@ Key patterns:
 
 ### Example: Model Default
 
-A shared extension that registers `/model-default` for top-level agents. It displays resolved `DEFAULT_*` aliases, writes agent-local `.model` files as raw `provider/model` overrides, and can update repo-local `model-defaults` through global menu options.
+A shared extension that registers `/model-default` for top-level agents. It displays resolved `DEFAULT_*` aliases, writes agent-local **`env.model`** files as raw `provider/model` overrides, and can update repo-local `model-defaults` through global menu options.
 
 Source: `shared/extensions/model-default/index.ts`
 
@@ -347,7 +347,7 @@ Key patterns:
 
 - Reads available models from `models.json`
 - Infers the current agent's default alias from `pi-args`
-- Resolves raw agent-local `.model` plus repo-local `model-defaults`
+- Resolves raw agent-local **`env.model`** plus repo-local `model-defaults`
 - Persists local overrides in a gitignored dotfile
 - Leaves agent-specific model policy in `pi-args`
 

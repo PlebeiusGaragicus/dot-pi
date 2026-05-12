@@ -17,10 +17,20 @@ export function overlayFile(name: string): string {
 	return path.join(dotPiOverlay(), name);
 }
 
-export function overlayFirstFile(name: string): string {
-	const overlayPath = overlayFile(name);
-	if (fs.existsSync(overlayPath)) return overlayPath;
-	return path.join(dotPiRoot(), name);
+/**
+ * Resolves the first existing path among `names` under **`$DOT_PI_OVERLAY`** only (in order).
+ * User-owned config must not live in the Pi-managed package tree, which **`pi update`** can reset.
+ * If none exist, returns the overlay path for `names[0]` (canonical write target).
+ */
+export function overlayFirstFile(...names: string[]): string {
+	if (names.length === 0) {
+		throw new Error("overlayFirstFile requires at least one filename");
+	}
+	for (const name of names) {
+		const overlayPath = overlayFile(name);
+		if (fs.existsSync(overlayPath)) return overlayPath;
+	}
+	return overlayFile(names[0]!);
 }
 
 export function ensureOverlayDir(): string {
@@ -46,8 +56,16 @@ export function agentOverlayFile(agentDir: string, fileName: string): string {
 	return path.join(agentOverlayDir(agentDir), fileName);
 }
 
-export function agentOverlayFirstFile(agentDir: string, fileName: string): string {
-	const overlayPath = agentOverlayFile(agentDir, fileName);
-	if (fs.existsSync(overlayPath)) return overlayPath;
-	return path.join(agentDir, fileName);
+/**
+ * Like {@link overlayFirstFile} but under the agent’s overlay directory only (no reads from `agentDir` in the clone).
+ */
+export function agentOverlayFirstFile(agentDir: string, ...names: string[]): string {
+	if (names.length === 0) {
+		throw new Error("agentOverlayFirstFile requires at least one filename");
+	}
+	for (const name of names) {
+		const overlayPath = agentOverlayFile(agentDir, name);
+		if (fs.existsSync(overlayPath)) return overlayPath;
+	}
+	return agentOverlayFile(agentDir, names[0]!);
 }

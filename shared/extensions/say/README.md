@@ -29,7 +29,7 @@ Future backends (piper, mimic3, etc.) can be added to the `resolveBackend()` fun
 
 ## Tunables
 
-- **WPM** -- words per minute, stored per-device in `$DOT_PI_OVERLAY/.tts-wpm` (default 250). Bootstrapped on first `session_start`. Adjust at runtime with `/tts-wpm [50-600]`; changes persist across sessions.
+- **WPM** -- words per minute, stored per-device in `$DOT_PI_OVERLAY/env.tts-wpm` (default 250). Bootstrapped on first `session_start`. Adjust at runtime with `/tts-wpm [50-600]`; changes persist across sessions.
 - `MAX_CHARS` -- per-utterance character cap (default 32_000)
 
 ## Commands
@@ -37,7 +37,7 @@ Future backends (piper, mimic3, etc.) can be added to the `resolveBackend()` fun
 - `/say` -- speak the last assistant reply
 - `/stop-speaking` -- cancel current and queued speech
 - `/tts-toggle [on|off]` -- toggle or set auto-TTS for the current session
-- `/tts-wpm [50-600]` -- get or set TTS speed in words-per-minute (persists to `.tts-wpm`)
+- `/tts-wpm [50-600]` -- get or set TTS speed in words-per-minute (persists to `env.tts-wpm`)
 
 ## CLI Flag
 
@@ -45,7 +45,7 @@ Future backends (piper, mimic3, etc.) can be added to the `resolveBackend()` fun
 
 ## Hooks Registered
 
-- `session_start` -- syncs `autoTtsEnabled` from the CLI flag, loads WPM from `.tts-wpm`, bootstraps the file if missing
+- `session_start` -- syncs `autoTtsEnabled` from the CLI flag, loads WPM from `env.tts-wpm`, bootstraps the file if missing
 - `message_update` (streaming) -- buffers and queues lines as they arrive
 - `agent_end` -- fallback to speak anything not yet streamed for the turn
 - `before_agent_start` -- cancel speech on a new user prompt

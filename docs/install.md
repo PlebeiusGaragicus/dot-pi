@@ -42,10 +42,10 @@ Mutable dot-pi state lives outside the Pi-managed clone:
 $DOT_PI_OVERLAY/
 ├── settings.json
 ├── model-defaults
-├── .exa.env
-├── .tavily.env
-├── .ntfy.env
-├── .tts-wpm
+├── env.exa
+├── env.tavily
+├── env.ntfy
+├── env.tts-wpm
 └── <agent>/
     ├── sessions/
     ├── prompts/

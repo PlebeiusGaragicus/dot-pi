@@ -12,7 +12,7 @@ import { ensureOverlayDir, overlayFile, overlayFirstFile } from "../lib/dotpi-pa
 
 const USAGE_API_URL = "https://api.tavily.com/usage";
 const STATUS_KEY = "tavily-usage";
-const TAVILY_KEY_FILE = ".tavily.env";
+const TAVILY_KEY_FILE = "env.tavily";
 
 /** Cached footer state for the simplified usage bar. */
 interface FooterUsageState {

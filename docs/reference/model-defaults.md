@@ -22,9 +22,9 @@ export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
 
 The `${VAR:-...}` form is intentional: inline environment variables keep priority over the file.
 
-`model-defaults` is loaded at agent launch time by `dispatch-agent` after the current agent config root is known. Child worker processes launched by **`top-level-agent-orchestrator`** inherit the same environment and load each worker’s own `pi-args` and `.model` from that worker’s `PI_CODING_AGENT_DIR`. The overlay path is preferred; clone-local files are only a development fallback.
+`model-defaults` is loaded at agent launch time by `dispatch-agent` after the current agent config root is known. Child worker processes launched by **`top-level-agent-orchestrator`** inherit the same environment and load each worker’s own `pi-args` and **`env.model`** from **`$DOT_PI_OVERLAY/<worker>/`**. Paths are overlay-only; the Pi-managed package clone is not used for these overrides.
 
-### Agent `.model`
+### Agent `env.model`
 
 Optional agent-local override file, written by the in-agent command:
 
@@ -32,7 +32,7 @@ Optional agent-local override file, written by the in-agent command:
 /model-default
 ```
 
-Agent `.model` files live under `$DOT_PI_OVERLAY` and contain one raw model id for that specific agent config root:
+Agent **`env.model`** files live under `$DOT_PI_OVERLAY` and contain one raw model id for that specific agent config root:
 
 ```text
 lmstudio/nvidia/nemotron-3-super
@@ -85,7 +85,7 @@ Model selection resolves in this order:
    DEFAULT_AGENTIC_MODEL=provider/model-name deepresearch
    ```
 
-2. Agent-local `.model` overrides written by `/model-default`.
+2. Agent-local **`env.model`** overrides written by `/model-default`.
 3. Overlay `model-defaults` values written by `dotpi model-defaults`.
 4. Pi's `settings.json` default, reached when no non-empty model value resolves.
 
@@ -93,7 +93,7 @@ Model selection resolves in this order:
 
 - Agent policy lives in `pi-args`, not a separate model policy file.
 - `model-defaults` supplies machine-local global fallback aliases.
-- Agent `.model` files supply persistent per-agent raw model overrides without editing `pi-args`.
+- Agent **`env.model`** files supply persistent per-agent raw model overrides without editing `pi-args`.
 - Inline env overrides are temporary and highest priority among defaults.
 - Empty default aliases are valid and result in no `--model` flag being passed.
 
@@ -143,7 +143,7 @@ Agents that should use pi's provider default should leave `--thinking` out.
 ```mermaid
 flowchart TD
   inlineEnv["Inline environment"] --> modelEnv["Resolved DEFAULT_* env"]
-  dotModel["Agent .model overrides"] --> modelEnv
+  dotModel["Agent env.model overrides"] --> modelEnv
   modelDefaults["model-defaults fallbacks"] --> modelEnv
   piArgs["Agent pi-args"] --> expand["Expand env vars"]
   modelEnv --> expand
@@ -156,7 +156,7 @@ flowchart TD
 
 MAS worker invocations are separate pi config roots (`agents/ask`, `agents/scout`, etc.). Each worker’s own `pi-args` is read before launch, with the same model-default behavior as any top-level agent:
 
-- Load that worker’s own `.model` and overlay `model-defaults`.
+- Load that worker’s own **`env.model`** and overlay `model-defaults`.
 - Expand `$DEFAULT_*` in the worker’s `pi-args`.
 - Drop empty `--model` values.
 

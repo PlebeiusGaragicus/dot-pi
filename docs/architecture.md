@@ -48,10 +48,10 @@ User-owned state:
 ~/.pi/dot-pi/
 ├── settings.json
 ├── model-defaults
-├── .exa.env
-├── .tavily.env
-├── .ntfy.env
-├── .tts-wpm
+├── env.exa
+├── env.tavily
+├── env.ntfy
+├── env.tts-wpm
 └── <agent>/
     ├── sessions/
     ├── prompts/

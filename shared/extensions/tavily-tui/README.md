@@ -4,16 +4,16 @@ Provides `/tavily-api-key` and a footer usage status for agents that use the scr
 
 ## Files
 
-- `index.ts` -- Registers key and usage commands, reads/writes `.tavily.env`, and manages the footer status.
+- `index.ts` -- Registers key and usage commands, reads/writes **`env.tavily`**, and manages the footer status.
 
 ## Configuration
 
 API key resolution follows the same order as the `tavily-cli` scripts:
 
 1. `TAVILY_API_KEY` environment variable
-2. Repo-root `.tavily.env`, written as `TAVILY_API_KEY=<key>`
+2. **`env.tavily`** under **`$DOT_PI_OVERLAY`**, written as `TAVILY_API_KEY=<key>`
 
-The `.tavily.env` file is local credentials state and must stay gitignored.
+The **`env.tavily`** file is local credentials state and must stay gitignored.
 
 ## Commands
 
@@ -21,7 +21,7 @@ The `.tavily.env` file is local credentials state and must stay gitignored.
 /tavily-api-key
 ```
 
-`/tavily-api-key` shows the current key in masked form, prompts for a new key, saves it to `.tavily.env`, and refreshes the footer.
+`/tavily-api-key` shows the current key in masked form, prompts for a new key, saves it to **`env.tavily`**, and refreshes the footer.
 
 ## Related Skill
 

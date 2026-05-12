@@ -4,13 +4,18 @@ shared/models.json
 shared/settings.json
 shared/auth.json
 .env
+# Overlay API keys and prefs (under $DOT_PI_OVERLAY; visible names)
+env.exa
+env.tavily
+env.ntfy
+env.tts-wpm
+env.ssh
+# Broad ignores for mistaken secret paths at repo root (not read by dot-pi)
 .*.env
-# .exa.env
-# .tavily.env
 .tts-wpm
+.ssh
 .browser-control/
 core/bin/
-.ssh
 google.json
 todo.jsonl
 
@@ -20,10 +25,9 @@ package-lock.json
 agents/*/sessions/*
 !agents/*/sessions/.gitkeep
 agents/*/auth.json
-agents/*/.model
-# agents/*/settings.json
+agents/*/env.model
+agents/*/agents/*/env.model
 agents/*/.cache/
-agents/*/agents/*/.model
 agents/*-beta/
 
 # Eval results (generated per-run, can be large)

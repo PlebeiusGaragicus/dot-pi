@@ -12,7 +12,7 @@
  *
  * API key resolution (in priority order):
  *   1. TAVILY_API_KEY environment variable
- *   2. `$DOT_PI_OVERLAY/.tavily.env`, falling back to repo-root `.tavily.env`
+ *   2. `$DOT_PI_OVERLAY/env.tavily` (overlay only)
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
@@ -25,7 +25,7 @@ import { ensureOverlayDir, overlayFile, overlayFirstFile } from "../lib/dotpi-pa
 const API_URL = "https://api.tavily.com/search";
 const USAGE_API_URL = "https://api.tavily.com/usage";
 const STATUS_KEY = "tavily-usage";
-const TAVILY_KEY_FILE = ".tavily.env";
+const TAVILY_KEY_FILE = "env.tavily";
 
 function loadTavilyKey(): string | null {
     const envKey = process.env.TAVILY_API_KEY?.trim();

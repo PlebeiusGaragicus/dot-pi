@@ -19,6 +19,8 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ### Changed
 
+- **Breaking:** **`$DOT_PI_OVERLAY`** user config uses visible **`env.*`** filenames only (**`env.exa`**, **`env.tavily`**, **`env.ntfy`**, **`env.tts-wpm`**, per-agent **`env.model`**, optional **`env.ssh`** text file). Older dotfiles and **`env.*.env`** names are not read—migrate existing keys into the new paths. Resolution is overlay-only (no package-clone fallbacks). ([#9](https://github.com/PlebeiusGaragicus/dot-pi/issues/9))
+- **`overlayFirstFile`**, **`agentOverlayFirstFile`**, and **`core/dispatch/pi-args.sh`** resolve **`model-defaults`**, provider **`env.*`** files, **`env.tts-wpm`**, and per-agent **`env.model`** under **`$DOT_PI_OVERLAY`** only (no reads from the Pi-managed package clone for that durable user state).
 - Document contributor **local development** (git clone, `npm install`, prepend clone `core/bin` to `PATH`) in **`README.md`**; cross-references in **`docs/install.md`**, **`docs/index.md`**, and **`PI_INSTALL.md`**.
 
 ---
