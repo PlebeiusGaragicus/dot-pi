@@ -2,7 +2,7 @@
 
 Agent commands in `core/bin/` are symlinks to `dispatch-agent`. The symlink name selects `agents/<name>/` as `PI_CODING_AGENT_DIR`, loads that agent's `pi-args`, sets `DOT_PI_OVERLAY` when missing, adds an overlay-backed `--session-dir`, and invokes `pi`.
 
-`core/bin/todo` is different unless an agent named `todo` exists: it points at the JSONL todo CLI.
+`core/bin/todo` is different unless an agent named `todo` exists: it points at the JSONL todo CLI. For resolution rules, safety (`del` vs `rm`), and design goals, see [Todo CLI](design/todo-cli.md).
 
 ## Core Forms
 

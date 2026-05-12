@@ -1,5 +1,7 @@
 The `todo` utility is a simple shell script for managing todo.jsonl task lists.
 
+Design goals, non-goals, resolution, and safety: [docs/design/todo-cli.md](../../../docs/design/todo-cli.md) in this repo, or the published site [Todo CLI](https://PlebeiusGaragicus.github.io/dot-pi/design/todo-cli/).
+
 ## todo file
 
 When `todo` runs, it looks for `todo.jsonl` in the current directory, then each parent directory up to the root. That file is the project or workspace todo list. If none exists, the active file is `~/.todo/todo.jsonl` (the directory is created if needed).

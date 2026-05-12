@@ -47,6 +47,7 @@ nav:
   - Architecture: architecture.md
   - Design:
     - Top-Level Agent MAS: design/top-level-agent-mas.md
+    - Todo CLI: design/todo-cli.md
   - Agent Layout: agent-layout.md
   - Standalone Agents: standalone-agents.md
   - Reference:
