@@ -12,7 +12,8 @@ usage() {
 Usage: dotpi symlink-agents [--dry-run] [--rc FILE]
 
   Append or refresh a marked export PATH=... block for this package's core/bin
-  in your shell rc file (default from $SHELL: .zshrc or .bashrc).
+  in your shell rc file (default from $SHELL: ~/.zshrc for zsh, ~/.bashrc for bash
+  on Linux and macOS).
 
 Options:
   --dry-run   Print actions only; do not write.

@@ -73,6 +73,8 @@ Install/update scripts may create missing directories and seed files, but they m
 
 Use **`dotpi symlink-agents`** (or the full path printed by postinstall) so `ask`, `mas`, `coder`, etc. resolve in new terminals. Options: **`--dry-run`**, **`--rc FILE`** (e.g. fish users can target a file they maintain). Re-run after changing install location; the command refreshes the marked block.
 
+On **Linux with bash**, `SHELL` is usually `/bin/bash` and dot-pi updates **`~/.bashrc`**. If you use a **login** shell that does not source `~/.bashrc` (some SSH or minimal setups), either run **`dotpi symlink-agents --rc ~/.bash_profile`** or add `if [ -f ~/.bashrc ]; then . ~/.bashrc; fi` to your **`~/.bash_profile`** so new sessions pick up the block.
+
 ### Permission denied on `~/.zshrc` or `~/.bashrc`
 
 If **`dotpi symlink-agents`** prints **`cannot write`** / **`touch: … Permission denied`**, your rc file is probably **not owned by your user** (often **`root`**) because something edited it with **`sudo`** once.
@@ -87,7 +89,7 @@ If you see `root` as the owner, fix it **once**, then rerun **`dotpi symlink-age
 
 ```bash
 sudo chown "$(whoami)" ~/.zshrc
-# and/or
+# and/or (Linux/bash)
 sudo chown "$(whoami)" ~/.bashrc
 ```
 

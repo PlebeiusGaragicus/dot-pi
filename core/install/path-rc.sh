@@ -6,9 +6,24 @@ dotpi_core_bin_dir() {
   (cd "$DOT_PI_DIR/core/bin" && pwd)
 }
 
+# Canonical path for PATH probing (GNU readlink -f, realpath, then python3).
 dotpi_resolve_path() {
-  local p="$1"
-  readlink -f "$p" 2>/dev/null || realpath "$p" 2>/dev/null || printf '%s\n' "$p"
+  local p="$1" rp
+  rp=$(readlink -f "$p" 2>/dev/null) && [ -n "$rp" ] && {
+    printf '%s\n' "$rp"
+    return 0
+  }
+  rp=$(realpath "$p" 2>/dev/null) && [ -n "$rp" ] && {
+    printf '%s\n' "$rp"
+    return 0
+  }
+  if command -v python3 >/dev/null 2>&1; then
+    rp=$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$p" 2>/dev/null) && [ -n "$rp" ] && {
+      printf '%s\n' "$rp"
+      return 0
+    }
+  fi
+  printf '%s\n' "$p"
 }
 
 # First agent name under core/bin suitable for PATH probing (prefer ask).

@@ -13,6 +13,18 @@ fail() {
   exit 1
 }
 
+# sha256 of file (Linux: sha256sum, macOS: shasum, else openssl).
+dotpi_file_sha256() {
+  local f="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$f" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$f" | awk '{print $1}'
+  else
+    openssl dgst -sha256 "$f" 2>/dev/null | awk '{print $NF}'
+  fi
+}
+
 assert_link() {
   local path="$1"
   [ -L "$path" ] || fail "expected symlink: $path"
@@ -36,9 +48,9 @@ DOT_PI_DIR="$FIXTURE" DOT_PI_OVERLAY="$OVERLAY" bash "$FIXTURE/core/install/post
 
 grep -q '"theme": "user-owned"' "$OVERLAY/settings.json" || fail "existing theme setting was overwritten"
 grep -q '"enableInstallTelemetry": false' "$OVERLAY/settings.json" || fail "missing setting was not merged"
-settings_after=$(shasum -a 256 "$OVERLAY/settings.json" | awk '{print $1}')
+settings_after=$(dotpi_file_sha256 "$OVERLAY/settings.json")
 DOT_PI_DIR="$FIXTURE" DOT_PI_OVERLAY="$OVERLAY" bash "$FIXTURE/core/install/postinstall.sh" >/dev/null
-settings_after_second=$(shasum -a 256 "$OVERLAY/settings.json" | awk '{print $1}')
+settings_after_second=$(dotpi_file_sha256 "$OVERLAY/settings.json")
 [ "$settings_after" = "$settings_after_second" ] || fail "overlay settings.json changed after defaults were merged"
 
 assert_link "$FIXTURE/shared/settings.json"
