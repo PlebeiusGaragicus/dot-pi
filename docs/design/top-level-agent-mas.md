@@ -245,6 +245,8 @@ The worker process should inherit the MAS current working directory and the runt
 
 The launch path should mirror prior nested orchestrator subprocess conventions where practical: spawn a child `pi` process in JSON mode, set `PI_CODING_AGENT_DIR` to the selected top-level agent root, read that agent's `pi-args`, pass `--persona <name>` when a persona is selected, pass an explicit worker trace `--session-dir`, and send the delegated task through print mode. The extension should not invoke the dot-pi dispatcher for workers in the first version.
 
+Parallel `tasks[]` fan-out is capped globally in code; workers whose resolved provider is **`lmstudio`** or **`ollama`** additionally share a small concurrency pool (default one in-flight worker) so local inference endpoints are not saturated by simultaneous children. Resolution follows the worker’s `--model` line or `defaultProvider` in `shared/settings.json`.
+
 Worker replies are not human-facing. A worker is part of a chain, and its final reply is consumed by the orchestrator. Worker instructions should explicitly say that the worker should not summarize for the user, explain its process conversationally, or add human-centered preamble and closing text. The final reply should carry only the information the orchestrator needs to decide the next step.
 
 Worker output can be natural language. It does not need to follow a strict schema because the top-level orchestrator is another agent and can interpret concise operational replies. The important invariant is content, not format: the reply should tell the orchestrator what happened, what artifacts were created or changed, what decisions matter, and whether anything blocked or failed.

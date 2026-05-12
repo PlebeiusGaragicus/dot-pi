@@ -13,7 +13,9 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ## [Unreleased]
 
-_No entries yet._
+### Added
+
+- **`top-level-agent-orchestrator`**: cap concurrent worker child processes for **`lmstudio`** and **`ollama`** (shared slot, default one) so parallel `subagent` `tasks[]` does not overload local inference; other providers stay parallel up to the existing task cap.
 
 ---
 

@@ -20,6 +20,11 @@ const CORE_AGENT_NAMES = ["ask", "scout", "writer", "coder", "web"] as const;
 const MODEL_DEFAULT_ALIASES = ["DEFAULT_AGENTIC_MODEL", "DEFAULT_FAST_MODEL", "DEFAULT_VLM_MODEL"] as const;
 const MAX_PARALLEL_TASKS = 10;
 
+/** Max concurrent child `pi` workers hitting lmstudio/ollama (raise when local hardware allows). */
+const LOCAL_INFERENCE_PARALLEL_LIMIT = 1;
+
+const LOCAL_THROTTLED_PROVIDER_IDS = new Set(["lmstudio", "ollama"]);
+
 type CoreAgentName = (typeof CORE_AGENT_NAMES)[number];
 type InvocationMode = "single" | "parallel" | "chain";
 
@@ -262,6 +267,109 @@ function readPiArgs(agentDir: string): string[] {
 	}
 }
 
+function getModelArg(piArgs: string[]): string | null {
+	for (let i = 0; i < piArgs.length; i++) {
+		if (piArgs[i] === "--model") {
+			const value = piArgs[i + 1];
+			if (value && !value.startsWith("--")) return value;
+		}
+	}
+	return null;
+}
+
+/** Provider id from `provider/model`, or the full string when there is no `/` (bare provider id). */
+function getProviderFromModel(model: string | null): string | null {
+	if (!model) return null;
+	const x = model.trim();
+	if (!x) return null;
+	const i = x.indexOf("/");
+	if (i > 0) return x.slice(0, i).trim() || null;
+	return x;
+}
+
+function readDefaultProvider(): string | null {
+	let root: string;
+	try {
+		root = findDotPiRoot();
+	} catch {
+		return null;
+	}
+	const settingsPath = path.join(root, "shared", "settings.json");
+	try {
+		if (!fs.existsSync(settingsPath)) return null;
+		const raw = fs.readFileSync(settingsPath, "utf-8");
+		const data = JSON.parse(raw) as { defaultProvider?: unknown };
+		const p = data.defaultProvider;
+		if (typeof p !== "string") return null;
+		const t = p.trim();
+		return t || null;
+	} catch {
+		return null;
+	}
+}
+
+function resolveWorkerProvider(piArgs: string[]): string | null {
+	const model = getModelArg(piArgs);
+	if (model) return getProviderFromModel(model);
+	return readDefaultProvider();
+}
+
+function isThrottledLocalProvider(provider: string | null): boolean {
+	if (!provider) return false;
+	return LOCAL_THROTTLED_PROVIDER_IDS.has(provider.trim().toLowerCase());
+}
+
+interface ResourcePoolState {
+	active: number;
+	queue: Array<() => void>;
+}
+
+const resourcePoolStates = new Map<string, ResourcePoolState>();
+
+function getResourcePoolState(pool: string): ResourcePoolState {
+	let state = resourcePoolStates.get(pool);
+	if (!state) {
+		state = { active: 0, queue: [] };
+		resourcePoolStates.set(pool, state);
+	}
+	return state;
+}
+
+async function acquireResourcePoolSlot(pool: string, limit: number): Promise<() => void> {
+	const state = getResourcePoolState(pool);
+	const cap = Math.max(1, limit);
+
+	if (state.active >= cap) {
+		await new Promise<void>((resolve) => {
+			state.queue.push(() => {
+				state.active++;
+				resolve();
+			});
+		});
+	} else {
+		state.active++;
+	}
+
+	let released = false;
+	return () => {
+		if (released) return;
+		released = true;
+		state.active = Math.max(0, state.active - 1);
+		while (state.active < cap && state.queue.length > 0) {
+			const next = state.queue.shift();
+			if (!next) break;
+			next();
+		}
+	};
+}
+
+async function acquireLocalInferenceSlot(piArgs: string[]): Promise<() => void> {
+	if (!isThrottledLocalProvider(resolveWorkerProvider(piArgs))) {
+		return () => {};
+	}
+	return acquireResourcePoolSlot("localInference", LOCAL_INFERENCE_PARALLEL_LIMIT);
+}
+
 function buildWorkerTask(task: string): string {
 	return [
 		"You are running as a worker for a parent MAS orchestrator.",
@@ -399,8 +507,10 @@ async function runWorker(
 		return result;
 	}
 
-	const args: string[] = ["--mode", "json", "--session-dir", traceManager.traceDir];
 	const piArgs = readPiArgs(agent.dir);
+	const release = await acquireLocalInferenceSlot(piArgs);
+
+	const args: string[] = ["--mode", "json", "--session-dir", traceManager.traceDir];
 	args.push(...piArgs);
 	if (persona) args.push("--persona", persona);
 	args.push("-p", buildWorkerTask(task));
@@ -502,6 +612,7 @@ async function runWorker(
 		}
 		return currentResult;
 	} finally {
+		release();
 		currentResult.endedAt = new Date().toISOString();
 		traceManager.finishWorker(manifestEntry, currentResult);
 		await traceManager.flush();
