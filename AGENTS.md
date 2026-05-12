@@ -299,6 +299,8 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 
 After `pi install` / `pi update`, run **`dotpi symlink-agents`** when postinstall tells you to (or use **`--rc FILE`** if your shell is not bash/zsh). This appends an idempotent `export PATH="…/core/bin:$PATH"` block to `~/.zshrc` or `~/.bashrc`.
 
+If the command reports **permission denied**, the rc file may be **owned by root**; the tool prints a **`sudo chown "$(whoami)" …`** fix—see [docs/install.md](docs/install.md#permission-denied-on-zshrc-or-bashrc).
+
 ### Write a custom extension
 
 1. Create a directory: `<agentDir>/extensions/<ext-name>/index.ts`

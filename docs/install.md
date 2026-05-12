@@ -73,6 +73,26 @@ Install/update scripts may create missing directories and seed files, but they m
 
 Use **`dotpi symlink-agents`** (or the full path printed by postinstall) so `ask`, `mas`, `coder`, etc. resolve in new terminals. Options: **`--dry-run`**, **`--rc FILE`** (e.g. fish users can target a file they maintain). Re-run after changing install location; the command refreshes the marked block.
 
+### Permission denied on `~/.zshrc` or `~/.bashrc`
+
+If **`dotpi symlink-agents`** prints **`cannot write`** / **`touch: … Permission denied`**, your rc file is probably **not owned by your user** (often **`root`**) because something edited it with **`sudo`** once.
+
+Check:
+
+```bash
+ls -la ~/.zshrc ~/.bashrc 2>/dev/null
+```
+
+If you see `root` as the owner, fix it **once**, then rerun **`dotpi symlink-agents`** (without sudo):
+
+```bash
+sudo chown "$(whoami)" ~/.zshrc
+# and/or
+sudo chown "$(whoami)" ~/.bashrc
+```
+
+Do **not** run **`dotpi symlink-agents`** with **`sudo`** as a workaround; that can make ownership worse. The command prints **`ls -la`** and a copy-paste **`chown`** line when it detects a non-writable target.
+
 ## Agent Commands
 
 Commands such as `coder`, `ask`, or `mas` are symlinks in `core/bin` that point to `dispatch-agent`. The symlink name selects `agents/<name>/`, sets `PI_CODING_AGENT_DIR`, reads that agent's `pi-args`, and runs `pi`.

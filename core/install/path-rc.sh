@@ -73,6 +73,44 @@ dotpi_path_export_line() {
   printf 'export PATH="%s:$PATH"\n' "$bin_dir"
 }
 
+# True if we can create or update rc_file as the current user.
+dotpi_rc_target_writable() {
+  local rc_file="$1" dir
+  dir=$(dirname "$rc_file")
+  if [ -e "$rc_file" ]; then
+    [ -w "$rc_file" ] && return 0
+    return 1
+  fi
+  mkdir -p "$dir" 2>/dev/null || true
+  [ -w "$dir" ] && return 0
+  return 1
+}
+
+# Explain ownership / parent-dir issues (shared by permission and move failures).
+dotpi_print_rc_ownership_fixup() {
+  local rc_file="$1" dir
+  if [ -e "$rc_file" ]; then
+    printf '\nThis file exists but is not writable by your user. Common cause: it was created or edited with sudo and is owned by root.\n\n' >&2
+    ls -la "$rc_file" 2>/dev/null | sed 's/^/  /' >&2 || true
+    printf '\nFix ownership, then run symlink-agents again:\n\n' >&2
+    printf '  sudo chown "$(whoami)" %q\n' "$rc_file" >&2
+    printf '\n(Use your normal account; avoid running dotpi symlink-agents with sudo.)\n' >&2
+    return 0
+  fi
+  dir=$(dirname "$rc_file")
+  printf '\nCannot create %q (parent directory not writable).\n\n' "$rc_file" >&2
+  ls -ld "$dir" 2>/dev/null | sed 's/^/  /' >&2 || true
+  printf '\nExample fix:\n\n' >&2
+  printf '  sudo chown "$(whoami)" %q\n' "$dir" >&2
+}
+
+# Explain permission errors (e.g. ~/.zshrc owned by root after a past sudo edit).
+dotpi_print_rc_permission_help() {
+  local rc_file="$1"
+  printf 'dotpi: cannot write %q\n' "$rc_file" >&2
+  dotpi_print_rc_ownership_fixup "$rc_file"
+}
+
 # Idempotent: remove old marked block if present, append fresh block.
 # Args: rc_file [dry_run: 1 or 0]
 dotpi_append_path_block() {
@@ -89,12 +127,22 @@ dotpi_append_path_block() {
     dotpi_path_block_begin
     printf '%s\n' "$line"
     dotpi_path_block_end
+    if ! dotpi_rc_target_writable "$rc_file"; then
+      printf '\nWarning: %q is not writable; a real run would fail.\n' "$rc_file" >&2
+      dotpi_print_rc_ownership_fixup "$rc_file"
+      printf '\n(--dry-run only; fix permissions above, then run without --dry-run.)\n' >&2
+    fi
     return 0
+  fi
+
+  if ! dotpi_rc_target_writable "$rc_file"; then
+    dotpi_print_rc_permission_help "$rc_file"
+    return 1
   fi
 
   mkdir -p "$(dirname "$rc_file")" 2>/dev/null || true
   touch "$rc_file" || {
-    printf 'dotpi: cannot write %s\n' "$rc_file" >&2
+    dotpi_print_rc_permission_help "$rc_file"
     return 1
   }
 
@@ -112,6 +160,10 @@ dotpi_append_path_block() {
   } >>"$tmp" || return 1
   mv "$tmp" "$rc_file" || {
     rm -f "$tmp"
+    printf 'dotpi: could not replace %q (move failed).\n' "$rc_file" >&2
+    if [ -e "$rc_file" ] && [ ! -w "$rc_file" ]; then
+      dotpi_print_rc_ownership_fixup "$rc_file"
+    fi
     return 1
   }
   return 0
@@ -133,6 +185,7 @@ dotpi_postinstall_path_hint() {
   printf '  "%s" symlink-agents\n' "$dotpi_abs"
   printf '\n'
   printf 'Then open a new terminal, or run: source ~/.zshrc   (or ~/.bashrc)\n'
+  printf 'If that command reports permission denied, dot-pi prints a chown fix — or see docs/install.md (PATH for agent commands).\n'
   printf '=====================================================================\n'
   printf '\n'
 }

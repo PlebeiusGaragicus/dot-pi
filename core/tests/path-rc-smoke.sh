@@ -45,4 +45,17 @@ export PATH="$ROOT/core/bin"
 dotpi_core_bin_on_path || fail "detect with only fixture bin on PATH"
 
 export PATH="$_saved_PATH"
+
+# Non-writable rc → stderr should mention chown (pre-flight, no sudo)
+perm_rc="$HOME/.zshrc-perm-smoke"
+: >"$perm_rc"
+chmod a-w "$perm_rc" 2>/dev/null || true
+if dotpi_append_path_block "$perm_rc" 0 2>"$TMP/perm.err"; then
+  chmod u+w "$perm_rc" 2>/dev/null || true
+  fail "append to read-only rc should fail"
+fi
+grep -q 'chown' "$TMP/perm.err" || fail "permission error should suggest chown"
+chmod u+w "$perm_rc" 2>/dev/null || true
+rm -f "$perm_rc" "$TMP/perm.err"
+
 echo "path-rc smoke: ok"

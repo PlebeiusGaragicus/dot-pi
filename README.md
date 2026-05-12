@@ -14,7 +14,7 @@ After install, if postinstall reports that agent commands are not on your `PATH`
 dotpi symlink-agents
 ```
 
-That appends an idempotent block to `~/.zshrc` or `~/.bashrc` (from `$SHELL`). Then run any shipped agent command from a project directory:
+That appends an idempotent block to `~/.zshrc` or `~/.bashrc` (from `$SHELL`). If you get **permission denied**, the file may be owned by `root` (often from a past `sudo` edit); the command prints a **`sudo chown "$(whoami)" …`** line to repair it—see [docs/install.md](docs/install.md#permission-denied-on-zshrc-or-bashrc). Then run any shipped agent command from a project directory:
 
 ```bash
 ask -p "What does this project do?"
