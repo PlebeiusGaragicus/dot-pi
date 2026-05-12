@@ -92,6 +92,7 @@ shellcheck --shell=bash --severity=warning --external-sources \
 ./dotpi --help
 bash core/tests/dispatch-agent-smoke.sh
 bash core/tests/postinstall-smoke.sh
+bash core/tests/path-rc-smoke.sh
 bash -n dotpi dispatch-agent core/commands/*.sh core/dispatch/*.sh core/install/*.sh
 
 # extension typecheck

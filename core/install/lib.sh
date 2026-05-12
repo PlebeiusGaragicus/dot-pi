@@ -206,6 +206,10 @@ dotpi_relink() {
 
   printf 'postinstall: dot-pi package root: %s\n' "$dot_pi_dir"
   printf 'postinstall: overlay: %s\n' "$overlay"
-  printf 'postinstall: add to PATH if needed: export PATH="%s:$PATH"\n' "$bin_dir"
   [ -n "$pi_agent_dir" ] && true
 }
+
+# shellcheck source=path-rc.sh
+_LIB_INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1090
+source "$_LIB_INSTALL_DIR/path-rc.sh"

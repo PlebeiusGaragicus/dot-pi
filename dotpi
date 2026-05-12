@@ -22,6 +22,7 @@ Commands:
   link-skill <agent> <skill> [...]         Symlink one or more shared skills into an agent config
   link-auth <src> <dst>                    Override auth.json symlink (src: agent name, file path, or "shared")
   relink                                   Rebuild local symlinks and overlay resource links
+  symlink-agents [--dry-run] [--rc FILE]   Add core/bin to PATH in .zshrc or .bashrc (idempotent)
   version | --version | -v                 Print dotpi version (from VERSION file) and exit
 
 Examples:
@@ -33,6 +34,7 @@ Examples:
   dotpi link-skill my-agent searxng
   dotpi link-auth shared blog             # point blog at shared/auth.json
   dotpi relink                            # rerun postinstall-style local wiring
+  dotpi symlink-agents                    # add agent commands to PATH in shell rc
 EOF
   exit 1
 }
@@ -53,6 +55,8 @@ case "$cmd" in
   link-skill)   source "$COMMANDS_DIR/link-skill.sh" "$@" ;;
   link-auth)    source "$COMMANDS_DIR/link-auth.sh" "$@" ;;
   relink|sync)  source "$COMMANDS_DIR/sync.sh" "$@" ;;
+  symlink-agents)
+                source "$COMMANDS_DIR/symlink-agents.sh" "$@" ;;
   doctor)       echo "dotpi doctor is deprecated; use 'dotpi relink' to repair local wiring." >&2; exit 1 ;;
   version|--version|-v)
                 v="unknown"

@@ -8,7 +8,7 @@ dot-pi packages multiple [pi](https://github.com/PlebeiusGaragicus/pi-mono) agen
 pi install git:https://github.com/PlebeiusGaragicus/dot-pi
 ```
 
-Add the installed `core/bin` path printed by postinstall to your shell, then run an agent from any project:
+Add the installed `core/bin` path to your shell (postinstall prints **`dotpi symlink-agents`** when needed), then run an agent from any project:
 
 ```bash
 cd /any/project
@@ -19,7 +19,7 @@ Use `pi update` for upgrades.
 
 ## Local development
 
-To hack on dot-pi from a **git clone**, put **that clone’s** `core/bin` first on `PATH` after `npm install` in the clone—no `pi update` per edit. See the [README](https://github.com/PlebeiusGaragicus/dot-pi#local-development) **Local development** section for steps and the optional `core/tests` TypeScript check.
+To hack on dot-pi from a **git clone**, put **that clone’s** `core/bin` first on `PATH` after `npm install` in the clone—no `pi update` per edit—or run **`./dotpi symlink-agents --rc ~/.zshrc`** once. See the [README](https://github.com/PlebeiusGaragicus/dot-pi#local-development) **Local development** section for steps and the optional `core/tests` TypeScript check.
 
 ## How It Works
 

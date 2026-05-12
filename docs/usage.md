@@ -4,7 +4,7 @@ This guide covers the common day-to-day command flow. For exact terminal syntax,
 
 ## Prerequisites
 
-Install with Pi and put the installed package's `core/bin` on your `PATH`:
+Install with Pi, then ensure agent commands are on your `PATH` (postinstall prints **`dotpi symlink-agents`** when needed, or run it manually). See [Installation](install.md#path-for-agent-commands).
 
 ```bash
 pi install git:https://github.com/PlebeiusGaragicus/dot-pi

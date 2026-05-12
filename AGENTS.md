@@ -295,6 +295,10 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 1. Create `shared/skills/<name>/SKILL.md` with frontmatter (`name`, `description`)
 2. Link into an agent config: `dotpi link-skill <agent> <name>` (or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`)
 
+### Add agent commands to your PATH
+
+After `pi install` / `pi update`, run **`dotpi symlink-agents`** when postinstall tells you to (or use **`--rc FILE`** if your shell is not bash/zsh). This appends an idempotent `export PATH="…/core/bin:$PATH"` block to `~/.zshrc` or `~/.bashrc`.
+
 ### Write a custom extension
 
 1. Create a directory: `<agentDir>/extensions/<ext-name>/index.ts`
@@ -321,7 +325,7 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `agents/*/APPEND_SYSTEM.md` | Yes | Appends to pi's default system prompt (pi-native) |
 | `agents/*/pi-args` | Yes | Default CLI flags (read by `dispatch-agent`) |
 | `agents/*/extensions/**/*.ts` | Yes | Custom agent extensions |
-| `dotpi` | Yes | CLI dispatcher (setup, create, list, link-skill, link-auth) |
+| `dotpi` | Yes | CLI dispatcher (setup, create, list, link-skill, link-auth, symlink-agents) |
 | `core/commands/*.sh` | Yes | Subcommand scripts (sourced by dotpi) |
 | `dispatch-agent` | Yes | Symlink target in core/bin/ (dispatches commands to agents) |
 | `core/dispatch/*.sh` | Yes | Focused launcher internals sourced by `dispatch-agent` |

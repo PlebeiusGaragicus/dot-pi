@@ -8,7 +8,13 @@ Custom [pi](https://github.com/PlebeiusGaragicus/pi-mono) agent configs as a Pi-
 pi install git:https://github.com/PlebeiusGaragicus/dot-pi
 ```
 
-Add the installed `core/bin` directory printed by postinstall to your `PATH`, then run any shipped agent command from a project directory:
+After install, if postinstall reports that agent commands are not on your `PATH`, run the printed command (usually `"<package>/core/bin/dotpi" symlink-agents`) or from any directory where `dotpi` resolves to this tree:
+
+```bash
+dotpi symlink-agents
+```
+
+That appends an idempotent block to `~/.zshrc` or `~/.bashrc` (from `$SHELL`). Then run any shipped agent command from a project directory:
 
 ```bash
 ask -p "What does this project do?"
@@ -42,7 +48,7 @@ You can iterate on this repository from a normal **`git clone`** without running
 
 1. Clone the repo to any directory and **`cd`** into it.
 2. Run **`npm install`** in the repo root so **`postinstall`** runs (symlinks, overlay wiring—same as after **`pi install`**).
-3. **Prepend** this clone’s **`core/bin`** to **`PATH`** (before any Pi-installed dot-pi **`core/bin`** if you have both).
+3. **Prepend** this clone’s **`core/bin`** to **`PATH`** (before any Pi-installed dot-pi **`core/bin`** if you have both), or run **`./dotpi symlink-agents --rc ~/.zshrc`** (or **`~/.bashrc`**) once so your shell rc picks up this clone.
 4. Run **`ask`**, **`mas`**, **`dotpi`**, etc. as usual. You still need a working **`pi`** binary and the usual **`~/.pi/agent`** auth and model files.
 
 Optional TypeScript check for shared extensions:
