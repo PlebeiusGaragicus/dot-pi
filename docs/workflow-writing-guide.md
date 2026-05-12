@@ -1,6 +1,6 @@
 # Workflow Writing Guide
 
-This guide condenses the rules for writing `mas` workflow prompts. Use it before creating or revising files under `agents/mas/prompts/` or project-local `.pi/prompts/`.
+This guide condenses the rules for writing `mas` workflow prompts. Use it before creating or revising user-authored prompts under **`$DOT_PI_OVERLAY/mas/prompts/`** (default **`~/.pi/dot-pi/mas/prompts/`**) or project-local **`.pi/prompts/`**. Shipped examples live under **`agents/mas/prompts/`** in the Pi-managed package clone; that tree is **not** a safe place for personal or project workflows you expect to survive **`pi update`**—use overlay or project-local instead.
 
 ## Core Rule
 
@@ -67,6 +67,10 @@ Treat the text below as the user's instructions, including scope, inputs, output
 - Validating only the worker's final message instead of reading the artifact that will matter after the run.
 - Hiding partial failures. Continue only when the remaining artifacts are sufficient, and report failed URLs, pages, tests, or missing dependencies.
 
-## Project Workflow Location
+## Where to store workflow prompts
 
-Bundled prompts live in `agents/mas/prompts/`. Project-specific prompts should live in `.pi/prompts/` under the directory where the user launches `mas`. Project prompts are isolated to that project while still using the shared `mas` worker catalog.
+Three locations matter:
+
+- **Bundled** (`agents/mas/prompts/` under the dot-pi package root): shipped with the repo; reset on **`pi update`**. Maintainer and product prompts only—not for durable user-authored workflows.
+- **Overlay** (`$DOT_PI_OVERLAY/mas/prompts/`, typically `~/.pi/dot-pi/mas/prompts/`): durable per-machine; available whenever `mas` runs, in any working directory. **Default recommendation** for user-authored `mas` workflows.
+- **Project-local** (`.pi/prompts/` next to where the user launches `mas`): git-trackable with the project; isolated to that cwd/repo while still using the shared `mas` worker catalog. Use when the workflow should live only in that project.

@@ -1,10 +1,14 @@
 # Workflow Builder
 
-Help the user create, troubleshoot, enhance, or revise a project-local `mas` workflow prompt. Generated or modified workflows must live under the current working directory's `.pi/prompts/` directory unless the user explicitly asks for a different location.
+Help the user create, troubleshoot, enhance, or revise a `mas` workflow prompt stored in a **durable** location. Do **not** write or modify files under the bundled dot-pi git tree (`$DOT_PI_DIR/agents/mas/prompts/` or any path inside `$DOT_PI_DIR` that ships with the package): those files are wiped or reset on **`pi update`**. Contributing bundled prompts is out of scope for this workflow (use a normal maintainer PR).
 
 ## Goal
 
-Turn a workflow idea, bug report, rough draft, or existing project workflow into a coherent prompt-template file that `mas` can run from the current project. The result should be a durable `.pi/prompts/<workflow-name>.md` artifact, not just advice in chat.
+Turn a workflow idea, bug report, rough draft, or existing workflow into a coherent prompt-template file that `mas` can run. The result should be a durable artifact on disk, not just advice in chat.
+
+**Default storage:** `$DOT_PI_OVERLAY/mas/prompts/<slug>.md` (when `$DOT_PI_OVERLAY` is unset, this is typically `~/.pi/dot-pi/mas/prompts/<slug>.md`). These prompts apply whenever `mas` runs, regardless of current working directory.
+
+**Optional storage:** `.pi/prompts/<slug>.md` under the current working directory—project-only, useful when the workflow should live in the repo with the project.
 
 ## Required Trajectory
 
@@ -15,11 +19,16 @@ Follow these phases in order. Do not skip the review checkpoint before writing u
 - Parse the user request at the end of this prompt for:
   - create vs modify mode
   - desired workflow name or existing workflow path
+  - **storage tier**: durable `mas` overlay vs project-local `.pi/prompts/`, unless already explicit in the user text
   - workflow goal, expected user inputs, artifact outputs, quality gates, stop conditions, and known pain points
   - whether the workflow should read local files, edit files, run commands, browse the web, write reports, or ask for user choices
-- Project workflow output defaults to `.pi/prompts/<slug>.md`, where `<slug>` is lowercase kebab-case derived from the workflow name.
+- Derive `<slug>` as lowercase kebab-case from the workflow name. Resolve the **target path** from storage tier:
+  - **Overlay (default):** `$DOT_PI_OVERLAY/mas/prompts/<slug>.md`
+  - **Project-local:** `.pi/prompts/<slug>.md` (relative to current working directory)
+- If the user did **not** clearly specify overlay vs project-local, use `questionnaire` before invoking workers. Offer: durable overlay (survives `pi update`, available in every project with `mas`), project-only under `.pi/prompts/` (stays in the repo/cwd), or cancel. Skip this questionnaire when the user already stated their choice.
+- If the user points at an existing file to modify: if that path is under `$DOT_PI_DIR/agents/mas/prompts/` (bundled), **do not** write there. Use `questionnaire` to choose overlay or project destination; you may read the bundled file as a read-only source and copy its intent into the new durable path.
 - If the request does not identify whether to create or modify, or lacks enough intent to design the workflow responsibly, use `questionnaire` before invoking workers.
-- If the requested filename already exists and the user did not ask to modify it, use `questionnaire` to choose overwrite, revise existing, pick a new name, or stop.
+- If the requested filename already exists at the chosen target and the user did not ask to modify it, use `questionnaire` to choose overwrite, revise existing, pick a new name, or stop.
 - After worker delegation begins, do not use `questionnaire` except at the explicit review checkpoints in this workflow.
 
 ### 2. Load Workflow Guidance
@@ -35,14 +44,17 @@ If the guide is missing or insufficient for the request, also consult only the n
 - `$DOT_PI_DIR/agents/mas/prompts/deepresearch.md`
 - `$DOT_PI_DIR/agents/mas/prompts/pdf-ocr.md`
 
+Reading example files under `$DOT_PI_DIR/agents/mas/prompts/` is allowed for reference only. Do not use `writer` or `coder` to change those paths.
+
 Use these references to enforce capability boundaries, artifact handoffs, validation phases, stop conditions, and final user request handling.
 
-### 3. Inspect Existing Project Context
+### 3. Inspect Existing Context
 
-Use your own `ls` / `find` / `grep` / `read` tools, or call `scout` for read-only exploration, to inspect relevant local context:
+Use your own `ls` / `find` / `grep` / `read` tools, or call `scout` for read-only exploration, to inspect relevant context:
 
-- `.pi/prompts/` for existing project workflows
-- the existing workflow file when modifying
+- `.pi/prompts/` for existing project-local workflows
+- `$DOT_PI_OVERLAY/mas/prompts/` for existing overlay workflows (resolve `$DOT_PI_OVERLAY` from the environment)
+- the existing workflow file when modifying (path from the approved spec)
 - nearby project docs or artifacts mentioned by the user
 
 If using `scout`, ask it only to locate and summarize local files. Do not ask it to edit, run commands, or browse the web.
@@ -53,7 +65,7 @@ For modify mode, read the current workflow before proposing changes. Preserve us
 
 Present a concise workflow spec to the user before writing files. Include:
 
-- workflow name and target path
+- workflow name, storage tier, and **full target path**
 - create or modify mode
 - user input expected in the final user request section
 - phases and delegation plan
@@ -67,11 +79,11 @@ Then use `questionnaire` to ask whether the user approves the spec, wants revisi
 
 Stop if the user cancels. Do not write a workflow from an unapproved spec.
 
-### 5. Prepare Project Prompt Directory
+### 5. Prepare Prompt Directory
 
-Confirm `.pi/prompts/` exists. If it does not exist, call `coder` once with a tightly scoped task to create only that directory.
+Prepare the parent directory for the **approved target path** only.
 
-The coder task must be equivalent to:
+**If the target is project-local** (`.pi/prompts/<slug>.md`): confirm `.pi/prompts/` exists under the current working directory. If it does not exist, call `coder` once with a tightly scoped task equivalent to:
 
 ```text
 Create the project prompt directory `.pi/prompts/` in the current working directory if it does not already exist.
@@ -83,16 +95,29 @@ Constraints:
 Reply with the directory path and whether it was created or already existed.
 ```
 
+**If the target is overlay** (`$DOT_PI_OVERLAY/mas/prompts/<slug>.md`): confirm `$DOT_PI_OVERLAY/mas/prompts/` exists. It is usually created by install/relink. If it is missing, call `coder` once with a tightly scoped task equivalent to:
+
+```text
+Create the directory `$DOT_PI_OVERLAY/mas/prompts/` if it does not already exist (use the actual expanded value of `$DOT_PI_OVERLAY` from the environment).
+
+Constraints:
+- Do not create or modify any other files or directories.
+- Do not write under `$DOT_PI_DIR/agents/mas/prompts/` or any other bundled package path.
+- Do not initialize config, install packages, or run unrelated commands.
+
+Reply with the directory path and whether it was created or already existed.
+```
+
 If directory creation fails, stop and report the blocker.
 
 ### 6. Write Or Revise Workflow
 
-Call `writer` once to create or revise the workflow file. The writer task must include:
+Call `writer` once to create or revise the workflow file. The writer task must include the **approved absolute or workspace-relative target path** (expand `$DOT_PI_OVERLAY` for overlay so `writer` receives a concrete path). The writer task must include:
 
 ```text
 You are writing a `mas` workflow prompt template.
 
-Target path: .pi/prompts/<workflow-name>.md
+Target path: <approved-target-path>
 Mode: create new | revise existing
 
 Use the approved spec below and write a coherent markdown workflow prompt.
@@ -103,7 +128,7 @@ Requirements:
 - Include explicit phases, worker delegation contracts, artifact conventions, validation, stop conditions, and final response guidance.
 - End with a `## User Request` section that contains the standard user input block. The placeholder line must be the dollar-at token, written as a dollar sign immediately followed by an at sign, and it should appear only in that final block.
 - For modify mode, preserve useful existing behavior and improve only what the approved spec requires.
-- Do not edit files outside `.pi/prompts/<workflow-name>.md`.
+- Do not edit any file other than the single target path above.
 - Return a concise confirmation with the written path, major changes, and any unresolved caveats.
 
 Approved spec:
@@ -117,7 +142,7 @@ If the workflow needs command execution or generated non-prose assets during wri
 
 ### 7. Validate Written Workflow
 
-After `writer` returns, use your own `read` tool to inspect `.pi/prompts/<workflow-name>.md`.
+After `writer` returns, use your own `read` tool to inspect the **approved target path**.
 
 Validate that it has:
 
@@ -137,10 +162,10 @@ If you use `ask` with persona `judge` for an additional semantic check, pass the
 
 ## Artifact Conventions
 
-- Project workflows are stored under `.pi/prompts/`.
-- Default generated path is `.pi/prompts/<workflow-name>.md`.
+- **Bundled** (`$DOT_PI_DIR/agents/mas/prompts/`): shipped with dot-pi; **never** write or modify via this workflow.
+- **Overlay (default for new workflows):** `$DOT_PI_OVERLAY/mas/prompts/<workflow-name>.md` — durable, survives `pi update`, loaded for every `mas` session.
+- **Project-local (opt-in):** `.pi/prompts/<workflow-name>.md` — scoped to the current project directory.
 - Workflow names should be lowercase kebab-case.
-- Do not write bundled prompts under `$DOT_PI_DIR/agents/mas/prompts/` unless the user explicitly requests a dot-pi repo change rather than a project workflow.
 - Do not create project-local subagents, skills, or config files unless the user explicitly expands the scope.
 
 ## Stop Conditions
@@ -148,21 +173,22 @@ If you use `ask` with persona `judge` for an additional semantic check, pass the
 - The user cancels at a questionnaire checkpoint.
 - The workflow idea is too ambiguous and the user declines to clarify.
 - The target file collision cannot be resolved.
-- `.pi/prompts/` cannot be created.
+- The required parent directory for the chosen target cannot be created.
 - The requested workflow requires structural capabilities not available to the `mas` worker catalog.
 - Validation fails after one repair pass.
 
 ## Final Response
 
-Keep the final response short. Prefer:
+Keep the final response short. Prefer one of:
 
-`Workflow written to ./.pi/prompts/<workflow-name>.md. Run it with /<workflow-name> ... from mas in this project.`
+- Overlay: `Workflow written to $DOT_PI_OVERLAY/mas/prompts/<workflow-name>.md` (or the expanded path). Run it with `/<workflow-name> ...` from `mas`.
+- Project-local: `Workflow written to ./.pi/prompts/<workflow-name>.md. Run it with /<workflow-name> ... from mas in this project.`
 
 If the workflow was modified, mention the path and the most important change. If the workflow stopped early, state the blocker and any partial artifact path.
 
 ## User Request
 
-Treat the text below as the user's instructions for creating, troubleshooting, enhancing, or revising a project-local `mas` workflow prompt.
+Treat the text below as the user's instructions for creating, troubleshooting, enhancing, or revising a `mas` workflow prompt (overlay or project-local per this template).
 
 **User prompt:**
 `$@`
