@@ -91,6 +91,12 @@ interface TraceManifest {
 	cwd: string;
 	createdAt: string;
 	workers: ManifestWorker[];
+	/** Pi `session_info.id` from orchestrator JSONL when discoverable (links traces to named sessions). */
+	parentSessionInfoId?: string;
+	/** Pi `session_info.name` from `/name` when discoverable. */
+	parentSessionInfoName?: string;
+	/** Basename of orchestrator `*.jsonl` the session_info was parsed from. */
+	parentOrchestratorSessionFile?: string;
 }
 
 type OnUpdateCallback = (partial: AgentToolResult<TopLevelSubagentDetails>) => void;
@@ -109,6 +115,89 @@ function makeRunId(parentAgent: string): string {
 	].join("-");
 	const suffix = randomBytes(3).toString("hex");
 	return `${timestamp}--${parentAgent}-${suffix}`;
+}
+
+/** Matches `dispatch-agent` `_cwd_to_session_dir` encoding for overlay session dirs. */
+function encodeCwdSessionDirKey(cwd: string): string {
+	const normalized = path.normalize(cwd);
+	const noLeading = normalized.replace(/^[/\\]+/, "");
+	const encoded = noLeading.replace(/[/\\]/g, "-");
+	return `--${encoded}--`;
+}
+
+function readUtf8FileTail(filePath: string, maxBytes: number): string {
+	const stat = fs.statSync(filePath);
+	const size = stat.size;
+	if (size === 0) return "";
+	const start = Math.max(0, size - maxBytes);
+	const fd = fs.openSync(filePath, "r");
+	try {
+		const len = size - start;
+		const buf = Buffer.alloc(len);
+		fs.readSync(fd, buf, 0, len, start);
+		let text = buf.toString("utf-8");
+		if (start > 0) {
+			const nl = text.indexOf("\n");
+			if (nl !== -1) text = text.slice(nl + 1);
+		}
+		return text;
+	} finally {
+		fs.closeSync(fd);
+	}
+}
+
+function parseLastSessionInfoFromJsonl(filePath: string): { id: string; name?: string } | null {
+	const tail = readUtf8FileTail(filePath, 512 * 1024);
+	const lines = tail.split("\n");
+	for (let i = lines.length - 1; i >= 0; i--) {
+		const line = lines[i]!.trim();
+		if (!line.includes("session_info")) continue;
+		let rec: { type?: string; id?: string; name?: string };
+		try {
+			rec = JSON.parse(line) as { type?: string; id?: string; name?: string };
+		} catch {
+			continue;
+		}
+		if (rec.type === "session_info" && typeof rec.id === "string" && rec.id.length > 0) {
+			return { id: rec.id, name: typeof rec.name === "string" ? rec.name : undefined };
+		}
+	}
+	return null;
+}
+
+interface ParsedOrchestratorSessionInfo {
+	sessionFile: string;
+	id: string;
+	name?: string;
+}
+
+function tryParseOrchestratorSessionInfo(parentAgentDir: string, cwd: string): ParsedOrchestratorSessionInfo | null {
+	const sessionsDir = path.join(agentOverlayDir(parentAgentDir), "sessions", encodeCwdSessionDirKey(cwd));
+	if (!isDirectory(sessionsDir)) return null;
+	let jsonlPaths: string[];
+	try {
+		jsonlPaths = fs
+			.readdirSync(sessionsDir)
+			.filter((f) => f.endsWith(".jsonl"))
+			.map((f) => path.join(sessionsDir, f))
+			.filter((p) => {
+				try {
+					return fs.statSync(p).isFile();
+				} catch {
+					return false;
+				}
+			})
+			.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+	} catch {
+		return null;
+	}
+	for (const filePath of jsonlPaths) {
+		const parsed = parseLastSessionInfoFromJsonl(filePath);
+		if (parsed) {
+			return { sessionFile: path.basename(filePath), id: parsed.id, name: parsed.name };
+		}
+	}
+	return null;
 }
 
 function findDotPiRoot(): string {
@@ -411,16 +500,40 @@ class TraceManager {
 	}
 
 	ensure(cwd: string): void {
-		if (this.manifest) return;
 		fs.mkdirSync(this.traceDir, { recursive: true });
-		this.manifest = {
-			parentAgent: this.parentAgentName,
-			traceRunId: this.runId,
-			cwd,
-			createdAt: new Date().toISOString(),
-			workers: [],
-		};
-		fs.writeFileSync(this.manifestPath, `${JSON.stringify(this.manifest, null, 2)}\n`);
+		const firstInit = !this.manifest;
+		if (firstInit) {
+			this.manifest = {
+				parentAgent: this.parentAgentName,
+				traceRunId: this.runId,
+				cwd,
+				createdAt: new Date().toISOString(),
+				workers: [],
+			};
+		}
+		const sessionMetaChanged = this.mergeOrchestratorSessionInfo(cwd);
+		if (firstInit || sessionMetaChanged) void this.write();
+	}
+
+	/** Best-effort: read latest orchestrator JSONL tail for `session_info` (e.g. after `/name`). */
+	private mergeOrchestratorSessionInfo(cwd: string): boolean {
+		if (!this.manifest) return false;
+		const info = tryParseOrchestratorSessionInfo(this.parentAgentDir, cwd);
+		if (!info) return false;
+		let changed = false;
+		if (this.manifest.parentSessionInfoId !== info.id) {
+			this.manifest.parentSessionInfoId = info.id;
+			changed = true;
+		}
+		if (info.name !== undefined && this.manifest.parentSessionInfoName !== info.name) {
+			this.manifest.parentSessionInfoName = info.name;
+			changed = true;
+		}
+		if (this.manifest.parentOrchestratorSessionFile !== info.sessionFile) {
+			this.manifest.parentOrchestratorSessionFile = info.sessionFile;
+			changed = true;
+		}
+		return changed;
 	}
 
 	startWorker(mode: InvocationMode, agent: string, persona: string | undefined, task: string, cwd: string): ManifestWorker {

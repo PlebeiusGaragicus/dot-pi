@@ -301,6 +301,10 @@ The trace bundle should include a small manifest for retrospective analysis:
   "parentAgent": "mas",
   "traceRunId": "2026-05-06-203104--mas-a7f3c2",
   "cwd": "/path/to/project",
+  "createdAt": "2026-05-06T20:31:04.000Z",
+  "parentSessionInfoId": "32d3902b",
+  "parentSessionInfoName": "wildfires report grok",
+  "parentOrchestratorSessionFile": "2026-05-12T12-00-00-000Z-session.jsonl",
   "workers": [
     {
       "index": 1,
@@ -313,6 +317,8 @@ The trace bundle should include a small manifest for retrospective analysis:
   ]
 }
 ```
+
+`parentSessionInfoId`, `parentSessionInfoName`, and `parentOrchestratorSessionFile` are optional: the orchestrator extension best-effort copies them from the latest `session_info` line in the orchestrator JSONL under `sessions/<cwd-key>/` whenever a worker trace is ensured, so retrospective workflows can correlate `subagent-traces/<run-id>/` with a named session.
 
 The manifest does not need to replace pi's JSONL session files. It only needs to make a complete MAS trajectory easy to find and inspect.
 

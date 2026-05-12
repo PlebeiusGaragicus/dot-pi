@@ -15,6 +15,8 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ### Added
 
+- **`/retro`** workflow prompt ([`agents/mas/prompts/retro.md`](agents/mas/prompts/retro.md)): retrospective review of a **`/name`d** `mas` session (overlay `sessions/` + `subagent-traces/`) via `scout`, read-only `coder`/`jq`, and `ask` critique.
+- **`top-level-agent-orchestrator`**: worker trace **`manifest.json`** may include **`parentSessionInfoId`**, **`parentSessionInfoName`**, and **`parentOrchestratorSessionFile`**, best-effort from the latest orchestrator **`session_info`** line whenever a trace bundle is ensured (helps correlate bundles to named sessions).
 - **`top-level-agent-orchestrator`**: cap concurrent worker child processes for **`lmstudio`** and **`ollama`** (shared slot, default one) so parallel `subagent` `tasks[]` does not overload local inference; other providers stay parallel up to the existing task cap.
 
 ### Changed
