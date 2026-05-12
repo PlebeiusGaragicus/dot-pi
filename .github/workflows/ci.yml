@@ -56,8 +56,16 @@ jobs:
             echo "Unexpected exit code: $rc (expected 0 or 1)"
             exit 1
           fi
-      - name: install --help
-        run: bash install --help
+      - name: install deprecation stub (exits 1 by design)
+        run: |
+          set +e
+          bash install --help
+          rc=$?
+          set -e
+          if [ "$rc" -ne 1 ]; then
+            echo "Unexpected exit code: $rc (expected 1 from removed curl installer stub)"
+            exit 1
+          fi
       - name: pi-args parsing (no trailing newline, comments, multi-word flags)
         run: |
           set -e
