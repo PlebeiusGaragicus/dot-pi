@@ -14,6 +14,8 @@ core/bin/
 google.json
 todo.jsonl
 
+package-lock.json
+
 # Agent runtime data
 agents/*/sessions/*
 !agents/*/sessions/.gitkeep
