@@ -69,11 +69,7 @@ fi
 
 if dotpi_append_path_block "$rc_file" 0; then
   printf 'dotpi: updated %s\n' "$rc_file"
-  case "$rc_file" in
-    *.zshrc) printf 'Run: source %q (or open a new terminal)\n' "$rc_file" ;;
-    *.bashrc) printf 'Run: source %q (or open a new terminal)\n' "$rc_file" ;;
-    *) printf 'Reload your shell config or open a new terminal.\n' ;;
-  esac
+  printf 'Run: source %q (or open a new terminal)\n' "$rc_file"
 else
   exit 1
 fi
