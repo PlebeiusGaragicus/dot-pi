@@ -6,11 +6,18 @@ dot-pi is installed as a normal Pi git package. The supported user flow is:
 pi install git:https://github.com/PlebeiusGaragicus/dot-pi
 ```
 
-Then ensure the installed package's `core/bin` directory is on your `PATH`. The package `postinstall` prints the exact line for your machine; it will look like:
+Then put the installed package's `core/bin` on your `PATH`. After `pi install` or `pi update`, **postinstall** checks whether agent commands from **this** install already resolve on your current `PATH`:
+
+- If yes, it prints a short confirmation.
+- If not, it prints a single command to run, for example:
 
 ```bash
-export PATH="$HOME/.pi/agent/git/github.com/PlebeiusGaragicus/dot-pi/core/bin:$PATH"
+"$HOME/.pi/agent/git/github.com/PlebeiusGaragicus/dot-pi/core/bin/dotpi" symlink-agents
 ```
+
+That updates `~/.zshrc` or `~/.bashrc` (based on your `$SHELL`) with an **idempotent** `export PATH="…/core/bin:$PATH"` block. You can also run `dotpi symlink-agents` from a shell where `dotpi` already refers to this install.
+
+Alternatively you can add the same `export PATH=…` line manually; the path is under `~/.pi/agent/git/.../core/bin` for git installs.
 
 Use ordinary Pi updates:
 
@@ -32,7 +39,7 @@ The old curl installer and `~/.dot-pi` product install are no longer supported.
 
 Pi clones this repository under `~/.pi/agent/git/...` and runs `npm install`, which triggers dot-pi's `postinstall` script. The script is idempotent and safe to run after every `pi update`.
 
-It creates or repairs clone-local symlinks, creates missing overlay directories, and prints PATH guidance. It does not overwrite user-owned overlay files.
+It creates or repairs clone-local symlinks, creates missing overlay directories, and prints **PATH** status (or a one-line `dotpi symlink-agents` command). It does not overwrite user-owned overlay files.
 
 ## Overlay State
 
@@ -61,6 +68,32 @@ $HOME/.pi/dot-pi
 ```
 
 Install/update scripts may create missing directories and seed files, but they must not overwrite, truncate, replace, or delete existing overlay files. In particular, `$DOT_PI_OVERLAY/settings.json` is shared user-owned settings for dot-pi agents.
+
+## PATH for agent commands
+
+Use **`dotpi symlink-agents`** (or the full path printed by postinstall) so `ask`, `mas`, `coder`, etc. resolve in new terminals. Options: **`--dry-run`**, **`--rc FILE`** (e.g. fish users can target a file they maintain). Re-run after changing install location; the command refreshes the marked block.
+
+On **Linux with bash**, `SHELL` is usually `/bin/bash` and dot-pi updates **`~/.bashrc`**. If you use a **login** shell that does not source `~/.bashrc` (some SSH or minimal setups), either run **`dotpi symlink-agents --rc ~/.bash_profile`** or add `if [ -f ~/.bashrc ]; then . ~/.bashrc; fi` to your **`~/.bash_profile`** so new sessions pick up the block.
+
+### Permission denied on `~/.zshrc` or `~/.bashrc`
+
+If **`dotpi symlink-agents`** prints **`cannot write`** / **`touch: … Permission denied`**, your rc file is probably **not owned by your user** (often **`root`**) because something edited it with **`sudo`** once.
+
+Check:
+
+```bash
+ls -la ~/.zshrc ~/.bashrc 2>/dev/null
+```
+
+If you see `root` as the owner, fix it **once**, then rerun **`dotpi symlink-agents`** (without sudo):
+
+```bash
+sudo chown "$(whoami)" ~/.zshrc
+# and/or (Linux/bash)
+sudo chown "$(whoami)" ~/.bashrc
+```
+
+Do **not** run **`dotpi symlink-agents`** with **`sudo`** as a workaround; that can make ownership worse. The command prints **`ls -la`** and a copy-paste **`chown`** line when it detects a non-writable target.
 
 ## Agent Commands
 
@@ -111,4 +144,4 @@ dotpi list
 ask -p "say hello"
 ```
 
-If `ask` is not found, add the printed `core/bin` path to your shell config and restart the shell.
+If `ask` is not found, run **`dotpi symlink-agents`** (see [PATH for agent commands](#path-for-agent-commands)) or add the printed `core/bin` path to your shell config and restart the shell.

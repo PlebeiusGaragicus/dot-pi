@@ -465,15 +465,17 @@ _setup_shell_rc() {
 }
 
 _rc="$(_setup_shell_rc)"
-if grep -qF "dot-pi" "$_rc" 2>/dev/null; then
-  echo "  Shell: already configured in $_rc"
+if grep -qF 'BEGIN_DOT_PI_PATH' "$_rc" 2>/dev/null; then
+  echo "  Shell: dot-pi PATH block already present in $_rc"
   echo ""
   echo "  Re-run 'dotpi setup' anytime to add, edit, or remove providers."
   echo "  Start a session:  lm"
 else
-  echo "  Shell: not configured yet. Add to $(basename "$_rc"):"
+  echo "  Shell: add agent commands to PATH with:"
   echo ""
-  echo "       export PATH=\"$DOT_PI_DIR/core/bin:\$PATH\""
+  echo "       dotpi symlink-agents"
+  echo ""
+  echo "  (Or manually: export PATH=\"$DOT_PI_DIR/core/bin:\$PATH\" in $_rc)"
   echo ""
   echo "  Then restart your shell and run:  lm"
 fi

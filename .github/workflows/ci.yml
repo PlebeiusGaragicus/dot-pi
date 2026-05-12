@@ -23,7 +23,8 @@ jobs:
             dotpi \
             install \
             dispatch-agent \
-            core/commands/*.sh
+            core/commands/*.sh \
+            core/install/*.sh
 
   typecheck:
     name: typecheck (extensions)
@@ -55,8 +56,16 @@ jobs:
             echo "Unexpected exit code: $rc (expected 0 or 1)"
             exit 1
           fi
-      - name: install --help
-        run: bash install --help
+      - name: install deprecation stub (exits 1 by design)
+        run: |
+          set +e
+          bash install --help
+          rc=$?
+          set -e
+          if [ "$rc" -ne 1 ]; then
+            echo "Unexpected exit code: $rc (expected 1 from removed curl installer stub)"
+            exit 1
+          fi
       - name: pi-args parsing (no trailing newline, comments, multi-word flags)
         run: |
           set -e
@@ -93,6 +102,11 @@ jobs:
           bash -n dispatch-agent
           for f in core/commands/*.sh; do bash -n "$f"; done
           for f in core/dispatch/*.sh; do bash -n "$f"; done
+          for f in core/install/*.sh; do bash -n "$f"; done
+      - name: postinstall smoke
+        run: bash core/tests/postinstall-smoke.sh
+      - name: path-rc smoke
+        run: bash core/tests/path-rc-smoke.sh
 
   gitignore-guard:
     name: gitignore vs tracked guard
