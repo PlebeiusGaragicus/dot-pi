@@ -22,7 +22,7 @@ export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
 
 The `${VAR:-...}` form is intentional: inline environment variables keep priority over the file.
 
-`model-defaults` is loaded at agent launch time by `dispatch-agent` and, for subagents, by `agent-orchestrator`, after the current agent config root is known. The overlay path is preferred; clone-local files are only a development fallback.
+`model-defaults` is loaded at agent launch time by `dispatch-agent` after the current agent config root is known. Child worker processes launched by **`top-level-agent-orchestrator`** inherit the same environment and load each worker’s own `pi-args` and `.model` from that worker’s `PI_CODING_AGENT_DIR`. The overlay path is preferred; clone-local files are only a development fallback.
 
 ### Agent `.model`
 
@@ -152,12 +152,12 @@ flowchart TD
   piSettings["pi settings.json default"] --> launch
 ```
 
-## Subagents
+## Child worker processes
 
-Subagents are separate pi config roots, so their own `pi-args` files are read before launch. The `agent-orchestrator` extension applies the same model default behavior for subagents:
+MAS worker invocations are separate pi config roots (`agents/ask`, `agents/scout`, etc.). Each worker’s own `pi-args` is read before launch, with the same model-default behavior as any top-level agent:
 
-- Load the subagent's own `.model` and repo-root `model-defaults`.
-- Expand `$DEFAULT_*` in the subagent's `pi-args`.
+- Load that worker’s own `.model` and overlay `model-defaults`.
+- Expand `$DEFAULT_*` in the worker’s `pi-args`.
 - Drop empty `--model` values.
 
-This keeps parent agents, standalone agents, and subagents on one model selection mechanism.
+This keeps orchestrators, standalone agents, and delegated workers on one model selection mechanism.

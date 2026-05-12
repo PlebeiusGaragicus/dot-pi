@@ -7,18 +7,14 @@ standalone_found=0
 echo "Multi-agent systems:"
 for dir in "$DOT_PI_DIR"/agents/*/; do
   [ -d "$dir" ] || continue
-  if [ ! -e "$dir/extensions/agent-orchestrator/index.ts" ] && [ ! -e "$dir/extensions/top-level-agent-orchestrator/index.ts" ]; then
+  if [ ! -e "$dir/extensions/top-level-agent-orchestrator/index.ts" ]; then
     continue
   fi
   name=$(basename "$dir")
   mas_found=1
-  agent_count=0
-  [ -d "$dir/agents" ] && agent_count=$(find "$dir/agents" -mindepth 1 -maxdepth 1 \( -type d -o -type l \) 2>/dev/null | wc -l | tr -d ' ')
   prompt_count=0
   [ -d "$dir/prompts" ] && prompt_count=$(find "$dir/prompts" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
-  orchestrator="nested"
-  [ -e "$dir/extensions/top-level-agent-orchestrator/index.ts" ] && orchestrator="top-level"
-  echo "  $name  ($agent_count subagents, $prompt_count prompts, orchestrator: $orchestrator)"
+  echo "  $name  ($prompt_count prompts, top-level MAS)"
 done
 if [ "$mas_found" -eq 0 ]; then
   echo "  (none -- run 'dotpi create <name>' to create one)"
@@ -28,7 +24,7 @@ echo ""
 echo "Standalone agents:"
 for dir in "$DOT_PI_DIR"/agents/*/; do
   [ -d "$dir" ] || continue
-  if [ -e "$dir/extensions/agent-orchestrator/index.ts" ] || [ -e "$dir/extensions/top-level-agent-orchestrator/index.ts" ]; then
+  if [ -e "$dir/extensions/top-level-agent-orchestrator/index.ts" ]; then
     continue
   fi
   name=$(basename "$dir")

@@ -37,8 +37,7 @@ dot-pi/
 │   ├── dispatch/             # launch modules
 │   ├── install/              # postinstall/relink helpers
 │   └── tests/
-├── agents/                   # top-level PI_CODING_AGENT_DIR roots
-├── subagents/                # reusable subagent roots
+├── agents/                   # top-level PI_CODING_AGENT_DIR roots (MAS + standalone + workers)
 ├── shared/                   # shared extensions, skills, prompts, themes
 └── docs/
 ```

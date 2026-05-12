@@ -13,11 +13,34 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ## [Unreleased]
 
+_No entries yet._
+
+---
+
+## [0.8.0] — 2026-05-11
+
+_Remove nested **`agent-orchestrator`** and subagent relink stack; MAS worker traces under **`$DOT_PI_OVERLAY`**; **`top-level-agent-orchestrator`**-only dispatch and **`dotpi create`**._
+
+### Removed
+
+- **`shared/extensions/agent-orchestrator`** (nested MAS worker discovery and provider-aware scheduling).
+- Repo-root sample configs **`agent-orchestrator.conf`** and **`local-providers.conf`** (only consumed by the removed extension).
+- **`shared/extensions-subagents/`** bundle and postinstall/relink wiring for **`subagents/*/`** and **`agents/<mas>/agents/*/`** nested pools.
+- **`docs/reference/subagent-concurrency.md`** (MkDocs nav entry removed).
+
 ### Changed
 
+- **`dotpi create`** scaffolds MAS configs with **`top-level-agent-orchestrator`** and updated README / USAGE / SYSTEM templates for capability-agent delegation.
+- **`core/dispatch/main.sh`** and **`dotpi list`**: MAS detection uses only **`top-level-agent-orchestrator`**.
+- **`shared/extensions/lib/dotpi-paths.ts`**: dropped **`subagents/`**-specific overlay mapping.
+- Design doc **`docs/design/top-level-agent-mas.md`** and reference docs now describe the shipped top-level worker model as the supported path (historical note on removed nested stack).
 - **MAS** (`top-level-agent-orchestrator`): worker **`subagent`** trace JSONL and
   **`manifest.json`** are written under **`$DOT_PI_OVERLAY/<agent>/subagent-traces/<run-id>/`**
   (e.g. **`~/.pi/dot-pi/mas/subagent-traces/...`**) instead of under the dot-pi git clone.
+
+### Breaking
+
+- Custom MAS trees that symlinked **`agent-orchestrator`**, relied on automatic relink into **`subagents/`** or **`agents/<mas>/agents/`**, or used **`local-providers.conf`** / **`agent-orchestrator.conf`**, must migrate to **`top-level-agent-orchestrator`**, vendor the old extension, or wire nested configs manually.
 
 ---
 

@@ -1,341 +1,121 @@
 # Multi-Agent Systems
 
-This is the definitive guide to dot-pi's multi-agent implementation. For the file-by-file anatomy of an agent config root, start with [Agent Layout](../agent-layout.md). This page explains how those files work together to create an orchestrated multi-agent system.
+This page describes how dot-pi implements **multi-agent systems (MAS)** today. For per-file layout of an agent config root, see [Agent Layout](../agent-layout.md). For the top-level orchestrator design rationale, see [Top-Level Agent MAS](../design/top-level-agent-mas.md).
 
-In dot-pi, a multi-agent system (MAS) is a top-level orchestrator agent plus a pool of specialized subagents. The orchestrator owns the user conversation, decomposes work, calls subagents through the `subagent` tool, and synthesizes the final answer. Subagents run as isolated pi child processes with their own context windows, tools, prompts, and model settings.
+In dot-pi, a MAS is a **top-level orchestrator** agent (for example `mas`) plus a **fixed set of capability workers** (`ask`, `scout`, `writer`, `coder`, `web`). Each worker is its own shipped `PI_CODING_AGENT_DIR` under `agents/<worker>/`. The orchestrator owns the user conversation, calls workers through the **`subagent`** tool registered by **`top-level-agent-orchestrator`**, and synthesizes the final answer. Workers run as isolated `pi` child processes with their own prompts, `pi-args`, tools, and context.
 
-This is a centralized orchestration model. It is closer to supervisor-worker and pipeline systems than to fully decentralized swarms.
-
-## Implementation Overview
-
-A MAS is a normal agent config root with one important extension:
+## Implementation overview
 
 ```text
-agents/deepresearch/
+agents/mas/
 ├── SYSTEM.md
 ├── pi-args
-├── bootstrap.sh
 ├── extensions/
-│   └── agent-orchestrator -> ../../../shared/extensions/agent-orchestrator
-└── agents/
-    └── scout/
-        ├── README.md
-        ├── SYSTEM.md
-        ├── USAGE.md
-        └── pi-args
+│   ├── ...                    # extensions-common bundle
+│   └── top-level-agent-orchestrator -> ../../../shared/extensions/top-level-agent-orchestrator
+└── prompts/
+    └── ...
 ```
 
-The parent process loads `extensions/agent-orchestrator`, which registers the `subagent` tool. When the model calls that tool, the extension launches child pi processes using the selected subagent directories as their `PI_CODING_AGENT_DIR` roots.
+The extension registers the **`subagent`** tool with modes `single`, `parallel` (via `tasks`), and `chain`. Each invocation resolves worker names to `agents/<worker>/` under the dot-pi package root (`DOT_PI_DIR`), sets `PI_CODING_AGENT_DIR` for the child, and passes worker traces under `$DOT_PI_OVERLAY/<mas>/subagent-traces/<run-id>/` as `--session-dir`.
 
-Each subagent is isolated:
+Workers are **not** discovered from `agents/<mas>/agents/` and postinstall does not wire nested pools.
 
-- It has its own prompt files.
-- It has its own `pi-args`.
-- It has its own tools and skills.
-- It has its own context window.
-- It only gets the task passed to it by the orchestrator.
-
-This isolation is the main reason to use a MAS. Subagents can explore, write, review, OCR, collect, or evaluate without filling the parent context with every intermediate detail.
-
-## Terminology Map
+## Terminology map
 
 | MAS literature | dot-pi artifact |
 |----------------|-----------------|
-| Orchestrator, supervisor, controller | `agents/<name>/SYSTEM.md` plus `agent-orchestrator` |
-| Worker, specialist, role agent | A subagent config under `agents/<name>/agents/` |
-| Agent capability card | `README.md` and `USAGE.md` in a subagent config |
-| Blackboard or shared workspace | Workspace directory and artifact files such as `sources/` or `report.md` |
-| Tool restriction | Subagent-specific `pi-args`, skills, and extensions |
-| Evaluation agent | A reviewer, editor, scanner, or auditor subagent |
-| Resource scheduler | subagent `pi-args`, `local-providers.conf`, and `agent-orchestrator.conf` |
+| Orchestrator, supervisor | `agents/<mas>/SYSTEM.md` plus **`top-level-agent-orchestrator`** |
+| Worker, specialist | Top-level `agents/<worker>/` (`ask`, `scout`, `writer`, `coder`, `web`) |
+| Capability card | `CAPABILITY.md`, `README.md`, `USAGE.md` under each worker |
+| Shared workspace | Current working directory (in-situ) and project files |
+| Tool restriction | Per-worker `pi-args`, skills, extensions |
 
-## Orchestrator Root
+## Orchestrator root
 
-The orchestrator root is the command the user runs. It should define the workflow and delegation policy, not duplicate every subagent's detailed instructions.
+- **`SYSTEM.md`**: delegation policy, artifact expectations, and how to use slash prompts under `prompts/`.
+- **`pi-args`**: parent model and tool allowlists for the orchestrator process.
+- **`extensions/top-level-agent-orchestrator`**: registers `subagent`, appends worker catalog text, launches children, writes trace manifests.
+- **`prompts/`**: workflow templates (`/deepresearch`, `/pdf-ocr`, etc.) that orchestrate workers.
 
-Key files:
+## The `subagent` tool
 
-- `SYSTEM.md`: parent prompt. Put workflow policy, delegation rules, artifact expectations, resume behavior, and final response style here.
-- `pi-args`: parent tool restrictions and model defaults. MAS roots usually need the `subagent` tool plus enough read/list/search capability to inspect workspace artifacts.
-- `extensions/agent-orchestrator`: registers the `subagent` tool and handles discovery, prompt augmentation, scheduling, and child process launches.
-- `bootstrap.sh`: optional in-situ launch hook. The script can create directories, export environment variables, initialize daemons, and run preflight checks before pi starts. Its stdout/stderr is captured in `BOOTSTRAP_LOG` under the overlay session directory.
-
-The optional repo-level `agent-orchestrator.conf` file configures local-provider limits for physical subagent concurrency.
-
-The orchestrator should normally coordinate rather than perform specialist work itself. If a task belongs to a subagent role, encode that policy in the root `SYSTEM.md`.
-
-## Subagent Config Format
-
-Subagents are pi config directories stored in two places:
-
-- User-level: `<PI_CODING_AGENT_DIR>/agents/`
-- Project-level: `.pi/agents/`, discovered from the current working directory upward
-
-Reusable dot-pi subagents live canonically under `subagents/<name>/` and are symlinked into a MAS, for example `agents/deepresearch/agents/scout -> ../../../subagents/scout`. MAS-specific subagents can be real directories directly under `agents/<mas>/agents/<name>/`.
-
-A subagent is available when its directory contains `SYSTEM.md` or `APPEND_SYSTEM.md`.
-
-Recommended files:
-
-- `SYSTEM.md` or `APPEND_SYSTEM.md`: the subagent prompt.
-- `README.md`: short description used in orchestrator listings.
-- `USAGE.md`: invocation contract appended to the orchestrator prompt.
-- `pi-args`: tool, model, context-file, and skill restrictions for this subagent.
-Subagents do not get the top-level common extension bundle. They are non-interactive child processes, so only extensions in `shared/extensions-subagents/` are wired into them by postinstall/relink. For reusable symlinked subagents, relink wires the canonical `subagents/<name>/` directory rather than treating the MAS link as the source of truth.
-
-The `USAGE.md` file is especially important. It tells the orchestrator how to call the subagent, what input the subagent expects, what artifacts it may read or write, and what it should return.
-
-Example:
-
-```markdown
-# scout Usage
-
-Call scout when you need fast codebase or source discovery.
-
-Input:
-- A focused research question.
-- Any known paths or keywords.
-
-Output:
-- Concise findings with file paths or source paths.
-- Open questions or blockers.
-- Do not make edits.
-```
-
-## Prompt Augmentation
-
-The parent MAS prompt lives in `<agentDir>/SYSTEM.md`. At runtime, `agent-orchestrator` appends discovered subagent information so the orchestrator can delegate without hard-coding every subagent contract into the parent prompt.
-
-The appended information includes:
-
-- subagent names
-- short descriptions from `README.md`
-- invocation contracts from `USAGE.md`
-
-This keeps the root `SYSTEM.md` focused on orchestration policy while each subagent owns its own capability contract.
-
-## Agent Discovery
-
-Agents are discovered fresh on each `subagent` tool invocation.
-
-Discovery locations:
-
-1. User-level subagents from `<PI_CODING_AGENT_DIR>/agents/`
-2. Project-level subagents from `.pi/agents/`, relative to the current working directory and walking upward
-
-The `agentScope` parameter controls which locations are loaded:
-
-- `user`: only the MAS config's bundled subagents
-- `project`: only project-local `.pi/agents/`
-- `both`: both sets, with project agents overriding user agents of the same name
-
-Project-local agents are useful when a repository needs task-specific specialists without changing the shared dot-pi config.
-
-## The `subagent` Tool
-
-The `subagent` tool has three modes: single, parallel, and chain.
+Same three modes as implemented in `shared/extensions/top-level-agent-orchestrator/index.ts`:
 
 ### Single
-
-Run one subagent on one task:
 
 ```json
 { "agent": "scout", "task": "Find all auth code" }
 ```
 
-Use this for routing or one-off specialist work.
-
 ### Parallel
-
-Run logically independent tasks:
 
 ```json
 {
   "tasks": [
     { "agent": "scout", "task": "Find authentication code" },
-    { "agent": "planner", "task": "Review architecture boundaries" }
+    { "agent": "web", "task": "Find primary sources for …" }
   ]
 }
 ```
 
-The tasks are independent from the prompt's point of view. Physical concurrency is still controlled by provider-derived scheduling.
+Parallel fan-out is bounded by the extension’s concurrency cap (`MAX_PARALLEL_TASKS` in source). Each worker’s model and tools still come from that worker’s own `pi-args`.
 
 ### Chain
-
-Run a sequential pipeline:
 
 ```json
 {
   "chain": [
     { "agent": "scout", "task": "Find code related to auth" },
-    { "agent": "planner", "task": "Plan changes based on: {previous}" }
+    { "agent": "writer", "task": "Draft a short note from: {previous}" }
   ]
 }
 ```
 
-The `{previous}` placeholder is replaced with the prior step's output. Use chains for fixed pipelines where each step depends on the one before it.
+`{previous}` is replaced with the prior step’s final assistant text.
 
-## Resource Scheduling
+## Optional project-local pi configs
 
-The LLM expresses logical independence; config controls physical concurrency. Subagents declare model intent with `pi-args`:
+Pi can still load **project-local** agent directories under `.pi/agents/` for non–dot-pi-managed flows. dot-pi **postinstall/relink** does not symlink extensions into those paths; manage them manually if you use them alongside dot-pi.
 
-```text
-agents/<mas>/agents/<subagent>/pi-args
-```
+## Workflow authoring and capability boundaries
 
-```text
---model
-$DEFAULT_AGENTIC_MODEL
-```
+Workflow prompts must respect each worker’s **structural** configuration (`pi-args`, skills, extensions). Prompts cannot grant tools the worker does not have.
 
-Providers backed by limited local or self-hosted compute are listed at the dot-pi root:
+Before drafting a `subagent` call, read the worker’s `CAPABILITY.md` / `USAGE.md` and `pi-args`:
 
-```text
-local-providers.conf
-```
+- Paths and URLs require workers with `read`, `bash`, or appropriate skills.
+- Artifacts require `write`/`edit` where applicable.
+- No-tool workers such as `ask` need the evidence inlined in the task string.
 
-```text
-lmstudio
-```
+See the [Workflow Writing Guide](../workflow-writing-guide.md) for a checklist.
 
-Local limits are configured at the dot-pi root:
+## Workspace and artifact handoffs
 
-```text
-agent-orchestrator.conf
-```
+MAS runs **in-situ** in the user’s cwd. Prefer files (`sources/`, `drafts/`, `reports/`) over huge inline returns so the orchestrator context stays small and runs remain auditable.
 
-```ini
-local=1
-default=1
-```
+## Common patterns
 
-This matters most for self-hosted inference. Ten OCR tasks may be logically independent, but if they all resolve to a provider listed in `local-providers.conf`, the local limit should probably run them one at a time. API-backed providers are treated as unbounded and are not throttled by the local limit.
+Patterns (orchestrator–worker, router, pipeline, evaluator–optimizer, artifact handoff) are unchanged in principle; the implementation detail is that **workers are always the five top-level capability agents** unless you fork the extension.
 
-For the exact rules, see [Subagent Concurrency](subagent-concurrency.md).
+## Best practices
 
-## Workflow Authoring And Capability Boundaries
+- Put orchestration policy in `agents/<mas>/SYSTEM.md`; keep worker roots focused on their role.
+- Match every delegated task to the worker’s real tools and `pi-args`.
+- Prefer artifact handoffs for large outputs; keep worker replies concise.
+- Use parallel mode only when tasks are logically independent; respect the extension’s concurrency cap and your own provider rate limits.
+- Keep trace directories under `$DOT_PI_OVERLAY` for postmortems.
 
-Workflow prompts and orchestrator task strings must respect each worker's structural configuration. Prompt instructions can narrow behavior, but they cannot grant tools, skills, context-file access, filesystem access, browser access, or write permission.
+## Known failure modes
 
-For a compact checklist before drafting or revising a workflow prompt, see the [Workflow Writing Guide](../workflow-writing-guide.md).
-
-Before writing a `subagent` call, check the target worker's `USAGE.md` or `CAPABILITY.md` and its `pi-args`:
-
-- If the task names file paths, the worker must have `read` or another explicit way to inspect those paths.
-- If the task asks for an artifact, the worker must have `write`, `edit`, or an explicitly allowed script path through `bash`.
-- If the task asks for live web data, the worker must have web/search/browser skills and the tools needed to use them.
-- If the task asks for semantic judgement from a no-tool worker, include the relevant text directly in the task.
-- If a workflow depends on auditability, require durable source files, screenshots, logs, or manifests instead of accepting a large natural-language summary.
-
-Bad delegation:
-
-```json
-{
-  "agent": "ask",
-  "persona": "judge",
-  "task": "Evaluate whether reports/report.md has enough citations."
-}
-```
-
-`ask` has no tools and cannot read `reports/report.md`. A correct call either uses a reader/editor worker, or passes the report excerpt and rubric inline:
-
-```json
-{
-  "agent": "ask",
-  "persona": "judge",
-  "task": "Report excerpt: ...\nRubric: citations must appear on factual claims.\nReply PASS or FAIL."
-}
-```
-
-For research workflows, preserve artifact contracts when migrating from workflow-specific workers to durable capability agents. If a legacy `collector` saved one cleaned source file and screenshot per URL, the replacement `web` task should still demand one source file and screenshot per URL; it should not merely summarize several pages into one opaque notes file.
-
-## Workspace And Artifact Handoffs
-
-MAS configs run in the current working directory. Use ordinary project directories for durable artifacts:
-
-```text
-./
-├── sources/
-├── drafts/
-├── sessions/
-└── report.md
-```
-
-Artifact handoffs are usually better than returning large text blobs through the orchestrator. A collector can save source extracts to `sources/`, a writer can read those files and create `drafts/report.md`, and an editor can review the draft against the saved sources.
-
-This pattern keeps the parent context smaller and makes failures inspectable. It also makes `resume` and post-run analysis practical.
-
-## Common Patterns
-
-### Orchestrator-Worker
-
-A parent agent plans work, dispatches specialized subagents, and integrates their outputs. This is dot-pi's default MAS shape and matches the pattern described in Anthropic's “Building Effective Agents” and “How we built our multi-agent research system.”
-
-Use it when tasks benefit from separate contexts, parallel exploration, or specialized tool access.
-
-### Router
-
-A parent agent classifies the request and sends it to one specialist. This is useful for support, search, coding, or documentation assistants where each request has one obvious owner.
-
-### Fixed Pipeline
-
-Agents run in a known sequence: scout, collect, write, edit; or implement, review, revise. Pipelines are easier to evaluate than open-ended delegation because the expected artifacts and handoffs are explicit.
-
-### Evaluator-Optimizer
-
-One agent produces an output and another evaluates it against criteria. The producer revises until quality is acceptable or a budget is exhausted. This pattern is useful for writing, code review, factuality checks, and policy-sensitive outputs.
-
-### Debate And Reflection
-
-Multiple agents produce competing analyses or critiques before the orchestrator decides. Related methods include Reflexion, multi-agent debate, Tree of Thoughts, and self-consistency. Use these when independent reasoning paths are valuable, but cap iterations to avoid runaway cost.
-
-### Blackboard / Artifact Handoff
-
-Agents communicate through files in the workspace instead of passing long text through the orchestrator context. This keeps the parent context small and makes failures inspectable.
-
-### Swarm / Decentralized Coordination
-
-Swarms let agents coordinate peer-to-peer through shared memory or task queues. dot-pi does not currently implement this as a first-class pattern; use an orchestrator unless there is a strong reason to give agents autonomous coordination.
-
-## Best Practices
-
-- Give each subagent a narrow responsibility, explicit tools, and a short invocation contract in `USAGE.md`.
-- Put workflow policy in the orchestrator `SYSTEM.md`, not in every subagent.
-- Prefer artifact handoffs for large outputs. Return concise status from subagents and write durable deliverables to the workspace.
-- Restrict capabilities structurally through tools, skills, and config. Do not rely only on prompt instructions for safety boundaries.
-- Use `parallel` only for logically independent work. Let `agent-orchestrator` provider-derived scheduling decide physical concurrency.
-- Add evaluator subagents for high-risk outputs: citations, code changes, factual claims, security findings, or final reports.
-- Keep session logs and manifests. Traceability is what makes MAS failures debuggable.
-- Evaluate workflows with scripted prompts before tuning prompts by feel.
-
-## Known Failure Modes
-
-- The orchestrator performs specialist work itself instead of delegating.
-- Subagents return huge summaries instead of writing artifacts.
-- Parallel calls contend for the same local model server or GPU.
-- The system lacks a verifier, so hallucinated or incomplete outputs pass through.
-- Agents loop because the stop condition, artifact path, or ownership boundary is unclear.
-- The orchestrator treats a failed subagent as a partial success.
-- `USAGE.md` drifts from the subagent's real behavior, so the orchestrator calls it incorrectly.
-- A subagent is missing required extensions or `pi-args` because it was assumed to inherit the parent MAS root.
-
-## How This Maps To dot-pi
-
-Start with a simple orchestrator-worker design. Add pipelines when the workflow is stable, evaluator agents when quality matters, and provider-derived scheduling when concurrency meets real infrastructure limits. Reach for more experimental patterns like debate or swarm coordination only after the basic artifact flow and eval loop are reliable.
-
-Use [Agent Layout](../agent-layout.md) as the source of truth for where files live. Use this page as the source of truth for how the orchestrator and subagents interact.
+- Orchestrator does specialist work instead of delegating.
+- Workers return huge summaries instead of writing artifacts.
+- Parallel calls overload a single local model endpoint.
+- Missing verifier for high-risk outputs.
+- `CAPABILITY.md` / `USAGE.md` drift from real worker behavior.
 
 ## Resources
 
-- Anthropic, [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents/): practical patterns including prompt chaining, routing, parallelization, orchestrator-workers, and evaluator-optimizer loops.
-- Anthropic, [How we built our multi-agent research system](https://www.anthropic.com/engineering/built-multi-agent-research-system): production lessons for breadth-first research with a lead agent and parallel subagents.
-- Anthropic, [Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents): how to evaluate agentic systems beyond single-response benchmarks.
-- OpenAI Agents SDK, [Multi-agent orchestration](https://openai.github.io/openai-agents-js/guides/multi-agent): handoffs, agents as tools, and orchestration tradeoffs.
-- AutoGen: conversation-driven multi-agent programming framework.
-- CAMEL: role-playing agent collaboration framework.
-- MetaGPT and ChatDev: software-development MAS examples with role specialization and staged workflows.
-- AgentVerse: framework for multi-agent task solving and simulation.
-- Reflexion: actor-evaluator-reflector pattern for verbal self-improvement.
-- Tree of Thoughts and multi-agent debate: search and deliberation methods for difficult reasoning tasks.
-- “Large Language Model based Multi-Agents: A Survey of Progress and Challenges” (2024): survey of LLM MAS domains, communication, profiling, and evaluation.
-- “A Survey on Multi-Generative Agent System: Recent Advances and New Frontiers” (2024): survey of generative MAS applications and evaluation.
+- Anthropic, [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents/)
+- Anthropic, [How we built our multi-agent research system](https://www.anthropic.com/engineering/built-multi-agent-research-system)
+- [Top-Level Agent MAS](../design/top-level-agent-mas.md) in this repo

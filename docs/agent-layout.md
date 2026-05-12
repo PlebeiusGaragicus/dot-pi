@@ -75,9 +75,7 @@ Session files do not live in the package clone. Dispatch passes:
 
 ## MAS Subagents
 
-MAS roots include an `agents/` directory. A subagent is discovered when it has `SYSTEM.md` or `APPEND_SYSTEM.md`. `USAGE.md` in a subagent root is the invocation contract appended to the orchestrator prompt.
-
-Reusable subagents live under `subagents/<name>/` and can be symlinked into MAS roots.
+MAS roots use **`top-level-agent-orchestrator`**: workers are separate top-level `agents/<worker>/` configs, not a nested `agents/<mas>/agents/` tree maintained by postinstall.
 
 ## Repo-Level Files
 
@@ -85,4 +83,4 @@ Reusable subagents live under `subagents/<name>/` and can be symlinked into MAS 
 
 Agent-root `bin` links are repaired to `$DOT_PI_OVERLAY/<agent>/bin`, and that overlay link points at vanilla Pi's `~/.pi/agent/bin`. This lets dot-pi agents share downloaded binaries such as `fd` and `rg` with bare `pi`.
 
-`$DOT_PI_OVERLAY/model-defaults`, `$DOT_PI_OVERLAY/local-providers.conf`, `$DOT_PI_OVERLAY/agent-orchestrator.conf`, `.service.env` files, and `.tts-wpm` are user-owned local state. Clone-local fallbacks exist only for development checkouts.
+`$DOT_PI_OVERLAY/model-defaults`, `.service.env` files, and `.tts-wpm` are user-owned local state. Clone-local fallbacks exist only for development checkouts.

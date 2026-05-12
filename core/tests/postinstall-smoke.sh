@@ -20,11 +20,6 @@ assert_link() {
 
 mkdir -p "$FIXTURE"
 cp -R "$ROOT/core" "$ROOT/agents" "$ROOT/shared" "$ROOT/dispatch-agent" "$ROOT/dotpi" "$FIXTURE/"
-if [ -d "$ROOT/subagents" ]; then
-  cp -R "$ROOT/subagents" "$FIXTURE/"
-else
-  mkdir -p "$FIXTURE/subagents"
-fi
 
 mkdir -p "$OVERLAY/coder/prompts"
 cat > "$OVERLAY/settings.json" <<'EOF'

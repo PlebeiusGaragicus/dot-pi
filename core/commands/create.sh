@@ -11,12 +11,12 @@ if [ -d "$mas_dir" ]; then
 fi
 
 echo "Creating multi-agent system '$mas_name'..."
-mkdir -p "$mas_dir/extensions" "$mas_dir/agents" "$mas_dir/prompts" "$mas_dir/skills"
+mkdir -p "$mas_dir/extensions" "$mas_dir/prompts" "$mas_dir/skills"
 
 ln -sf "../../../shared/prompts/introduction.md" "$mas_dir/prompts/introduction.md"
 
 link_extension_bundle "$SHARED_DIR/extensions-common" "$mas_dir/extensions" "../../../shared/extensions-common"
-ln -sfn "../../../shared/extensions/agent-orchestrator" "$mas_dir/extensions/agent-orchestrator"
+ln -sfn "../../../shared/extensions/top-level-agent-orchestrator" "$mas_dir/extensions/top-level-agent-orchestrator"
 
 mkdir -p "$mas_dir/themes"
 for theme in "$SHARED_DIR"/themes/*.json; do
@@ -38,6 +38,8 @@ cat > "$mas_dir/README.md" <<README
 
 $mas_name multi-agent system. Edit this file for a human-readable overview of the orchestrator and workflow. **USAGE.md** is shown for \`$mas_name help\` (and \`-h\` / \`--help\`) — keep that file man-page style for the launcher.
 
+This scaffold uses the **top-level-agent-orchestrator** extension: the \`subagent\` tool delegates to the fixed capability agents \`ask\`, \`scout\`, \`writer\`, \`coder\`, and \`web\` (each a separate top-level agent config shipped in this repo). Use \`prompts/\` for workflow templates that orchestrate those workers.
+
 ## Usage
 
 \`\`\`
@@ -54,7 +56,7 @@ cat > "$mas_dir/USAGE.md" <<USAGE
 ${_usage_title}(1)                          dot-pi                          ${_usage_title}(1)
 
 NAME
-       $mas_name — multi-agent orchestrator
+       $mas_name — multi-agent orchestrator (in-situ)
 
 SYNOPSIS
        $mas_name help | usage | -h | --help
@@ -66,9 +68,13 @@ SYNOPSIS
        $mas_name ls
 
 DESCRIPTION
-       Coordinates subagents under agents/$mas_name/agents/.  Runs in the
-       current working directory.  Session files are stored outside the package
-       clone under DOT_PI_OVERLAY.
+       $mas_name launches pi with top-level-agent-orchestrator. It delegates
+       bounded tasks to the curated top-level capability agents ask, scout,
+       writer, coder, and web through the subagent tool.
+
+       The agent runs in the current working directory. Resumable sessions and
+       worker traces live under DOT_PI_OVERLAY (see agents/mas/USAGE.md on the
+       shipped mas agent for path conventions).
 
 OPTIONS
        -p, --print
@@ -102,9 +108,9 @@ fi
 cat > "$mas_dir/SYSTEM.md" <<SYSTEMMD
 # $(echo "$mas_name" | sed 's/./\U&/') Orchestrator
 
-You are the orchestrator for the $mas_name multi-agent system. Coordinate specialized subagents through the \`subagent\` tool, synthesize their results, and present the final answer to the user.
+You are the orchestrator for the $mas_name multi-agent system. Delegate bounded work to the top-level capability agents \`ask\`, \`scout\`, \`writer\`, \`coder\`, and \`web\` through the \`subagent\` tool (parallel, chain, or single mode per the tool schema). Synthesize worker results and present the final answer to the user.
 
-The available subagents and their invocation contracts are appended automatically by the \`agent-orchestrator\` extension from each linked subagent's \`USAGE.md\` file.
+Worker capabilities and personas are defined in each worker's config (e.g. CAPABILITY.md, SYSTEM.md, USAGE.md under \`agents/<worker>/\`). Add workflow templates under \`prompts/\` and slash-invoke them as needed.
 SYSTEMMD
 echo "Created SYSTEM.md (edit to customize)"
 
@@ -112,9 +118,8 @@ echo "Created MAS at $mas_dir"
 echo ""
 echo "Directory layout:"
 echo "  $mas_dir/"
-echo "    extensions/          (common bundle plus MAS-specific agent-orchestrator)"
-echo "    agents/              (add or link subagent config directories here)"
-echo "    USAGE.md             (man-style text for mas help / -h / --help)"
+echo "    extensions/          (common bundle plus top-level-agent-orchestrator)"
+echo "    USAGE.md             (man-style text for $mas_name help / -h / --help)"
 echo "    prompts/             (shared introduction.md symlinked; add workflow templates here)"
 echo "    skills/              (empty — use dotpi link-skill $mas_name <skill>)"
 echo "    themes/              (individual themes symlinked from shared)"
@@ -128,9 +133,9 @@ echo "    settings.json        (symlink → shared/settings.json)"
 echo "    pi-args              (optional default CLI flags; see IMPORTANT line inside)"
 echo ""
 echo "Next steps:"
-echo "  1. Add or link subagent config directories under $mas_dir/agents/"
-echo "  2. Edit $mas_dir/USAGE.md (launcher CLI) and $mas_dir/SYSTEM.md with the orchestrator workflow"
-echo "  3. Link skills as needed: dotpi link-skill $mas_name <skill>"
+echo "  1. Edit $mas_dir/USAGE.md (launcher CLI) and $mas_dir/SYSTEM.md with the orchestrator workflow"
+echo "  2. Add prompt templates under $mas_dir/prompts/ as needed"
+echo "  3. Link skills: dotpi link-skill $mas_name <skill>"
 echo "  4. Run: $mas_name \"your task\""
 
 source "$COMMANDS_DIR/sync.sh"

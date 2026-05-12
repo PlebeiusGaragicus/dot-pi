@@ -22,13 +22,6 @@ agents/*/.model
 # agents/*/settings.json
 agents/*/.cache/
 agents/*/agents/*/.model
-subagents/*/sessions/*
-!subagents/*/sessions/.gitkeep
-subagents/*/auth.json
-subagents/*/.model
-subagents/*/.cache/
-
-# agents being developed
 agents/*-beta/
 
 # Eval results (generated per-run, can be large)

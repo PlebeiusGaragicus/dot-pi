@@ -149,7 +149,7 @@ dotpi_relink() {
   local dot_pi_dir="$1" overlay="${2:-$(dotpi_overlay_dir)}"
   local bin_dir="$dot_pi_dir/core/bin" shared_dir="$dot_pi_dir/shared"
   local pi_agent_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
-  local d name link subagent target
+  local d name link
 
   mkdir -p "$bin_dir" "$shared_dir" "$HOME/.pi/agent/bin"
 
@@ -159,17 +159,6 @@ dotpi_relink() {
   dotpi_link_force_symlink "$overlay/settings.json" "$shared_dir/settings.json"
   dotpi_link_force_symlink "$overlay/auth.json" "$shared_dir/auth.json"
   dotpi_link_force_symlink "$overlay/models.json" "$shared_dir/models.json"
-
-  for subagent in "$dot_pi_dir"/subagents/*/; do
-    [ -d "$subagent" ] || continue
-    [ -f "$subagent/SYSTEM.md" ] || [ -f "$subagent/APPEND_SYSTEM.md" ] || continue
-    dotpi_link_force_symlink "../../shared/auth.json" "$subagent/auth.json"
-    dotpi_link_force_symlink "../../shared/models.json" "$subagent/models.json"
-    dotpi_link_force_symlink "../../shared/settings.json" "$subagent/settings.json"
-    dotpi_link_force_symlink "$HOME/.pi/agent/bin" "$subagent/bin"
-    dotpi_link_extension_bundle "$shared_dir/extensions-subagents" "$subagent/extensions" "../../../shared/extensions-subagents"
-    dotpi_link_extension_helpers "$subagent/extensions" "../../../shared/extensions"
-  done
 
   for d in "$dot_pi_dir"/agents/*/; do
     [ -d "$d" ] || continue
@@ -185,30 +174,6 @@ dotpi_relink() {
     dotpi_link_force_symlink "$overlay/$name/bin" "$d/bin"
     dotpi_link_extension_bundle "$shared_dir/extensions-common" "$d/extensions" "../../../shared/extensions-common"
     dotpi_link_extension_helpers "$d/extensions" "../../../shared/extensions"
-
-    if [ -e "$d/extensions/agent-orchestrator/index.ts" ]; then
-      for subagent in "$d"/agents/*/; do
-        [ -d "$subagent" ] || continue
-        if [ -L "${subagent%/}" ]; then
-          target=$(readlink "${subagent%/}" 2>/dev/null || true)
-          case "$target" in
-            ../../../subagents/*|"$dot_pi_dir"/subagents/*) ;;
-            *)
-              printf 'postinstall: invalid subagent symlink %s -> %s\n' "${subagent%/}" "$target" >&2
-              return 1
-              ;;
-          esac
-          continue
-        fi
-        [ -f "$subagent/SYSTEM.md" ] || [ -f "$subagent/APPEND_SYSTEM.md" ] || continue
-        dotpi_link_force_symlink "../../../../shared/auth.json" "$subagent/auth.json"
-        dotpi_link_force_symlink "../../../../shared/models.json" "$subagent/models.json"
-        dotpi_link_force_symlink "../../../../shared/settings.json" "$subagent/settings.json"
-        dotpi_link_force_symlink "$HOME/.pi/agent/bin" "$subagent/bin"
-        dotpi_link_extension_bundle "$shared_dir/extensions-subagents" "$subagent/extensions" "../../../../../shared/extensions-subagents"
-        dotpi_link_extension_helpers "$subagent/extensions" "../../../../../shared/extensions"
-      done
-    fi
 
     dotpi_link_overlay_entries "$overlay" "$d" "$name"
 

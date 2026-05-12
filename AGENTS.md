@@ -9,7 +9,7 @@ dot-pi is a **dotfiles-style** repository for [pi](https://github.com/PlebeiusGa
 
 Two kinds of agent configurations live here:
 
-- **Multi-agent systems (MAS)** (`agents/`): An orchestrator agent using the `agent-orchestrator` extension to delegate to subagent config directories.
+- **Multi-agent systems (MAS)** (`agents/`): An orchestrator agent using the **`top-level-agent-orchestrator`** extension to delegate to fixed top-level capability agents (`ask`, `scout`, `writer`, `coder`, `web`) via the `subagent` tool.
 - **Standalone agents** (`agents/`): Single-agent setups with custom extensions and no subagent orchestration.
 
 All top-level agents run **in-situ** in the user's current directory. Runtime sessions and user-owned state live under **`$DOT_PI_OVERLAY`** (default **`~/.pi/dot-pi`**) so **`pi update`** can reset and clean the Pi-managed package clone without deleting local files.
@@ -32,7 +32,6 @@ dot-pi/
 ├── shared/                   # Reusable resources (never used as PI_CODING_AGENT_DIR directly)
 │   ├── extensions/           # Shared extension source code (*.ts files and directories)
 │   ├── extensions-common/    # Symlink bundle for standard top-level agent extensions
-│   ├── extensions-subagents/ # Symlink bundle for default subagent extensions
 │   ├── skills/               # Shared skill definitions (each skill is a directory with SKILL.md)
 │   ├── themes/               # Shared themes (JSON)
 │   ├── bin/                  # Downloaded binaries (fd, rg) — gitignored contents
@@ -72,8 +71,7 @@ Each is a complete `PI_CODING_AGENT_DIR` root:
 
 ```
 agents/<name>/
-├── extensions/               # Common bundle symlinks plus MAS-specific extensions
-├── agents/                   # Subagent config directories or symlinks
+├── extensions/               # Common bundle symlinks plus top-level-agent-orchestrator (MAS)
 ├── prompts/                  # Prompt templates (slash-command workflows)
 ├── skills/                   # Per-skill symlinks (add with dotpi link-skill)
 ├── themes/                   # Per-theme symlinks from shared/themes/
@@ -89,6 +87,8 @@ agents/<name>/
 ├── settings.json             # → shared/settings.json
 └── auth.json                 # → shared/auth.json (gitignored)
 ```
+
+No nested `agents/<mas>/agents/` pool is required for shipped MAS configs. The orchestrator loads **`top-level-agent-orchestrator`**, which spawns child `pi` processes with `PI_CODING_AGENT_DIR` set to each capability agent under `agents/<worker>/`.
 
 ### Standalone Agent Layout (`agents/<name>/`)
 
@@ -117,8 +117,6 @@ agents/<name>/
 ├── settings.json             # → shared/settings.json
 └── auth.json                 # → shared/auth.json (gitignored)
 ```
-
-No orchestrator subagent pool is required. The main pi process IS the agent. Custom behavior comes from the extension.
 
 **Prompt and tool customization** (combine as needed):
 
@@ -191,20 +189,16 @@ pi.registerTool({
 - `withFileMutationQueue(path, fn)` — serialize file writes
 - `parseFrontmatter<T>(content)` — returns `{ frontmatter: T, body: string }`
 
-### Subagent Config Directories
+### Subagent Config Directories (pi-native)
 
-Subagents are pi config directories under `<agentDir>/agents/` or project-local `.pi/agents/`. The `agent-orchestrator` extension discovers directories containing `SYSTEM.md` or `APPEND_SYSTEM.md`.
+Separate `PI_CODING_AGENT_DIR` trees used as **workers** or **project-local agents** still follow the normal agent layout. The shipped **`top-level-agent-orchestrator`** MAS does not use `agents/<mas>/agents/`; it delegates to top-level `agents/<worker>/` configs. You can still add pi subagent roots under **`<project>/.pi/agents/<name>/`** for other workflows; dot-pi **postinstall/relink** does not wire extension bundles into those paths automatically.
 
-Recommended subagent files:
+Recommended files when you maintain a child config root:
 
-- `SYSTEM.md` or `APPEND_SYSTEM.md` -- the subagent prompt.
-- `README.md` -- short description used in orchestrator listings.
-- `USAGE.md` -- invocation contract appended to the orchestrator prompt.
-- `pi-args` -- subagent-specific tools, context-file behavior, and model alias.
-- `models.json` -- symlink to `shared/models.json` (wired by postinstall/relink).
-- `settings.json` -- symlink to `shared/settings.json` (wired by postinstall/relink).
-- `auth.json` -- symlink to `shared/auth.json` (wired by postinstall/relink).
-- `bin/` -- symlink to `$DOT_PI_OVERLAY/<agent>/bin`, which points at `~/.pi/agent/bin` (wired by postinstall/relink).
+- `SYSTEM.md` or `APPEND_SYSTEM.md` — the worker prompt.
+- `README.md` — short description.
+- `USAGE.md` — invocation contract if a parent orchestrator consumes it.
+- `pi-args`, `models.json`, `settings.json`, `auth.json`, `bin/` — same symlink conventions as top-level agents when created under this repo's `agents/` tree.
 
 At the **root** of any `agents/<name>/` directory (MAS or standalone), **`USAGE.md`** is the file **`dispatch-agent`** prints for `<name> help`, `usage`, `-h`, and `--help` (plain text; use a man-style layout). **`README.md`** is for human- and agent-facing prose; launcher help does not fall back to it.
 
@@ -258,8 +252,7 @@ When editing prompt templates, keep delegation structural:
 
 - **Extension implementations**: Shared extension source lives in `shared/extensions/`. Do not move source into bundle directories.
 - **Common top-level extensions**: `shared/extensions-common/` contains symlinks for standard interactive/top-level agent extensions (`run-finish-notify`, `run-timer`, `startup-branding`, `say`, `save`, `model-default`). `dotpi create`, `dotpi create-agent`, postinstall, and `dotpi relink` link this bundle into top-level `agents/<name>/extensions/`.
-- **Subagent extensions**: `shared/extensions-subagents/` contains default subagent extension symlinks. Reusable subagents live canonically under `subagents/<name>/` and are symlinked into MAS roots (`agents/<mas>/agents/<name> -> ../../../subagents/<name>`). Postinstall/relink wires the subagent bundle into canonical reusable subagents and MAS-local subagent directories. Subagents do not get the full common top-level bundle.
-- **Specialized extensions**: MAS roots link `agent-orchestrator` explicitly. Other one-off extensions (`agent-prompt`, `tavily`, `personas`, `plan-mode`, etc.) are linked intentionally per agent as needed.
+- **MAS orchestrator**: Shipped MAS roots link **`top-level-agent-orchestrator`** (plus the common bundle). Other one-off extensions (`agent-prompt`, `tavily`, `personas`, `plan-mode`, etc.) are linked intentionally per agent as needed.
 - **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
 - **Themes**: Each theme JSON in `shared/themes/` is symlinked individually into `<dir>/themes/`.
 - **bin**: Agent roots link `bin → $DOT_PI_OVERLAY/<agent>/bin → ~/.pi/agent/bin` so dot-pi agents share downloaded helper binaries (`fd`, `rg`, etc.) with vanilla `pi`.
@@ -273,12 +266,11 @@ All symlinks use relative paths (e.g. `../../../shared/extensions-common/...` fo
 
 ## Common Tasks
 
-### Add a subagent to an existing MAS
+### Add prompts and skills to an existing MAS
 
-1. Create or link `agents/<mas>/agents/<name>/`
-2. Add `SYSTEM.md` or `APPEND_SYSTEM.md`
-3. Add `README.md`, `USAGE.md`, and subagent-specific `pi-args` when needed
-4. Update `agents/<mas>/SYSTEM.md` if the orchestrator needs workflow-specific instructions
+1. Add or edit slash templates under `agents/<mas>/prompts/`.
+2. Link skills with `dotpi link-skill <mas> <skill>` when needed.
+3. Update `agents/<mas>/SYSTEM.md` if orchestration rules change.
 
 ### Create a new MAS
 
@@ -286,7 +278,7 @@ All symlinks use relative paths (e.g. `../../../shared/extensions-common/...` fo
 dotpi create <mas-name>
 ```
 
-Then: add subagent directories under `agents/`, write the orchestrator `SYSTEM.md`, add prompt templates.
+Then: edit `SYSTEM.md` and `USAGE.md`, add prompt templates under `prompts/`, and link skills as needed. Delegation to workers uses the `subagent` tool and the shipped capability agents (`ask`, `scout`, `writer`, `coder`, `web`).
 
 ### Create a standalone agent
 
@@ -308,7 +300,7 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 1. Create a directory: `<agentDir>/extensions/<ext-name>/index.ts`
 2. Default-export a function: `(pi: ExtensionAPI) => void`
 3. Use `pi.on(...)` for lifecycle hooks and `pi.registerTool(...)` for tools
-4. See `shared/extensions/agent-orchestrator/index.ts` (full subagent tool + TUI) and `agents/twenty-questions/extensions/twenty-questions/index.ts` (minimal hook + TUI overlay) as examples
+4. See `shared/extensions/top-level-agent-orchestrator/index.ts` (MAS `subagent` tool + worker launches) and `agents/twenty-questions/extensions/twenty-questions/index.ts` (minimal hook + TUI overlay) as examples
 
 ## Files You Should and Shouldn't Edit
 
@@ -316,12 +308,11 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 |-------------|-----------|-------|
 | `shared/extensions/**/*.ts` | Yes | Shared extension source code |
 | `shared/extensions-common/*` | Yes | Symlink bundle for standard top-level agent extensions |
-| `shared/extensions-subagents/*` | Yes | Symlink bundle for default subagent extensions |
 | `shared/skills/*/SKILL.md` | Yes | Shared skill definitions |
 | `shared/themes/*.json` | Yes | Shared themes |
-| `agents/*/agents/*/SYSTEM.md` | Yes | Subagent system prompts |
+| `agents/*/agents/*/SYSTEM.md` | Yes | Optional nested worker prompts (not wired by postinstall) |
 | `agents/*/USAGE.md` | Yes | Man-style launcher help for `agent help` / `-h` / `--help` |
-| `agents/*/agents/*/USAGE.md` | Yes | Subagent invocation contracts (orchestrator prompt) |
+| `agents/*/agents/*/USAGE.md` | Yes | Optional nested worker invocation text |
 | `agents/*/prompts/*.md` | Yes | Prompt templates |
 | `*/banner.txt` | Yes | Startup branding (ASCII art + usage text) |
 | `*/bootstrap.sh` | Yes | Optional in-situ launch setup hook |
@@ -347,7 +338,7 @@ Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or l
 | `*/auth.json` | **No** | Symlink chain → `shared/auth.json` → `$DOT_PI_OVERLAY/auth.json` → `~/.pi/agent/auth.json` |
 | `REFERENCES/**` | **No** | Local-only sibling checkouts; gitignored. Cloned manually for agent context (see `REFERENCE-REPOS.md`). |
 | `$DOT_PI_OVERLAY/model-defaults` | Local | Per-machine global fallback model aliases. Created by postinstall/relink or `dotpi model-defaults`, loaded at agent launch time. |
-| `agents/*/.model`, `subagents/*/.model`, `agents/*/agents/*/.model` | Local | Per-agent raw `provider/model` overrides written by `/model-default`; gitignored. |
+| `agents/*/.model`, `agents/*/agents/*/.model` | Local | Per-agent raw `provider/model` overrides written by `/model-default`; gitignored. |
 | `shared/settings.json` | **No** | Symlink → `$DOT_PI_OVERLAY/settings.json`. Edit the overlay file directly; do not point runtime agents at vanilla `~/.pi/agent/settings.json`. |
 | `.exa.env`, `.tavily.env`, `.ntfy.env` | Local | Prefer **`$DOT_PI_OVERLAY/`** for Pi-managed installs (**`PI_INSTALL.md`** §3.3); else repo-root. Gitignored. |
 | **`$DOT_PI_OVERLAY/**` | Local | User overlay outside repo; not tracked. |

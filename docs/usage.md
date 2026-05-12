@@ -27,14 +27,14 @@ ask - "Map the authentication flow"
 
 ## Use A MAS
 
-Multi-agent systems use an orchestrator with the `subagent` tool:
+Multi-agent systems use an orchestrator with the **`subagent`** tool ( **`top-level-agent-orchestrator`** ), delegating to the shipped capability agents `ask`, `scout`, `writer`, `coder`, and `web`:
 
 ```bash
 cd ~/projects/some-api
-recon - "Find all authentication-related code"
+mas - "Find all authentication-related code and summarize findings"
 ```
 
-The orchestrator may delegate to subagents, then synthesize the result.
+The orchestrator delegates bounded tasks to those workers, then synthesizes the result.
 
 ## Print Mode
 
@@ -67,7 +67,7 @@ Workspace mode and `resume` have been removed. To continue an old conversation, 
 dotpi create docs-mas
 ```
 
-This creates `agents/docs-mas/` with shared extensions, themes, prompts, auth/model/settings links, and the orchestrator extension. Add or link subagents under `agents/docs-mas/agents/`, then run:
+This creates `agents/docs-mas/` with shared extensions, themes, prompts, auth/model/settings links, and **`top-level-agent-orchestrator`**. Edit `SYSTEM.md`, add workflow templates under `prompts/`, link skills as needed, then run:
 
 ```bash
 dotpi relink

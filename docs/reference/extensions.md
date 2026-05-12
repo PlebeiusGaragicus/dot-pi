@@ -10,7 +10,6 @@ dot-pi separates extension implementation from default wiring:
 
 - `shared/extensions/` contains the actual extension source code.
 - `shared/extensions-common/` contains symlinks for extensions that every top-level interactive agent should load.
-- `shared/extensions-subagents/` contains symlinks for extensions that subagent config roots should load.
 - Agent-specific and workflow-specific extensions are linked explicitly into the relevant agent.
 
 Top-level MAS and standalone agents get the common bundle. `dotpi create`, `dotpi create-agent`, postinstall, and `dotpi relink` wire every entry in `shared/extensions-common/` into `agents/<name>/extensions/`.
@@ -26,9 +25,9 @@ Current common extensions:
 | `say` | Provide text-to-speech / `say` behavior. |
 | `model-default` | View and override agent-local `.model` values or repo-local `model-defaults`. |
 
-Subagents are not interactive, so they do not get the top-level common bundle. Postinstall and `dotpi relink` wire only `shared/extensions-subagents/` into subagent config roots. For reusable subagents, the canonical root is `subagents/<name>/`, and MAS configs link those directories into `agents/<mas>/agents/`. MAS-specific local subagents can live directly under `agents/<mas>/agents/<name>/`.
+MAS orchestrators link **`top-level-agent-orchestrator`** explicitly (plus the common bundle). Worker agents (`ask`, `scout`, etc.) are ordinary top-level configs with the same bundle and their own custom extensions as needed.
 
-Specialized extensions stay out of the default bundles. Examples include `agent-orchestrator`, `agent-prompt`, `tavily`, `personas`, `plan-mode`, `questionnaire`, `bash-guardrails`, `auto-theme`, and `theme-cycler`.
+Specialized extensions stay out of the default bundles. Examples include **`top-level-agent-orchestrator`**, `agent-prompt`, `tavily`, `personas`, `plan-mode`, `questionnaire`, `bash-guardrails`, `auto-theme`, and `theme-cycler`.
 
 ### Repo-root service credentials
 
@@ -352,17 +351,15 @@ Key patterns:
 - Persists local overrides in a gitignored dotfile
 - Leaves agent-specific model policy in `pi-args`
 
-### Example: Agent Orchestrator
+### Example: Top-Level Agent Orchestrator
 
-The most complex extension in the repo — registers a `subagent` tool with three execution modes, TUI rendering, directory-based subagent discovery, and provider-derived scheduling.
+Registers the MAS **`subagent`** tool (single, parallel, and chain modes), renders invocation progress in the TUI, and spawns child `pi` processes with `PI_CODING_AGENT_DIR` set to each shipped capability agent.
 
-Source: `shared/extensions/agent-orchestrator/index.ts` (+ `agents.ts`)
+Source: `shared/extensions/top-level-agent-orchestrator/index.ts`
 
 Key patterns:
 
-- Multi-file extension using a directory with `index.ts` entry point and `agents.ts` helper
-- Full Typebox parameter schema with nested objects and enums
-- Spawns child pi processes via `node:child_process` with `PI_IS_SUBAGENT=1` in their env
-- Streams partial results via `onUpdate` callback
-- Complex `renderCall` and `renderResult` with collapsed/expanded views
-- Discovers subagent config directories and appends their `USAGE.md` contracts to the orchestrator prompt
+- Hard-coded worker catalog plus optional `CAPABILITY.md` text appended to the orchestrator prompt
+- Typebox tool parameters with `tasks` and `chain` arrays
+- Child launches with explicit `--session-dir` under `$DOT_PI_OVERLAY/<mas>/subagent-traces/<run-id>/`
+- `PI_IS_SUBAGENT=1` in child env

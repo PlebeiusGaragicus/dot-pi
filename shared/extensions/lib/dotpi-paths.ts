@@ -39,9 +39,6 @@ export function agentOverlayDir(agentDir: string): string {
 	if (parts[0] === "agents" && parts.length > 2) {
 		return path.join(dotPiOverlay(), parts.slice(1).join(path.sep));
 	}
-	if (parts[0] === "subagents" && parts[1]) {
-		return path.join(dotPiOverlay(), "subagents", parts[1]);
-	}
 	return path.join(dotPiOverlay(), path.basename(agentDir));
 }
 

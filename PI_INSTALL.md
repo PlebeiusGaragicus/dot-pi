@@ -49,15 +49,12 @@ Illustrative layout on a machine where **`PI_CODING_AGENT_DIR`** defaults to **`
 │                   │   │   ├── extensions/          # symlink bundle → shared/extensions… (shipped “vanilla dot-pi”)
 │                   │   │   ├── skills/
 │                   │   │   ├── themes/
-│                   │   │   ├── agents/              # MAS subagent dirs / symlinks (orchestrator only)
-│                   │   │   ├── banner.txt
 │                   │   │   ├── USAGE.md
 │                   │   │   └── README.md
 │                   │   ├── coder/
 │                   │   ├── ask/
 │                   │   └── …                        # other shipped agents
 │                   │
-│                   ├── subagents/                   # canonical reusable subagent PI_CODING_AGENT_DIR roots
 │                   ├── shared/
 │                   │   ├── extensions/              # TypeScript extension source
 │                   │   ├── skills/
@@ -214,7 +211,7 @@ Pi does **not** copy **`dispatch-agent`** into a second home by default. If you 
 
 ### 3.3 User overlay directory (survives `pi update`)
 
-Git package **`pi update`** runs **`git reset --hard`** and **`git clean -fdx`** in the Pi-managed clone when the installed git package changes. Anything that must **never** be wiped lives under **`~/.pi/dot-pi/`** (or **`$DOT_PI_OVERLAY`** if set), including **sessions**, user prompts/skills/extensions/themes, **`.service-name.env`** API keys, **`.tts-wpm`**, **`model-defaults`**, **`.model`** overrides, local provider/orchestrator config files, and dot-pi–scoped **`.ssh`** material.
+Git package **`pi update`** runs **`git reset --hard`** and **`git clean -fdx`** in the Pi-managed clone when the installed git package changes. Anything that must **never** be wiped lives under **`~/.pi/dot-pi/`** (or **`$DOT_PI_OVERLAY`** if set), including **sessions**, user prompts/skills/extensions/themes, **`.service-name.env`** API keys, **`.tts-wpm`**, **`model-defaults`**, **`.model`** overrides, and dot-pi–scoped **`.ssh`** material.
 
 **Convention:** **`DOT_PI_OVERLAY`** defaults to **`$HOME/.pi/dot-pi`** when unset. **`dispatch-agent`** and **`postinstall`** ensure **`$DOT_PI_OVERLAY/<agent>/sessions`** and sibling dirs exist. Per-agent overlay layout:
 
@@ -227,7 +224,7 @@ $DOT_PI_OVERLAY/<agent>/
 └── themes/            # optional user themes
 ```
 
-Root-level **`$DOT_PI_OVERLAY/.exa.env`**, **`.tavily.env`**, **`.ntfy.env`**, **`.tts-wpm`**, **`model-defaults`**, **`local-providers.conf`**, and **`agent-orchestrator.conf`** remain the convention for shared local state. Clone-root fallbacks may exist for development checkouts, but product installs should resolve **`$DOT_PI_OVERLAY`** first.
+Root-level **`$DOT_PI_OVERLAY/.exa.env`**, **`.tavily.env`**, **`.ntfy.env`**, **`.tts-wpm`**, and **`model-defaults`** remain the convention for shared local state. Clone-root fallbacks may exist for development checkouts, but product installs should resolve **`$DOT_PI_OVERLAY`** first.
 
 ### 3.4 Two-layer per-agent model (clone + overlay) and symlinks
 
@@ -254,7 +251,7 @@ It is **additive** by default: users add only what they need; shipped entries in
 
 **No `dotpi sync` merge:** nothing in this model requires merging shipped resource inventory into **`settings.json`** arrays. Optional **`settings.json`** keys remain for Pi prefs and narrow user overrides only.
 
-**Extensions and scripts** that read **`.exa.env`**, **`.tts-wpm`**, **`model-defaults`**, **`.model`**, **`local-providers.conf`**, etc., resolve **`$DOT_PI_OVERLAY`** first, then clone-local paths only as development fallbacks.
+**Extensions and scripts** that read **`.exa.env`**, **`.tts-wpm`**, **`model-defaults`**, **`.model`**, etc., resolve **`$DOT_PI_OVERLAY`** first, then clone-local paths only as development fallbacks.
 
 **`auth.json` / `models.json`:** keep using **`~/.pi/agent/auth.json`** and **`~/.pi/agent/models.json`** (symlinked from **`agents/<name>/`** in-repo if desired) so credentials and providers stay Pi-standard.
 
@@ -360,7 +357,7 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
 
 8. **Remove** the root **[`install`](install)** curl script (or replace with a pointer to **`pi install`**).
 
-9. **Migrate mutable local state** out of the Pi-managed clone. Extensions and scripts should resolve **`$DOT_PI_OVERLAY`** first for **`.exa.env`**, **`.tavily.env`**, **`.ntfy.env`**, **`.tts-wpm`**, **`model-defaults`**, **`.model`** overrides, **`local-providers.conf`**, and **`agent-orchestrator.conf`**. Clone-local fallbacks are only for development checkouts.
+9. **Migrate mutable local state** out of the Pi-managed clone. Extensions and scripts should resolve **`$DOT_PI_OVERLAY`** first for **`.exa.env`**, **`.tavily.env`**, **`.ntfy.env`**, **`.tts-wpm`**, **`model-defaults`**, and **`.model`** overrides. Clone-local fallbacks are only for development checkouts.
 
 ---
 

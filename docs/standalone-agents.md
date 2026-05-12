@@ -10,7 +10,7 @@ Use a standalone agent when you want:
 - A focused, single-purpose agent (game, utility, specialized workflow)
 - A playground for experimenting with the [extension API](reference/extensions.md)
 
-Use a [multi-agent system](architecture.md) when you want an orchestrator to coordinate multiple specialized subagents.
+Use a [multi-agent system](architecture.md) when you want an orchestrator to coordinate multiple top-level capability agents via the `subagent` tool.
 
 ## Directory Layout
 
@@ -43,11 +43,11 @@ The directory is a complete `PI_CODING_AGENT_DIR` root, just like a MAS director
 
 | | MAS | Standalone Agent |
 |--|------|-----------------|
-| `agent-orchestrator` extension | Symlinked | Not present |
-| `agents/` subdirectory | Subagent config directories | Not present |
-| `prompts/` subdirectory | Workflow templates | Not present |
+| `top-level-agent-orchestrator` extension | Symlinked on orchestrator roots | Not present |
+| `prompts/` subdirectory | Workflow slash templates typical | Optional |
+| Nested `agents/<mas>/agents/` pool | Not used (workers are top-level `agents/<worker>/`) | Not present |
 | `SYSTEM.md` | Orchestrator instructions | Standalone system prompt |
-| Custom extension | Optional | Core of the agent |
+| Custom extension | Optional (often only common bundle) | Core of the agent |
 
 ## Creating a Standalone Agent
 
@@ -211,5 +211,5 @@ const myFile = path.join(agentDir, "my-config.json");
 To reuse authentication from another agent or MAS:
 
 ```bash
-dotpi link-auth recon my-agent
+dotpi link-auth mas my-agent
 ```

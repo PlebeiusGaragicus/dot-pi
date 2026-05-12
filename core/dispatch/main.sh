@@ -8,7 +8,7 @@ _list_available() {
       [ -d "$d" ] || continue
       local name kind
       name=$(basename "$d")
-      kind=$([ -e "$d/extensions/agent-orchestrator/index.ts" ] || [ -e "$d/extensions/top-level-agent-orchestrator/index.ts" ] && echo mas || echo agent)
+      kind=$([ -e "$d/extensions/top-level-agent-orchestrator/index.ts" ] && echo mas || echo agent)
       printf '%s\t%s\n' "$name" "$kind"
     done
   } | sort -t $'\t' -k1,1 | while IFS=$'\t' read -r name kind; do

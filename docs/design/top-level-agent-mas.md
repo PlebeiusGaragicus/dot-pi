@@ -1,21 +1,18 @@
 # Top-Level Agent MAS
 
-This document specifies an experimental multi-agent system style for dot-pi. The goal is to reuse a small, fixed set of cleaned-up top-level agents as durable capability agents, then compose them with workflow prompts.
+This document specifies the multi-agent system style shipped on the general **`mas`** agent in dot-pi: a fixed set of top-level capability workers composed via workflow prompts and the **`top-level-agent-orchestrator`** extension.
 
-This is both the design document and implementation plan for the experiment. The existing MAS model remains valid and unchanged.
+The older nested **`agent-orchestrator`** extension, **`subagents/`** relink wiring, and **`extensions-subagents`** bundle have been **removed** from the repository. This file remains the design reference for the top-level worker model.
 
 ## Summary
 
-The current MAS pattern gives each workflow-oriented agent its own nested worker pool. A deep research agent, for example, can have research-specific workers for scouting, collecting, writing, and editing. That shape is useful for tightly controlled workflows, but it can encourage duplicated worker definitions when several workflows need the same underlying capabilities.
+The shipped pattern separates durable capability from workflow:
 
-The proposed pattern separates durable capability from workflow:
+- Top-level agents represent durable capabilities and trust boundaries (`ask`, `scout`, `writer`, `coder`, `web`).
+- Workflow prompts under `agents/mas/prompts/` represent task-specific orchestration.
+- **`top-level-agent-orchestrator`** invokes a hard-coded set of those top-level agents through the **`subagent`** tool.
 
-- Top-level agents represent durable capabilities and trust boundaries.
-- Workflow prompts represent task-specific orchestration.
-- A new extension invokes a hard-coded set of core top-level agents.
-- The existing orchestrator extension remains responsible for the current nested-worker pattern.
-
-In this model, the general `mas` agent can run a `/deepresearch` prompt that asks it to use the `web` top-level agent for search and browser-control work, `writer` for prose artifacts, and `ask` for semantic evaluation or final PASS/FAIL checks. The workflow prompt supplies the research-specific sequencing and artifact expectations. The workers remain general.
+In this model, the general **`mas`** agent can run a `/deepresearch` prompt that delegates to `web`, `writer`, `ask`, and so on. The workflow prompt supplies sequencing and artifact expectations; workers stay general-purpose.
 
 ## Design Principle
 
@@ -44,19 +41,15 @@ The top-level-agent MAS should avoid creating new worker identities just because
 
 Tool permissions, skills, model choices, context-file behavior, and safety posture must stay structural. They should not be moved into workflow prompts. A prompt can ask a worker to behave like a collector for one task, but it should not grant browser access, filesystem access, or repository context access.
 
-## Relationship To Existing MAS
+## Relationship To Prior Nested MAS
 
-The existing MAS design should remain intact. It is optimized for agents that own their worker pool and invoke nested worker config roots. That pattern is still appropriate when a workflow needs stable, workflow-specific workers with strict contracts.
+Earlier dot-pi revisions shipped a nested **`agent-orchestrator`** that discovered workers under **`agents/<mas>/agents/`** and **`subagents/`**, with a separate **`extensions-subagents`** bundle wired by postinstall. That stack has been **removed**. Custom forks may still vendor a nested orchestrator, but **`dotpi create`** and postinstall no longer support it.
 
-The top-level-agent MAS is a separate experiment:
+The **top-level-agent MAS** is the supported orchestration model in-tree:
 
-- It uses a separate extension.
-- It discovers a different class of worker.
-- It has different compatibility rules.
-- It should not alter existing nested-worker discovery.
-- It should not require changes to current workflow-specific MAS agents.
-
-This separation keeps the experiment reversible. If the new model proves useful, individual workflows can migrate later. If it does not, existing MAS behavior remains stable.
+- One extension: **`top-level-agent-orchestrator`**.
+- Workers: the hard-coded five top-level agent dirs.
+- Traces: **`$DOT_PI_OVERLAY/<mas>/subagent-traces/<run-id>/`** for worker JSONL (see Session Trace Management elsewhere in this doc).
 
 ## Target Architecture
 
@@ -100,19 +93,9 @@ The experiment should use a new extension, tentatively:
 shared/extensions/top-level-agent-orchestrator/
 ```
 
-The new extension should not be a mode inside the existing orchestrator extension. It can borrow implementation ideas, but it should own its own discovery rules, tool schema, prompt augmentation, filtering, and worker-selection rules.
+The new extension should not be a mode inside unrelated orchestrators. It owns discovery rules, tool schema, prompt augmentation, and worker selection.
 
-Reasons to use a separate extension:
-
-- It keeps existing MAS behavior stable.
-- It avoids overloading one implementation with two different meanings of "available agent."
-- It lets the new model evolve independently.
-- It makes the experiment easy to attach only to a future general MAS agent.
-- It keeps the first-version worker set intentionally small.
-
-The tool name for the new extension should be `subagent`. Reusing the name is acceptable because the general `mas` agent should load only the new top-level-agent extension, while existing workflow-specific MAS agents continue to load the existing nested-worker orchestrator. The two extensions should not be loaded into the same agent config in the first version because they would register the same tool name with different worker catalogs.
-
-The top-level `subagent` tool invokes top-level capability agents, not nested workflow workers. Its first-version contract should support `agent`, optional `persona`, and `task` for single calls, plus equivalent `tasks[]` and `chain[]` item shapes for parallel and sequential calls.
+The **`subagent`** tool is registered only here for shipped MAS roots. It must not be duplicated by a second extension in the same `PI_CODING_AGENT_DIR`.
 
 ## Discovery Model
 
@@ -260,7 +243,7 @@ The MAS should pass explicit task instructions to each worker. Instructions shou
 
 The worker process should inherit the MAS current working directory and the runtime environment needed by the target agent, including web/browser environment variables such as `$B` when calling `web`. The extension should set `PI_IS_SUBAGENT=1` for every worker invocation.
 
-The launch path should mirror the existing nested-worker orchestrator where possible: spawn a child `pi` process in JSON mode, set `PI_CODING_AGENT_DIR` to the selected top-level agent root, read that agent's `pi-args`, pass `--persona <name>` when a persona is selected, pass an explicit worker trace `--session-dir`, and send the delegated task through print mode. The extension should not invoke the dot-pi dispatcher for workers in the first version.
+The launch path should mirror prior nested orchestrator subprocess conventions where practical: spawn a child `pi` process in JSON mode, set `PI_CODING_AGENT_DIR` to the selected top-level agent root, read that agent's `pi-args`, pass `--persona <name>` when a persona is selected, pass an explicit worker trace `--session-dir`, and send the delegated task through print mode. The extension should not invoke the dot-pi dispatcher for workers in the first version.
 
 Worker replies are not human-facing. A worker is part of a chain, and its final reply is consumed by the orchestrator. Worker instructions should explicitly say that the worker should not summarize for the user, explain its process conversationally, or add human-centered preamble and closing text. The final reply should carry only the information the orchestrator needs to decide the next step.
 
@@ -472,7 +455,7 @@ The exact artifact directories should be chosen by each workflow prompt. Worker 
 
 ## Subprocess-Aware Extensions
 
-The new top-level-agent extension should preserve the existing subprocess convention used by nested-agent orchestration:
+The **`top-level-agent-orchestrator`** extension should preserve established subprocess conventions:
 
 ```text
 PI_IS_SUBAGENT=1
@@ -550,11 +533,7 @@ The extension should also provide a command to inspect the active catalog intera
 
 The first implementation should avoid recursive orchestration.
 
-The hard-coded core list is the first recursion-prevention mechanism. Since `mas`, `reader`, `deepresearch`, and other workflow-oriented agents are not in the list, the extension does not need to discover and exclude them dynamically.
-
-The first implementation should also avoid loading the new top-level-agent extension and the existing nested-worker orchestrator extension into the same top-level agent config. Both expose the `subagent` tool name, but with different worker catalogs.
-
-Recursive orchestration may be useful later, but it requires budgets, depth limits, failure propagation, and clear tracing. It should not be part of the first experiment.
+The hard-coded core list is the first recursion-prevention mechanism. Workflow-oriented top-level agents such as `reader` or legacy research MAS roots are not workers unless you fork the extension and expand the list deliberately.
 
 ## Top-Level Agent Cleanup Requirements
 
@@ -596,12 +575,12 @@ The design answers these risks with a hard-coded core worker list, capability de
 4. Clean the five core agents for worker use: prompts, `pi-args`, skills, model defaults, context-file behavior, and subprocess-safe extensions. Leave `coder`'s current context-file behavior as-is for the first version.
 5. Ensure `web` includes browser-control behavior and any required skill link or environment inheritance needed for `$B`.
 6. Make direct-use interactive tools such as `questionnaire` available to `writer` and `coder` only when not running with `PI_IS_SUBAGENT=1`.
-7. Implement `shared/extensions/top-level-agent-orchestrator/` separately from the existing nested-worker orchestrator. It should register the `subagent` tool, use the hard-coded core worker list, support `agent`, optional `persona`, and `task`, pass personas to child processes with `--persona`, and pass an explicit worker trace `--session-dir`.
+7. **`top-level-agent-orchestrator`** registers the `subagent` tool, uses the hard-coded core worker list, supports `agent`, optional `persona`, and `task`, passes personas to child processes with `--persona`, and passes an explicit worker trace `--session-dir` under **`$DOT_PI_OVERLAY`**.
 8. Configure `agents/mas/` with the new extension and a clear `SYSTEM.md`.
 9. Add workflow prompts to `agents/mas/prompts/`, starting with `/deepresearch`.
 10. Run smoke tests with each single worker: `ask`, `scout`, `writer`, `coder`, and `web`.
 11. Run small multi-worker workflows and inspect final artifacts, intermediate files, and worker outputs.
-12. Decide whether existing workflow-specific MAS agents should remain, be deprecated, or be reduced to `mas` prompt templates.
+12. Retire or rewrite any remaining workflow-specific MAS agent dirs as **`mas`** prompt templates where appropriate.
 
 Smoke-test acceptance criteria:
 
@@ -621,13 +600,11 @@ Smoke-test acceptance criteria:
 
 ## Non-Goals
 
-- Do not replace the existing MAS model.
-- Do not modify nested-worker discovery for existing MAS agents.
-- Do not add workspace top-level agents to the hard-coded worker list in the first version.
+- Do not auto-expose every top-level agent beyond the curated five without an explicit extension change.
+- Do not add workspace top-level agents to the hard-coded worker list without revisiting subprocess and trust rules.
 - Do not treat prompt instructions as a substitute for tool restrictions.
-- Do not auto-expose every top-level agent.
-- Do not expose workflow-specific top-level agents such as `reader` or `deepresearch` as workers.
-- Do not migrate existing workflows before the five core top-level agents are cleaned up.
+- Do not expose legacy workflow-specific top-level agents as workers unless their `pi-args` and prompts are vetted for worker mode.
+- Do not migrate existing workflows before the five core top-level agents are cleaned up for worker use.
 
 ## Open Design Questions
 
