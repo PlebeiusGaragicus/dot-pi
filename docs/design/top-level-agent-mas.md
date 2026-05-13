@@ -315,7 +315,7 @@ The trace bundle should include a small manifest for retrospective analysis:
 }
 ```
 
-Each trace bundle directory also contains **`orchestrator-session.jsonl`**, a symlink to the **latest mtime** orchestrator `*.jsonl` under **`sessions/<cwd-key>/`** for the same `cwd`, updated whenever **`TraceManager.ensure`** runs (typically each **`subagent`** invocation). Retrospective workflows (e.g. **`/retro`**) use this symlink as the join key between a named orchestrator session and that run’s worker JSONL.
+On the **first** **`subagent`** delegation in a top-level **`mas`** process, **`top-level-agent-orchestrator`** appends a pi session **`custom`** entry (via **`pi.appendEntry`**) that does **not** participate in LLM context. Stable **`customType`**: **`dotpi.subagent-traces`**. Payload (versioned, JSON in **`data`**) includes at least **`traceRunId`**, **`traceDirRelativeToDotPiOverlay`** (path from **`$DOT_PI_OVERLAY`** root to **`subagent-traces/<run-id>/`** using forward slashes), **`cwdSessionKey`**, and **`parentAgent`**. Retrospective workflows (e.g. **`/retro`**) read this line from the named orchestrator **`*.jsonl`** to resolve the worker bundle; there is no **`orchestrator-session.jsonl`** symlink in the trace directory.
 
 The manifest does not need to replace pi's JSONL session files. It only needs to make a complete MAS trajectory easy to find and inspect.
 

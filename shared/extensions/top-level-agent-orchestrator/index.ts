@@ -14,7 +14,7 @@ import type { Message } from "@mariozechner/pi-ai";
 import { type ExtensionAPI, getAgentDir, getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
 import { Type } from "typebox";
-import { agentOverlayDir, agentOverlayFirstFile, overlayFirstFile } from "../lib/dotpi-paths.js";
+import { agentOverlayDir, agentOverlayFirstFile, dotPiOverlay, overlayFirstFile } from "../lib/dotpi-paths.js";
 
 const CORE_AGENT_NAMES = ["ask", "scout", "writer", "coder", "web"] as const;
 const MODEL_DEFAULT_ALIASES = ["DEFAULT_AGENTIC_MODEL", "DEFAULT_FAST_MODEL", "DEFAULT_VLM_MODEL"] as const;
@@ -399,63 +399,17 @@ function isDirectory(p: string): boolean {
 	}
 }
 
-/** Symlink name inside each `subagent-traces/<run-id>/` bundle pointing at the parent orchestrator session JSONL. */
-const ORCHESTRATOR_SESSION_SYMLINK = "orchestrator-session.jsonl";
-
-/** Latest mtime `*.jsonl` under overlay `sessions/<cwd-key>/` (same layout as dispatch-agent). */
-function resolveLatestOrchestratorSessionJsonl(parentAgentDir: string, cwd: string): string | null {
-	const sessionsDir = path.join(agentOverlayDir(parentAgentDir), "sessions", encodeCwdSessionDirKey(cwd));
-	if (!isDirectory(sessionsDir)) return null;
-	let jsonlPaths: string[];
-	try {
-		jsonlPaths = fs
-			.readdirSync(sessionsDir)
-			.filter((f) => f.endsWith(".jsonl"))
-			.map((f) => path.join(sessionsDir, f))
-			.filter((p) => {
-				try {
-					return fs.statSync(p).isFile();
-				} catch {
-					return false;
-				}
-			})
-			.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
-	} catch {
-		return null;
-	}
-	return jsonlPaths[0] ?? null;
-}
-
-function linkOrchestratorSessionJsonl(parentAgentDir: string, traceDir: string, cwd: string): void {
-	const targetAbs = resolveLatestOrchestratorSessionJsonl(parentAgentDir, cwd);
-	if (!targetAbs) return;
-	const linkPath = path.join(traceDir, ORCHESTRATOR_SESSION_SYMLINK);
-	try {
-		const rel = path.relative(traceDir, targetAbs);
-		const linkTarget =
-			rel === ".." || rel.startsWith(`..${path.sep}`) || rel.startsWith("../") || rel.startsWith("..\\")
-				? targetAbs
-				: rel;
-		let needReplace = true;
-		if (fs.existsSync(linkPath)) {
-			const st = fs.lstatSync(linkPath);
-			if (st.isSymbolicLink()) {
-				const cur = fs.readlinkSync(linkPath);
-				const curAbs = path.isAbsolute(cur) ? cur : path.resolve(traceDir, cur);
-				if (path.resolve(curAbs) === path.resolve(targetAbs)) needReplace = false;
-			}
-			if (needReplace) fs.unlinkSync(linkPath);
-		}
-		if (needReplace) fs.symlinkSync(linkTarget, linkPath);
-	} catch {
-		/* best-effort; mas must stay up even if symlink fails */
-	}
-}
+/**
+ * Session `custom` entry (`pi.appendEntry`) — not sent to the LLM — linking this orchestrator
+ * session file to the active `subagent-traces/<run-id>/` bundle for this process.
+ */
+const DOTPI_SUBAGENT_TRACES_CUSTOM_TYPE = "dotpi.subagent-traces";
 
 class TraceManager {
 	private manifest: TraceManifest | null = null;
 	private writeQueue: Promise<void> = Promise.resolve();
 	private nextIndex = 1;
+	private sessionTracePointerAppended = false;
 
 	constructor(
 		private readonly parentAgentDir: string,
@@ -483,7 +437,24 @@ class TraceManager {
 			};
 			void this.write();
 		}
-		linkOrchestratorSessionJsonl(this.parentAgentDir, this.traceDir, cwd);
+	}
+
+	/** Once per trace run: persist overlay-relative trace dir into the orchestrator session JSONL (CustomEntry). */
+	appendSessionTracePointerIfNeeded(pi: ExtensionAPI, cwd: string): void {
+		if (this.sessionTracePointerAppended) return;
+		this.sessionTracePointerAppended = true;
+		const traceDirRelativeToDotPiOverlay = path.relative(dotPiOverlay(), this.traceDir).replace(/\\/g, "/");
+		try {
+			pi.appendEntry(DOTPI_SUBAGENT_TRACES_CUSTOM_TYPE, {
+				v: 1,
+				traceRunId: this.runId,
+				traceDirRelativeToDotPiOverlay,
+				cwdSessionKey: encodeCwdSessionDirKey(cwd),
+				parentAgent: this.parentAgentName,
+			});
+		} catch {
+			/* best-effort; mas must stay up if appendEntry fails */
+		}
 	}
 
 	startWorker(mode: InvocationMode, agent: string, persona: string | undefined, task: string, cwd: string): ManifestWorker {
@@ -774,6 +745,8 @@ export default function topLevelAgentOrchestrator(pi: ExtensionAPI): void {
 					isError: true,
 				};
 			}
+
+			traceManager.appendSessionTracePointerIfNeeded(pi, ctx.cwd);
 
 			if (params.chain && params.chain.length > 0) {
 				const results: WorkerResult[] = [];

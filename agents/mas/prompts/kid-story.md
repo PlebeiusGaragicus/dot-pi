@@ -86,7 +86,7 @@ Do not ask **`ask`** to read **`story.md`** from a path alone. If you use **`ask
 
 Keep the final response short. Prefer:
 
-`Kid story demo complete. Brainstorm: ./ideas/brainstorm-*.md — Final: ./story.md (≤500 words).`
+`Kid story demo complete. Brainstorm: ./ideas/brainstorm-*.md — Final: ./story.md (≤1,000 words).`
 
 Mention any failed parallel lane or trim pass. Do not paste the full story unless the user requested it.
 

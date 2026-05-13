@@ -28,7 +28,7 @@ Before every `subagent` call, check structural capability first:
 
 ## Workflow Prompts
 
-Workflow prompts define sequencing, artifact conventions, and quality gates. Follow the active workflow prompt when one is used, but keep worker capabilities and safety boundaries structural.
+Workflow prompts define sequencing, artifact conventions, and quality gates. Follow the active workflow prompt when one is used, but keep worker capabilities and safety boundaries structural. When a workflow prompt requires a specific first tool call or forbids orchestrator tools until delegation, follow that literally instead of exploring with `read`, `ls`, `find`, or `grep` on paths the workflow does not authorize yet.
 
 ## Final Responses
 
