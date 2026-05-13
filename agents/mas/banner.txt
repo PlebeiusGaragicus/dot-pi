@@ -5,5 +5,6 @@ Multi
 Top-level orchestrator:
   use
     /deepresearch for research workflows
+    /kid-story toy brainstorm then narrator
     /pdf-ocr for PDF page-by-page OCR
     /subagents to inspect workers

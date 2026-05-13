@@ -15,11 +15,14 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ### Added
 
-- **`/retro`** workflow prompt ([`agents/mas/prompts/retro.md`](agents/mas/prompts/retro.md)): retrospective review of a **`/name`d** `mas` session (overlay `sessions/` + `subagent-traces/`) via `scout`, read-only `coder`/`jq`, and `ask` critique.
-- **`top-level-agent-orchestrator`**: worker trace **`manifest.json`** may include **`parentSessionInfoId`**, **`parentSessionInfoName`**, and **`parentOrchestratorSessionFile`**, best-effort from the latest orchestrator **`session_info`** line whenever a trace bundle is ensured (helps correlate bundles to named sessions).
+- **`/kid-story`** workflow prompt ([`agents/mas/prompts/kid-story.md`](agents/mas/prompts/kid-story.md)): three parallel **`writer`** brainstorm files under **`ideas/`**, then one **`writer`** narrator producing **`story.md`** (≤500 words) from user settings and a premise seed.
+- **`/retro`** workflow prompt ([`agents/mas/prompts/retro.md`](agents/mas/prompts/retro.md)): one cwd-scoped **`scout`** pass plus read-only **`coder`** analysis of a **`/name`d** `mas` session; correlates **`sessions/<cwd-key>/`** with **`subagent-traces/<run-id>/`** via **`orchestrator-session.jsonl`** only.
+- **`top-level-agent-orchestrator`**: each **`subagent-traces/<run-id>/`** bundle includes **`orchestrator-session.jsonl`**, a symlink to the latest orchestrator session JSONL for that **`cwd`** (under overlay **`sessions/<cwd-key>/`**), for **`/retro`** and other tooling.
 - **`top-level-agent-orchestrator`**: cap concurrent worker child processes for **`lmstudio`** and **`ollama`** (shared slot, default one) so parallel `subagent` `tasks[]` does not overload local inference; other providers stay parallel up to the existing task cap.
 
 ### Changed
+
+- **`top-level-agent-orchestrator`**: removed optional **`parentSession*`** fields from trace **`manifest.json`** (replaced by the **`orchestrator-session.jsonl`** symlink).
 
 - **Breaking:** **`$DOT_PI_OVERLAY`** user config uses visible **`env.*`** filenames only (**`env.exa`**, **`env.tavily`**, **`env.ntfy`**, **`env.tts-wpm`**, per-agent **`env.model`**, optional **`env.ssh`** text file). Older dotfiles and **`env.*.env`** names are not read—migrate existing keys into the new paths. Resolution is overlay-only (no package-clone fallbacks). ([#9](https://github.com/PlebeiusGaragicus/dot-pi/issues/9))
 - **`overlayFirstFile`**, **`agentOverlayFirstFile`**, and **`core/dispatch/pi-args.sh`** resolve **`model-defaults`**, provider **`env.*`** files, **`env.tts-wpm`**, and per-agent **`env.model`** under **`$DOT_PI_OVERLAY`** only (no reads from the Pi-managed package clone for that durable user state).
