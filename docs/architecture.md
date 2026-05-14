@@ -71,7 +71,6 @@ User-owned state:
 ```text
 ~/.pi/dot-pi/
 ├── settings.json
-├── model-defaults
 ├── env.exa
 ├── env.tavily
 ├── env.ntfy

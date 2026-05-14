@@ -347,7 +347,7 @@ _configure_provider() {
 
 # ── Provider management loop ─────────────────────────────────────────────────
 
-echo "[1/2] Providers"
+echo "Providers"
 echo ""
 
 while true; do
@@ -374,7 +374,7 @@ while true; do
   echo "    a) Add a new provider"
   echo "    e) Edit an existing provider (by number)"
   echo "    d) Delete a provider (by number)"
-  echo "    s) Continue to model defaults"
+    echo "    s) Save and finish"
   echo ""
   read -r -p "  choice: " action
 
@@ -412,11 +412,6 @@ done
 
 echo ""
 
-# ── Step 2: Model defaults ────────────────────────────────────────────────────
-
-echo "[2/2] Model defaults"
-source "$COMMANDS_DIR/model-defaults.sh"
-
 # Ensure shared/models.json symlink exists after setup creates the system file
 _dotpi_models="$SHARED_DIR/models.json"
 if [ ! -e "$_dotpi_models" ] && [ ! -L "$_dotpi_models" ] && [ -f "$MODELS_FILE" ]; then
@@ -440,18 +435,9 @@ else
 fi
 echo ""
 
-defaults_file="$(resolve_model_defaults_file)"
-if [ -f "$defaults_file" ]; then
-  for role in DEFAULT_AGENTIC_MODEL DEFAULT_FAST_MODEL DEFAULT_VLM_MODEL; do
-    v=$(_setup_read_env_var "$defaults_file" "$role")
-    echo "  ${role}: ${v:-(not set)}"
-  done
-fi
-echo ""
-
 echo "  Local config (gitignored, safe to edit by hand):"
 echo "    $MODELS_FILE    (providers, API keys, model lists)"
-echo "    $defaults_file           (fallback model aliases; loaded by dispatch-agent)"
+echo "    $SHARED_DIR/settings.json   (agent prefs; default model lives in pi / this file)"
 echo ""
 
 _setup_shell_rc() {

@@ -9,7 +9,7 @@ Source: `shared/extensions/` (shared implementations) or `agents/<name>/extensio
 dot-pi separates extension implementation from default wiring:
 
 - `shared/extensions/` contains the actual extension source code.
-- **Shipped common extensions** — baseline UX (notifications, timer, branding, TTS, save, `/model-default`) for every **shipped** top-level agent — are listed in **`shared/shipped-common-extensions`** (basenames only). Postinstall and `dotpi relink` symlink each entry to `agents/<name>/extensions/<basename>.ts → ../../../shared/extensions/<basename>.ts` (the **`.ts` suffix on the link name** is required so pi discovers the entry). See [Creating a new agent](creating-a-new-agent.md#shipped-common-extensions) for the contract and how to add or omit them when scaffolding.
+- **Shipped common extensions** — baseline UX (notifications, timer, branding, TTS, save) for every **shipped** top-level agent — are listed in **`shared/shipped-common-extensions`** (basenames only). Postinstall and `dotpi relink` symlink each entry to `agents/<name>/extensions/<basename>.ts → ../../../shared/extensions/<basename>.ts` (the **`.ts` suffix on the link name** is required so pi discovers the entry). See [Creating a new agent](creating-a-new-agent.md#shipped-common-extensions) for the contract and how to add or omit them when scaffolding.
 - Agent-specific and workflow-specific extensions are linked explicitly into the relevant agent.
 
 Current shipped common extensions (see manifest for the authoritative list):
@@ -21,7 +21,6 @@ Current shipped common extensions (see manifest for the authoritative list):
 | `startup-branding` | Render `banner.txt` at startup. |
 | `save` | Provide the shared save tool. |
 | `say` | Provide text-to-speech / `say` behavior. |
-| `model-default` | View and override agent-local **`env.model`** values or repo-local `model-defaults`. |
 
 MAS orchestrators link **`top-level-agent-orchestrator`** explicitly (plus the common bundle). Worker agents (`ask`, `scout`, etc.) are ordinary top-level configs with the same bundle and their own custom extensions as needed.
 
@@ -334,20 +333,6 @@ Key patterns:
 - Uses `ctx.ui.setStatus()` for a lightweight live status segment
 - Updates once per second while the agent is running
 - Uses `agent_end` to replace `Running: 00:00` with `Trajectory time: 00:00`
-
-### Example: Model Default
-
-A shared extension that registers `/model-default` for top-level agents. It displays resolved `DEFAULT_*` aliases, writes agent-local **`env.model`** files as raw `provider/model` overrides, and can update repo-local `model-defaults` through global menu options.
-
-Source: `shared/extensions/model-default.ts`
-
-Key patterns:
-
-- Reads available models from `models.json`
-- Infers the current agent's default alias from `pi-args`
-- Resolves raw agent-local **`env.model`** plus repo-local `model-defaults`
-- Persists local overrides in a gitignored dotfile
-- Leaves agent-specific model policy in `pi-args`
 
 ### Example: Top-Level Agent Orchestrator
 

@@ -54,6 +54,5 @@ nav:
     - Creating a new agent: reference/creating-a-new-agent.md
     - Writing Extensions: reference/extensions.md
     - Workflow Writing Guide: workflow-writing-guide.md
-    - Model Defaults: reference/model-defaults.md
     - Multi-Agent Systems: reference/multi-agent-systems.md
     - Continuous Integration: ci.md

@@ -27,7 +27,6 @@ _run_pi_with_args_array() {
 _build_pi_command_args() {
   local config_dir="$1" session_dir="${2:-}" continue_session="${3:-false}"
   _dispatch_cmd_args=()
-  _filter_model_flags "$config_dir"
   [ ${#_pi_args[@]} -gt 0 ] && _dispatch_cmd_args+=("${_pi_args[@]}")
   [ "$_cli_print" = true ] && _dispatch_cmd_args+=(--mode json)
   [ -n "$session_dir" ] && _dispatch_cmd_args+=(--session-dir "$session_dir")

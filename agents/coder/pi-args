@@ -1,5 +1,3 @@
---model
-$DEFAULT_AGENTIC_MODEL
 --tools
 ls,find,grep,read,write,edit,bash
 # NOTE: we DO want "context files" for codebases (AGENTS.md, CLAUDE.md, etc.)

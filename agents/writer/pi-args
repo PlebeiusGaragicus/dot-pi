@@ -1,5 +1,3 @@
---model
-$DEFAULT_AGENTIC_MODEL
 # NOTE: writer can read and edit files, but does not get bash.
 --tools
 ls,find,grep,read,write,edit,questionnaire

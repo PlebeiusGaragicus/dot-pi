@@ -1,5 +1,3 @@
---model
-$DEFAULT_FAST_MODEL
 --tools
 ls,find,grep,read
 --no-skills

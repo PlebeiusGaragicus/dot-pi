@@ -59,9 +59,9 @@ Same three modes as implemented in `shared/extensions/top-level-agent-orchestrat
 }
 ```
 
-Parallel fan-out is bounded by the extension’s concurrency cap (`MAX_PARALLEL_TASKS` in source). Each worker’s model and tools still come from that worker’s own `pi-args`.
+Parallel fan-out is bounded by the extension’s concurrency cap (`MAX_PARALLEL_TASKS` in source). Each worker’s **tools** and other CLI flags come from that worker’s **`pi-args`**; the **model** is pi’s active default from **`shared/settings.json`** (pi updates that file when the user changes the model) unless that worker’s **`pi-args`** includes **`--model provider/id`**.
 
-When the resolved provider for a worker is **LM Studio** (`lmstudio`) or **Ollama** (`ollama`), the extension also applies a separate shared cap on concurrent child `pi` processes (default **one**), so parallel `tasks[]` may wait for a slot even under the global task limit. Resolution uses the worker’s first `--model` value (`provider/model` prefix) when present, otherwise `defaultProvider` from `shared/settings.json` (including a bare id such as `lmstudio`). Other providers are not throttled this way; raise the limit in source (`LOCAL_INFERENCE_PARALLEL_LIMIT`) if your machine can sustain more concurrent local loads.
+When the resolved provider for a worker is **LM Studio** (`lmstudio`) or **Ollama** (`ollama`), the extension also applies a separate shared cap on concurrent child `pi` processes (default **one**), so parallel `tasks[]` may wait for a slot even under the global task limit. Resolution uses the worker’s first `--model` value (`provider/model` prefix) when **`pi-args`** includes one, otherwise **`defaultProvider`** from `shared/settings.json` (including a bare id such as `lmstudio`). Other providers are not throttled this way; raise the limit in source (`LOCAL_INFERENCE_PARALLEL_LIMIT`) if your machine can sustain more concurrent local loads.
 
 ### Chain
 
