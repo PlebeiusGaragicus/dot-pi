@@ -13,16 +13,24 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ## [Unreleased]
 
+## [0.8.3] — 2026-05-13
+
 ### Added
 
 - **[`docs/reference/creating-a-new-agent.md`](docs/reference/creating-a-new-agent.md)** — canonical checklist for new standalone or MAS orchestrator roots under **`agents/<name>/`**, replacing removed scaffolds.
 - Shared skill **`creating-a-new-agent`** under **`shared/skills/creating-a-new-agent/`** — points agents at the reference doc; link with **`dotpi link-skill <agent> creating-a-new-agent`**.
 
+### Changed
+
+- **`docs/architecture.md`**: expanded install model (Pi `packages[]`, clone lifecycle, nested-clone pitfall, clone+overlay symlinks); corrected MAS diagram for **`top-level-agent-orchestrator`** ([#23](https://github.com/PlebeiusGaragicus/dot-pi/issues/23)).
+- **`docs/install.md`**: maintainer cross-link to architecture; explicit warning not to register dot-pi inside **`agents/*/settings.json`** ([#23](https://github.com/PlebeiusGaragicus/dot-pi/issues/23)).
+
 ### Removed
 
 - **`dotpi create`**, **`dotpi create-mas`**, and **`dotpi create-agent`**: removed from the **`dotpi`** CLI; **`core/commands/create.sh`** and **`core/commands/create-agent.sh`** removed. Scaffold new agents with **`docs/reference/creating-a-new-agent.md`** and the **`creating-a-new-agent`** skill, then run **`dotpi relink`**.
-- **`dotpi doctor`**: the deprecated stub command is gone; use **`dotpi relink`** to repair local wiring (**`PI_INSTALL.md`** updated).
-- **`dotpi sync`**: removed from the **`dotpi`** CLI; use **`dotpi relink`** (**[`core/commands/relink.sh`](core/commands/relink.sh)**). **`PI_INSTALL.md`** updated to match.
+- **`PI_INSTALL.md`** and the repo-root **`install`** stub: Pi-package architecture is documented in **`docs/architecture.md`** and **`docs/install.md`** ([#23](https://github.com/PlebeiusGaragicus/dot-pi/issues/23)).
+- **`dotpi doctor`**: the deprecated stub command is gone; use **`dotpi relink`** to repair local wiring.
+- **`dotpi sync`**: removed from the **`dotpi`** CLI; use **`dotpi relink`** (**[`core/commands/relink.sh`](core/commands/relink.sh)**).
 
 ## [0.8.2] — 2026-05-13
 
@@ -45,7 +53,7 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 - **`/retro`** and **`mas`** system prompt: orchestrator must delegate **`scout`** first under **`DOT_PI_OVERLAY`** only; copy-paste **`scout`** task template; forbid overlay probing before delegation.
 - **Breaking:** **`$DOT_PI_OVERLAY`** user config uses visible **`env.*`** filenames only (**`env.exa`**, **`env.tavily`**, **`env.ntfy`**, **`env.tts-wpm`**, per-agent **`env.model`**, optional **`env.ssh`** text file). Older dotfiles and **`env.*.env`** names are not read—migrate existing keys into the new paths. Resolution is overlay-only (no package-clone fallbacks). ([#9](https://github.com/PlebeiusGaragicus/dot-pi/issues/9))
 - **`overlayFirstFile`**, **`agentOverlayFirstFile`**, and **`core/dispatch/pi-args.sh`** resolve **`model-defaults`**, provider **`env.*`** files, **`env.tts-wpm`**, and per-agent **`env.model`** under **`$DOT_PI_OVERLAY`** only (no reads from the Pi-managed package clone for that durable user state).
-- Document contributor **local development** (git clone, `npm install`, prepend clone `core/bin` to `PATH`) in **`README.md`**; cross-references in **`docs/install.md`**, **`docs/index.md`**, and **`PI_INSTALL.md`**.
+- Document contributor **local development** (git clone, `npm install`, prepend clone `core/bin` to `PATH`) in **`README.md`**; cross-references in **`docs/install.md`** and **`docs/index.md`**.
 
 ### Removed
 

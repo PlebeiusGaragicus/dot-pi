@@ -33,6 +33,12 @@ pi remove git:https://github.com/PlebeiusGaragicus/dot-pi
 
 The old curl installer and `~/.dot-pi` product install are no longer supported.
 
+**Maintainer note:** Pi **`packages[]`**, clone lifecycle, nested-clone pitfalls, and clone-vs-overlay wiring are summarized in [Architecture](architecture.md).
+
+### Do not register dot-pi inside a worker agent
+
+**Never** add the dot-pi git source to **`packages[]`** inside an **`agents/<name>/settings.json`** (or any runtime agent settings that Pi treats as an install root). Pi would try to clone dot-pi again under that agent directory. Package registration belongs in vanilla **`~/.pi/agent/settings.json`** for the supported install path.
+
 **Contributors** developing from a git clone (without reinstalling through Pi on every change): see **Local development** in the repository [README](https://github.com/PlebeiusGaragicus/dot-pi#local-development) on GitHub, or the same section in a checkout’s `README.md`.
 
 ## What Install Does

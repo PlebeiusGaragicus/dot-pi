@@ -12,6 +12,30 @@ Pi records the package in vanilla `~/.pi/agent/settings.json` and owns the clone
 
 Named agents load from `agents/<name>/` inside the package clone through `dispatch-agent`.
 
+### How `pi install` registers the package
+
+`pi install <source>` materializes the package under the active agent directory (from `PI_CODING_AGENT_DIR` when set, otherwise `~/.pi/agent`) and appends the source string to `packages` in that directory’s `settings.json`. For the supported flow, leave `PI_CODING_AGENT_DIR` unset so registration lands in `~/.pi/agent/settings.json` and the clone lives under `~/.pi/agent/git/<host>/<path>/`. Pushes to the repo do not change the installed tree until the user runs `pi update`.
+
+### Git clone lifecycle and `postinstall`
+
+For git sources, Pi maintains the checkout under `{agentDir}/git/<host>/<path>/`. On update it may run `git reset --hard` and `git clean -fdx` in that clone. Untracked clone-local symlinks (for example into `$DOT_PI_OVERLAY`) are removed by `git clean`; **`core/install/postinstall.sh`** (triggered by `npm install` after install/update) and **`dotpi relink`** recreate them without overwriting existing overlay files.
+
+### Nested dot-pi (do not)
+
+Git packages install under the **active** agent directory. **`agents/<name>/settings.json` must not list the dot-pi package in `packages[]`**. If it did, Pi could install a second dot-pi clone under that agent’s tree (for example `agents/coder/git/...`), which is unsupported and confusing.
+
+### Inert root manifest
+
+Vanilla `pi` should stay behaviorally unchanged despite dot-pi being registered: the repo’s root **`package.json`** / **`pi`** manifest does not expose package-root extensions, skills, prompts, or themes to vanilla loading. Per-agent config and discovery live under **`agents/<name>/`** (symlinks into **`shared/`** and overlay-backed links), not in large inventory arrays in `settings.json`.
+
+### Clone plus overlay (two layers)
+
+Shipped layout lives in the Pi-managed clone under `agents/<agent>/{extensions,skills,prompts,themes}`. Durable user additions live under `$DOT_PI_OVERLAY/<agent>/…` (default `~/.pi/dot-pi/<agent>/…`). **`postinstall`** / **`dotpi relink`** wire overlay entries into the clone with symlinks so `PI_CODING_AGENT_DIR` stays a single tree for discovery. Discovery granularity matters: prompts and themes are typically individual symlinks; extensions are linked per extension; skills can be directory links—see [Agent layout](agent-layout.md).
+
+### Alternative: dedicated `PI_CODING_AGENT_DIR` for install
+
+You can install with `PI_CODING_AGENT_DIR` pointing at a separate directory so dot-pi never appears in `~/.pi/agent/settings.json`. That is more complex (updates and paths), so the documented product path is the default agent dir plus `pi install` / `pi update` as in [Installation](install.md).
+
 ## Runtime Isolation
 
 `dispatch-agent` sets:
@@ -82,16 +106,15 @@ All top-level agents run in-situ in the current working directory. Workspace mod
 
 ```mermaid
 graph TD
-  Parent["MAS root agent"]
-  Discover["Discover subagents"]
+  Parent["MAS orchestrator root"]
   Tool["subagent tool"]
-  Child["Child pi process"]
+  Workers["Child pi to agents ask scout writer coder web"]
   Result["Structured result"]
 
-  Parent --> Discover --> Tool --> Child --> Result --> Parent
+  Parent --> Tool --> Workers --> Result --> Parent
 ```
 
-Subagent configs are discovered from `agents/<mas>/agents/` and project-local `.pi/agents/`.
+Shipped MAS uses **`top-level-agent-orchestrator`**: workers are fixed top-level **`agents/<worker>/`** configs (`ask`, `scout`, `writer`, `coder`, `web`), not a nested `agents/<mas>/agents/` pool. Project-local **`.pi/agents/`** may still be used for other pi workflows; see [Multi-agent systems](reference/multi-agent-systems.md).
 
 ## Overlay Safety
 

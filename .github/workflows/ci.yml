@@ -21,7 +21,6 @@ jobs:
             --severity=warning \
             --external-sources \
             dotpi \
-            install \
             dispatch-agent \
             core/commands/*.sh \
             core/install/*.sh
@@ -56,16 +55,6 @@ jobs:
             echo "Unexpected exit code: $rc (expected 0 or 1)"
             exit 1
           fi
-      - name: install deprecation stub (exits 1 by design)
-        run: |
-          set +e
-          bash install --help
-          rc=$?
-          set -e
-          if [ "$rc" -ne 1 ]; then
-            echo "Unexpected exit code: $rc (expected 1 from removed curl installer stub)"
-            exit 1
-          fi
       - name: pi-args parsing (no trailing newline, comments, multi-word flags)
         run: |
           set -e
@@ -98,7 +87,6 @@ jobs:
       - name: bash syntax check (all shell scripts)
         run: |
           bash -n dotpi
-          bash -n install
           bash -n dispatch-agent
           for f in core/commands/*.sh; do bash -n "$f"; done
           for f in core/dispatch/*.sh; do bash -n "$f"; done

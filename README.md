@@ -57,7 +57,7 @@ Optional TypeScript check for shared extensions:
 (cd core/tests && npx tsc --noEmit)
 ```
 
-The supported **consumer** flow remains **`pi install`** / **`pi update`** as in [Quick Start](#quick-start). See **`PI_INSTALL.md`** in this repo for architecture notes (including how this differs from the Pi-managed package tree).
+The supported **consumer** flow remains **`pi install`** / **`pi update`** as in [Quick Start](#quick-start). For how the Pi-managed clone, overlay, and dispatch fit together, see **[docs/architecture.md](docs/architecture.md)** (MkDocs: [Architecture](https://PlebeiusGaragicus.github.io/dot-pi/architecture/)).
 
 ## Create agents
 
