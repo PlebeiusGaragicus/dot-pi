@@ -21,6 +21,23 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 - **Shipped common extension symlinks** use **`extensions/<basename>.ts`** (not bare `<basename>`) so **pi**’s extension discovery picks them up; bare names pointed at `*.ts` targets but were skipped by `discoverExtensionsInDir`, so extensions such as **`say` never ran `registerFlag`** and CLI flags like **`--tts-enable`** failed with “Unknown option”.
 
+## [0.8.5] — 2026-05-14
+
+### Added
+
+- **`dotpi keys`** ([#10](https://github.com/PlebeiusGaragicus/dot-pi/issues/10)): interactive CLI (and **`dotpi keys status`**) to view, set, or clear Exa, Tavily, and ntfy credentials under **`$DOT_PI_OVERLAY`**; optional ntfy **`/version`** probe after save.
+- **`/api-keys`** ([#10](https://github.com/PlebeiusGaragicus/dot-pi/issues/10)): shipped common extension for the same overlay files inside pi.
+
+### Changed
+
+- Unified key UX: **`/api-keys`** replaces **`/exa-api-key`** and **`/tavily-api-key`**; Exa/Tavily skill scripts and SKILLs point users at **`dotpi keys`** / **`/api-keys`** instead of documenting overlay key plumbing.
+- **`dotpi`**: **`setup`** help text describes LLM providers/models only; new **`keys`** subcommand; **`/api-keys`** root menu uses **`ctx.ui.select`** (list picker) instead of typed number entry.
+- After a **Tavily** key change in **`/api-keys`**, notify to run **`/reload`** so the Tavily usage footer re-bootstraps on **`session_start`**.
+
+### Removed
+
+- **`shared/extensions/exa/`** and the **`agents/web/extensions/exa`** symlink (key slash command only; Exa search remains skill scripts).
+
 ## [0.8.4] — 2026-05-14
 
 ### Changed
