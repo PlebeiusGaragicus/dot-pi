@@ -111,6 +111,10 @@ abs_path() {
 	printf '%s\n' "$(cd "$(dirname "$f")" && pwd)/$(basename "$f")"
 }
 
+print_todo_list_empty() {
+	echo "Your todo list is empty."
+}
+
 cmd_file() {
 	local force=false
 	while [[ $# -gt 0 ]]; do
@@ -241,7 +245,7 @@ cmd_list() {
 		n_open="$(jq -s 'map(select(.done != true)) | length' "$TODO_FILE")"
 	fi
 	if [[ "$n_open" -eq 0 ]]; then
-		echo "Your todo list is empty."
+		print_todo_list_empty
 		return 0
 	fi
 	jq -r 'select(.done != true) | "- [ ] (\(.id)) \(.text)"' "$TODO_FILE"
@@ -249,7 +253,16 @@ cmd_list() {
 
 cmd_all() {
 	resolve_todo_file
-	[[ ! -s "$TODO_FILE" ]] && return 0
+	local n_tasks
+	if [[ ! -s "$TODO_FILE" ]]; then
+		n_tasks=0
+	else
+		n_tasks="$(jq -s 'length' "$TODO_FILE")"
+	fi
+	if [[ "$n_tasks" -eq 0 ]]; then
+		print_todo_list_empty
+		return 0
+	fi
 	jq -r 'if .done then "- [x] (\(.id)) \(.text)" else "- [ ] (\(.id)) \(.text)" end' "$TODO_FILE"
 }
 
