@@ -18,9 +18,10 @@ Current shipped common extensions (see manifest for the authoritative list):
 |-----------|---------|
 | `run-finish-notify` | Notify when an agent turn completes. |
 | `run-timer` | Show elapsed turn time in the TUI. |
-| `startup-branding` | Render `banner.txt` at startup. |
+| `api-keys` | Slash command **`/api-keys`** to view or edit Exa, Tavily, and ntfy overlay keys (same files as **`dotpi keys`**). |
 | `save` | Provide the shared save tool. |
 | `say` | Provide text-to-speech / `say` behavior. |
+| `startup-branding` | Render `banner.txt` at startup. |
 
 MAS orchestrators link **`top-level-agent-orchestrator`** explicitly (plus the common bundle). Worker agents (`ask`, `scout`, etc.) are ordinary top-level configs with the same bundle and their own custom extensions as needed.
 
@@ -28,7 +29,7 @@ Specialized extensions stay out of the default bundles. Examples include **`top-
 
 ### Repo-root service credentials
 
-Extensions that support local API keys use **`env.<service>`** files under **`$DOT_PI_OVERLAY`** only (for example **`env.exa`** and **`env.tavily`**). Environment variables for the same keys always win when set.
+Extensions that support local API keys use **`env.<service>`** files under **`$DOT_PI_OVERLAY`** only (for example **`env.exa`** and **`env.tavily`**). Environment variables for the same keys always win when set. Manage these files with **`dotpi keys`** (CLI) or **`/api-keys`** in pi (shipped common extension).
 
 ## Extension Structure
 

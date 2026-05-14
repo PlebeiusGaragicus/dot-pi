@@ -1,6 +1,6 @@
 {
   "name": "dot-pi",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "Pi agent configurations managed as a Pi git package.",
   "keywords": [
     "pi-package"

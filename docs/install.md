@@ -84,7 +84,11 @@ $HOME/.pi/dot-pi
 
 Install/update scripts may create missing directories and seed files, but they must not overwrite, truncate, replace, or delete existing overlay files. In particular, `$DOT_PI_OVERLAY/settings.json` is shared user-owned settings for dot-pi agents.
 
-## PATH for agent commands
+## Overlay API keys (Exa, Tavily, ntfy)
+
+Use **`dotpi keys`** from a terminal for an interactive menu (view masked values, set, clear, optional ntfy probe). Use **`dotpi keys status`** for a non-interactive summary. Inside pi, use **`/api-keys`** for the same overlay files.
+
+These write **`env.exa`**, **`env.tavily`**, and **`env.ntfy`** under **`$DOT_PI_OVERLAY`**. Environment variables for the same keys still take precedence at runtime (see [Writing extensions](reference/extensions.md#repo-root-service-credentials)).
 
 Use **`dotpi symlink-agents`** (or the full path printed by postinstall) so `ask`, `mas`, `coder`, etc. resolve in new terminals. Options: **`--dry-run`**, **`--rc FILE`** (e.g. fish users can target a file they maintain). Re-run after changing install location; the command refreshes the marked block.
 

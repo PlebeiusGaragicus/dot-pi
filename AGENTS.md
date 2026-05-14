@@ -20,7 +20,7 @@ All top-level agents run **in-situ** in the user's current directory. Runtime se
 dot-pi/
 ├── AGENTS.md                 # This file
 ├── README.md                 # Human-facing overview
-├── dotpi                     # CLI: setup, list, link-skill, link-auth, relink, symlink-agents, …
+├── dotpi                     # CLI: setup, keys, list, link-skill, link-auth, relink, symlink-agents, …
 ├── dispatch-agent            # Symlink target in core/bin/ (dispatches commands to agents)
 ├── core/                     # Implementation internals
 │   ├── commands/             # Subcommand scripts (sourced by dotpi)
@@ -58,7 +58,7 @@ These files are **never tracked**. They're created locally by the installer or `
 | `shared/settings.json` | Symlink → `$DOT_PI_OVERLAY/settings.json` (created by postinstall/relink) | Shared dot-pi agent preferences (including pi’s default model when updated in-session). User-owned; install/update scripts must not overwrite existing overlay settings. |
 | `shared/auth.json` | Symlink → `$DOT_PI_OVERLAY/auth.json` → `~/.pi/agent/auth.json` (created by postinstall/relink) | API credentials. Edit `~/.pi/agent/auth.json` directly. |
 | `*/auth.json` (under `agents/<name>/`) | Symlink → `../../shared/auth.json` (created by postinstall/relink / scaffolds) | Same credential file for every top-level agent; edit `~/.pi/agent/auth.json`. Override with `dotpi link-auth` if needed. |
-| `env.exa`, `env.tavily`, `env.ntfy` | `/exa-api-key`, `/tavily-api-key`, manual keys, or `NTFY_*` for ntfy | API keys / ntfy URL under **`$DOT_PI_OVERLAY`** only (never the Pi-managed package clone). |
+| `env.exa`, `env.tavily`, `env.ntfy` | **`dotpi keys`**, **`/api-keys`** in pi, manual files, or `NTFY_*` in the environment | API keys / ntfy URL under **`$DOT_PI_OVERLAY`** only (never the Pi-managed package clone). |
 | **`$DOT_PI_OVERLAY/`** | Created by postinstall/relink as needed; default **`~/.pi/dot-pi`** when unset | Overlay root for shared **`settings.json`**, **`env.*`** credential/prefs files, **`env.tts-wpm`**, optional **`env.ssh`** (text file), and per-agent **`sessions/`**, **`prompts/`**, **`skills/`**, **`extensions/`**, **`themes/`**. User-owned; install/update scripts must not overwrite existing files. |
 | `env.tts-wpm` | Say extension / `/tts-wpm` | TTS speed; store under **`$DOT_PI_OVERLAY`** for Pi-package installs. |
 | `env.ssh` | Optional tooling | If used, keep under **`$DOT_PI_OVERLAY/env.ssh`** (single text file) so material is not deleted by **`git clean`** in the package tree. **Not** a replacement for the user’s **`~/.ssh`**. |
@@ -320,7 +320,7 @@ If the command reports **permission denied**, the rc file may be **owned by root
 | `agents/*/APPEND_SYSTEM.md` | Yes | Appends to pi's default system prompt (pi-native) |
 | `agents/*/pi-args` | Yes | Default CLI flags (read by `dispatch-agent`) |
 | `agents/*/extensions/**/*.ts` | Yes | Custom agent extensions |
-| `dotpi` | Yes | CLI dispatcher (setup, list, link-skill, link-auth, relink, symlink-agents, …) |
+| `dotpi` | Yes | CLI dispatcher (setup, keys, list, link-skill, link-auth, relink, symlink-agents, …) |
 | `core/commands/*.sh` | Yes | Subcommand scripts (sourced by dotpi) |
 | `dispatch-agent` | Yes | Symlink target in core/bin/ (dispatches commands to agents) |
 | `core/dispatch/*.sh` | Yes | Focused launcher internals sourced by `dispatch-agent` |

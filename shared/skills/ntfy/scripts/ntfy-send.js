@@ -23,7 +23,8 @@ function usage() {
 	console.log("  --tags LIST     Comma-separated tags (ntfy Tags header)");
 	console.log("");
 	console.log("Requires NTFY_BASE_URL and optional NTFY_USER / NTFY_PASSWORD");
-	console.log("(environment or $DOT_PI_OVERLAY/env.ntfy). DOT_PI_DIR must be set.");
+	console.log("(environment or overlay env.ntfy). Configure with: dotpi keys   (or /api-keys in pi)");
+	console.log("DOT_PI_DIR must be set when run through dispatch-agent.");
 }
 
 function parsePriority(raw) {
