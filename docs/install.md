@@ -125,6 +125,55 @@ dotpi setup
 
 Provider models are stored in Pi's standard `~/.pi/agent/models.json`. Credentials are stored in Pi's standard `~/.pi/agent/auth.json`. dot-pi exposes them through `$DOT_PI_OVERLAY/models.json` and `$DOT_PI_OVERLAY/auth.json`, then through `shared/models.json` and `shared/auth.json`, so all dot-pi agents share the same files as vanilla `pi`.
 
+### LM Studio model catalog
+
+If your models are served from **LM Studio** (local server or any OpenAI-compatible URL whose origin exposes LM Studio’s `GET /api/v1/models`), generate a provider entry with the bundled script. It reads each model’s reasoning `allowed_options` and emits a matching `thinkingLevelMap` where applicable.
+
+**Script location**
+
+- After install, `postinstall` prints the package root; the script is always `<dot-pi-root>/core/scripts/lmstudio-models`.
+- Typical **Pi git install** path (adjust if you use a fork or different host/path):
+
+```bash
+"$HOME/.pi/agent/git/github.com/PlebeiusGaragicus/dot-pi/core/scripts/lmstudio-models"
+```
+
+**Run (interactive, recommended)** — With no flags, the script prompts on the terminal for LM Studio URL, API key (leave blank if unused), and provider name (default `lmstudio`). Progress goes to **stderr**; the catalog JSON goes to **stdout** only.
+
+One-liner to write Pi’s catalog (adjust the script path if needed):
+
+```bash
+"$HOME/.pi/agent/git/github.com/PlebeiusGaragicus/dot-pi/core/scripts/lmstudio-models" > ~/.pi/agent/models.json
+```
+
+**Warning:** `>` **replaces the entire** `~/.pi/agent/models.json`. Use this when LM Studio is your only provider or you intend to replace the whole file. If you already have other providers, use the merge flow below instead of redirecting straight to `~/.pi/agent/models.json`.
+
+**Run (non-interactive)** — For scripts or CI, pass flags (use a real key when the server requires `Authorization: Bearer`):
+
+```bash
+"$HOME/.pi/agent/git/github.com/PlebeiusGaragicus/dot-pi/core/scripts/lmstudio-models" \
+  --url "http://localhost:1234" \
+  --key "" \
+  --name lmstudio
+```
+
+**Merge into `~/.pi/agent/models.json`**
+
+To keep existing providers, write generated JSON to a temp file (prompts still work; only JSON is captured), then merge with `jq`:
+
+```bash
+GEN=/tmp/lmstudio-models-gen.json
+"$HOME/.pi/agent/git/github.com/PlebeiusGaragicus/dot-pi/core/scripts/lmstudio-models" >"$GEN"
+SYSTEM="$HOME/.pi/agent/models.json"
+jq --slurpfile gen "$GEN" '.providers = (.providers // {}) * ($gen[0].providers)' "$SYSTEM" >"${SYSTEM}.tmp" && mv "${SYSTEM}.tmp" "$SYSTEM"
+```
+
+For a non-interactive merge, generate `$GEN` using the `--url`, `--key`, and `--name` flags instead.
+
+If you pass `--key`, the printed JSON includes an `apiKey` field inside that provider — do not commit or share that output; redact before pasting into docs or tickets.
+
+For other cloud providers and interactive editing, use **`dotpi setup`** as above.
+
 Global model aliases are stored at:
 
 ```text
