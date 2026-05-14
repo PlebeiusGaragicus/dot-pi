@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 Use when the user wants **push notifications** on phone or desktop via [ntfy](https://ntfy.sh/).
 
-**Run `node scripts/ntfy-send.js` from this skill directory** with the message text. For a quick test, a single quoted string is enough.
+**Run `node scripts/ntfy-send.js` from this skill directory** with the message text. For a quick test, a single quoted string is enough. Configure ntfy with **`dotpi keys`** or **`/api-keys`** in pi if notifications fail with a configuration error on stderr.
 
 ## Default topic (`bot`)
 

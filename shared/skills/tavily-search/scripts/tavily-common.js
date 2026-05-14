@@ -41,7 +41,7 @@ export function requireTavilyKey() {
 	if (apiKey) return apiKey;
 
 	console.error("Error: Tavily API key is not configured.");
-	console.error("Run /tavily-api-key, export TAVILY_API_KEY, or create $DOT_PI_OVERLAY/env.tavily with TAVILY_API_KEY=<key>.");
+	console.error("Configure with: dotpi keys   (or /api-keys in pi)");
 	console.error("Get your key from: https://app.tavily.com");
 	process.exit(1);
 }

@@ -22,7 +22,7 @@ For background on layout and overlay behaviour, see [Agent layout](../agent-layo
 
 ## Shipped common extensions
 
-dot-pi ships a **small fixed set** of shared extensions (TTS **`say`**, **`save`**, turn timer, finish notifications, **`startup-branding`**, etc.) so every **top-level interactive agent** in this repo gets the same baseline UX. The canonical **basename list** lives in **`shared/shipped-common-extensions`** (one name per line; `#` comments and blank lines allowed).
+dot-pi ships a **small fixed set** of shared extensions (TTS **`say`**, **`save`**, turn timer, finish notifications, **`startup-branding`**, **`/api-keys`**, etc.) so every **top-level interactive agent** in this repo gets the same baseline UX. The canonical **basename list** lives in **`shared/shipped-common-extensions`** (one name per line; `#` comments and blank lines allowed).
 
 **Wiring:** **`dotpi relink`** and postinstall read that file and create, for each basename **`ext`**:
 

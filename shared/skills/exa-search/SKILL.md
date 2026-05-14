@@ -6,7 +6,7 @@ disable-model-invocation: false
 
 # Exa CLI
 
-Use the scripts in `scripts/` for Exa web search. They read the API key from `EXA_API_KEY` first, then `$DOT_PI_OVERLAY/env.exa`. If no key is configured, ask the user to run `/exa-api-key`, export `EXA_API_KEY`, or create `$DOT_PI_OVERLAY/env.exa`.
+Use the scripts in `scripts/` for Exa web search when the environment is configured (see human install docs). If a run fails with a configuration error on stderr, ask the user to run **`dotpi keys`** or **`/api-keys`** in pi.
 
 Run commands from this skill directory unless you provide an absolute script path. The scripts are intentionally verbose on failure: missing keys, unknown options, missing option values, and Exa HTTP errors print a specific `Error:` line to stderr and exit nonzero.
 
@@ -72,6 +72,6 @@ node scripts/exa-similar.js https://example.com/article --num 5
 ## Failure Handling
 
 - If a script exits nonzero, read stderr before retrying.
-- If the error says the API key is missing, ask the user to configure it instead of guessing.
+- If stderr indicates missing configuration, ask the user to run **`dotpi keys`** or **`/api-keys`** in pi.
 - If Exa returns an HTTP error, report the status and provider message to the user.
 - If output is too verbose, retry with fewer results or use `--highlights` instead of `--text`.

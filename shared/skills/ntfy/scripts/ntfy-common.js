@@ -74,9 +74,7 @@ export function requireNtfyConfig() {
 	const config = loadNtfyConfig();
 	if (!config.baseUrl) {
 		console.error("Error: ntfy is not configured.");
-		console.error(
-			"Export NTFY_BASE_URL or create $DOT_PI_OVERLAY/env.ntfy with NTFY_BASE_URL=<url> (and optional NTFY_USER / NTFY_PASSWORD).",
-		);
+		console.error("Configure with: dotpi keys   (or /api-keys in pi)");
 		process.exit(1);
 	}
 	return config;

@@ -4,6 +4,7 @@
 
 run-finish-notify
 run-timer
+api-keys
 save
 say
 startup-branding

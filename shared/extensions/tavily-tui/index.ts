@@ -1,14 +1,12 @@
 /**
  * Tavily TUI helper.
  *
- * Provides repo-local API key management and a footer usage status for agents
- * that use the script-backed `tavily-cli` skill. This extension intentionally
- * does not register a Tavily search tool.
+ * Provides a footer usage status for agents that use the script-backed `tavily-search` skill.
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import * as fs from "node:fs";
-import { ensureOverlayDir, overlayFile, overlayFirstFile } from "../lib/dotpi-paths.js";
+import { overlayFirstFile } from "../lib/dotpi-paths.js";
 
 const USAGE_API_URL = "https://api.tavily.com/usage";
 const STATUS_KEY = "tavily-usage";
@@ -70,13 +68,6 @@ function loadTavilyKey(): string | null {
 	return match?.[1]?.trim() || null;
 }
 
-function saveTavilyKey(key: string): string {
-	ensureOverlayDir();
-	const keyPath = overlayFile(TAVILY_KEY_FILE);
-	fs.writeFileSync(keyPath, `TAVILY_API_KEY=${key}\n`, "utf-8");
-	return keyPath;
-}
-
 function buildBar(used: number, limit: number | null): string {
 	if (limit == null || limit <= 0) return "░".repeat(BAR_LEN);
 	const frac = Math.min(1, Math.max(0, used / limit));
@@ -115,7 +106,7 @@ async function fetchUsageBootstrapLine(): Promise<string> {
 	const apiKey = loadTavilyKey();
 	if (!apiKey) {
 		cachedUsage = null;
-		return "Tavily: run /tavily-api-key to configure";
+		return "Tavily: run /api-keys or dotpi keys to configure";
 	}
 
 	let res: Response;
@@ -158,27 +149,6 @@ async function refreshFooterBootstrap(ctx: ExtensionContext): Promise<void> {
 }
 
 export default function (pi: ExtensionAPI) {
-	pi.registerCommand("tavily-api-key", {
-		description: "Set or update your Tavily API key",
-		handler: async (_args, ctx) => {
-			if (!ctx.hasUI) return;
-			const current = loadTavilyKey();
-			const masked = current
-				? `${current.slice(0, 4)}****${current.slice(-2)}`
-				: "(not set)";
-			ctx.ui.notify(`Current key: ${masked}`, "info");
-			const input = await ctx.ui.input("Paste your Tavily API key (from https://app.tavily.com)");
-			if (!input?.trim()) {
-				ctx.ui.notify("Cancelled", "info");
-				return;
-			}
-
-			const keyPath = saveTavilyKey(input.trim());
-			ctx.ui.notify(`Saved to ${keyPath}`, "info");
-			await refreshFooterBootstrap(ctx);
-		},
-	});
-
 	pi.on("session_start", async (_event, ctx) => {
 		await refreshFooterBootstrap(ctx);
 	});

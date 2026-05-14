@@ -6,7 +6,7 @@ disable-model-invocation: false
 
 # Tavily CLI
 
-Use the scripts in `scripts/` for Tavily web search and extraction. They read the API key from `TAVILY_API_KEY` first, then `$DOT_PI_OVERLAY/env.tavily`. If no key is configured, ask the user to run `/tavily-api-key`, export `TAVILY_API_KEY`, or create `$DOT_PI_OVERLAY/env.tavily`.
+Use the scripts in `scripts/` for Tavily web search and extraction when the environment is configured (see human install docs). If a run fails with a configuration error on stderr, ask the user to run **`dotpi keys`** or **`/api-keys`** in pi.
 
 Run commands from this skill directory unless you provide an absolute script path. The scripts are intentionally verbose on failure: missing keys, unknown options, missing option values, rate limits, plan limits, and Tavily HTTP errors print a specific `Error:` line to stderr and exit nonzero.
 
@@ -69,7 +69,7 @@ Options:
 ## Failure Handling
 
 - If a script exits nonzero, read stderr before retrying.
-- If the error says the API key is missing, ask the user to configure it instead of guessing.
+- If stderr indicates missing configuration, ask the user to run **`dotpi keys`** or **`/api-keys`** in pi.
 - If Tavily returns HTTP 429, report the retry guidance and avoid immediate repeated calls.
 - If Tavily returns a plan or credit limit error, tell the user and stop searching.
 - If output is too verbose, retry with fewer results or a lower character cap.

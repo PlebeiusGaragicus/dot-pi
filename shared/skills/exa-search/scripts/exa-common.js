@@ -41,7 +41,7 @@ export function requireExaKey() {
 	if (apiKey) return apiKey;
 
 	console.error("Error: Exa API key is not configured.");
-	console.error("Run /exa-api-key, export EXA_API_KEY, or create $DOT_PI_OVERLAY/env.exa with EXA_API_KEY=<key>.");
+	console.error("Configure with: dotpi keys   (or /api-keys in pi)");
 	console.error("Get your key from: https://dashboard.exa.ai/api-keys");
 	process.exit(1);
 }

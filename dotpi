@@ -13,7 +13,8 @@ dotpi — dot-pi management CLI
 Usage: dotpi <command> [args]
 
 Commands:
-  setup                                    Interactive setup wizard (API keys and models)
+  setup                                    Interactive setup wizard (LLM providers and models)
+  keys [status|help]                       View or edit Exa, Tavily, and ntfy API keys in \$DOT_PI_OVERLAY
   list                                     List existing agent configs
   link-skill <agent> <skill> [...]         Symlink one or more shared skills into an agent config
   link-auth <src> <dst>                    Override auth.json symlink (src: agent name, file path, or "shared")
@@ -23,6 +24,8 @@ Commands:
 
 Examples:
   dotpi setup
+  dotpi keys
+  dotpi keys status
   dotpi list
   dotpi link-skill my-agent searxng
   dotpi link-auth shared blog             # point blog at shared/auth.json
@@ -39,6 +42,7 @@ shift
 
 case "$cmd" in
   setup)        source "$COMMANDS_DIR/setup.sh" "$@" ;;
+  keys)         source "$COMMANDS_DIR/keys.sh" "$@" ;;
   list)         source "$COMMANDS_DIR/list.sh" "$@" ;;
   link-skill)   source "$COMMANDS_DIR/link-skill.sh" "$@" ;;
   link-auth)    source "$COMMANDS_DIR/link-auth.sh" "$@" ;;

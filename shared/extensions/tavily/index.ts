@@ -20,7 +20,7 @@ import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
 import { Type } from "typebox";
 import * as fs from "node:fs";
-import { ensureOverlayDir, overlayFile, overlayFirstFile } from "../lib/dotpi-paths.js";
+import { overlayFirstFile } from "../lib/dotpi-paths.js";
 
 const API_URL = "https://api.tavily.com/search";
 const USAGE_API_URL = "https://api.tavily.com/usage";
@@ -35,13 +35,6 @@ function loadTavilyKey(): string | null {
     const content = fs.readFileSync(keyPath, "utf-8").trim();
     const match = content.match(/^(?:TAVILY_API_KEY\s*=\s*)?(.+)$/m);
     return match?.[1]?.trim() || null;
-}
-
-function saveTavilyKey(key: string): string {
-    ensureOverlayDir();
-    const keyPath = overlayFile(TAVILY_KEY_FILE);
-    fs.writeFileSync(keyPath, `TAVILY_API_KEY=${key}\n`, "utf-8");
-    return keyPath;
 }
 
 /** Cached footer state for the simplified usage bar. */
@@ -194,7 +187,7 @@ async function fetchUsageBootstrapLine(): Promise<string> {
     const apiKey = loadTavilyKey();
     if (!apiKey) {
         cachedUsage = null;
-        return "Tavily: run /tavily-api-key to configure";
+        return "Tavily: run /api-keys or dotpi keys to configure";
     }
 
     let res: Response;
@@ -294,7 +287,7 @@ export default function (pi: ExtensionAPI) {
                     content: [{ 
                         type: "text", 
                         text: "Error: Tavily API key is not configured.\n\n" +
-                              "Run /tavily-api-key to set it, or export TAVILY_API_KEY in your shell." 
+                              "Run dotpi keys or /api-keys in pi, or export TAVILY_API_KEY in your shell." 
                     }],
                     isError: true,
                     details: undefined,
@@ -528,26 +521,6 @@ export default function (pi: ExtensionAPI) {
 
             return new Text(preview.trimEnd(), 0, 0);
         }
-    });
-
-    pi.registerCommand("tavily-api-key", {
-        description: "Set or update your Tavily API key",
-        handler: async (_args, ctx) => {
-            if (!ctx.hasUI) return;
-            const current = loadTavilyKey();
-            const masked = current
-                ? `${current.slice(0, 4)}****${current.slice(-2)}`
-                : "(not set)";
-            ctx.ui.notify(`Current key: ${masked}`, "info");
-            const input = await ctx.ui.input("Paste your Tavily API key (from https://app.tavily.com)");
-            if (!input?.trim()) {
-                ctx.ui.notify("Cancelled", "info");
-                return;
-            }
-            const keyPath = saveTavilyKey(input.trim());
-            ctx.ui.notify(`Saved to ${keyPath}`, "info");
-            await refreshFooterBootstrap(ctx);
-        },
     });
 
     pi.on("session_start", async (_event, ctx) => {
