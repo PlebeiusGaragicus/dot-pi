@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export DOT_PI_SKIP_PLAYWRIGHT_INSTALL=1
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FIXTURE="$(mktemp -d "${TMPDIR:-/tmp}/dotpi-postinstall-smoke.XXXXXX")"
 OVERLAY="$(mktemp -d "${TMPDIR:-/tmp}/dotpi-postinstall-overlay.XXXXXX")"

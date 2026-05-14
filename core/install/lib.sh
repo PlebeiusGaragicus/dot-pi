@@ -209,6 +209,49 @@ dotpi_relink() {
   [ -n "$pi_agent_dir" ] && true
 }
 
+# Install Playwright Chromium for browser-control (npm package alone does not download browsers).
+# Skipped when PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1, DOT_PI_SKIP_PLAYWRIGHT_INSTALL=1, or CI is set.
+# Network or install failures are non-fatal so pi update stays usable offline.
+dotpi_install_browser_runtime_playwright() {
+  local dot_pi_dir="${DOT_PI_DIR:-}" rt
+  if [ "${PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD:-}" = "1" ] ||
+    [ "${DOT_PI_SKIP_PLAYWRIGHT_INSTALL:-}" = "1" ] ||
+    [ -n "${CI:-}" ]; then
+    return 0
+  fi
+  [ -n "$dot_pi_dir" ] || return 0
+  rt="$dot_pi_dir/core/utilities/browser-runtime"
+  [ -f "$rt/package.json" ] || return 0
+
+  (
+    set +e
+    cd "$rt" || exit 0
+    if command -v bun >/dev/null 2>&1; then
+      bun install || {
+        printf 'postinstall: warning: bun install failed in browser-runtime (browser-control may not run until fixed)\n' >&2
+        exit 0
+      }
+      bunx playwright install chromium || {
+        printf 'postinstall: warning: playwright install chromium failed; run: cd %s && bunx playwright install chromium\n' "$rt" >&2
+        exit 0
+      }
+    elif command -v npm >/dev/null 2>&1 && command -v npx >/dev/null 2>&1; then
+      npm install || {
+        printf 'postinstall: warning: npm install failed in browser-runtime (browser-control may not run until fixed)\n' >&2
+        exit 0
+      }
+      npx playwright install chromium || {
+        printf 'postinstall: warning: playwright install chromium failed; run: cd %s && npx playwright install chromium\n' "$rt" >&2
+        exit 0
+      }
+    else
+      printf 'postinstall: browser-control needs bun (recommended) or npm/npx; install deps in %s then run playwright install chromium\n' "$rt" >&2
+    fi
+    exit 0
+  )
+  return 0
+}
+
 # shellcheck source=path-rc.sh
 _LIB_INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1090

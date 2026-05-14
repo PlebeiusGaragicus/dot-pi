@@ -41,6 +41,16 @@ Pi clones this repository under `~/.pi/agent/git/...` and runs `npm install`, wh
 
 It creates or repairs clone-local symlinks, creates missing overlay directories, and prints **PATH** status (or a one-line `dotpi symlink-agents` command). It does not overwrite user-owned overlay files.
 
+Unless skipped (see below), postinstall also installs JavaScript dependencies under `core/utilities/browser-runtime` and runs **Playwright’s** `install chromium` so the **browser-control** daemon has a matching Chromium build (the `playwright` npm package does not download browsers by itself).
+
+To skip that step (CI, air-gapped machines, or when you manage browsers yourself), set **`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`** (Playwright’s own flag) or **`DOT_PI_SKIP_PLAYWRIGHT_INSTALL=1`**. If postinstall skipped or could not download browsers, install manually from the package clone:
+
+```bash
+cd /path/to/dot-pi/core/utilities/browser-runtime && bun install && bunx playwright install chromium
+```
+
+(Use `npm install` and `npx playwright install chromium` if you do not use Bun.)
+
 ## Overlay State
 
 Mutable dot-pi state lives outside the Pi-managed clone:

@@ -11,4 +11,5 @@ DOT_PI_OVERLAY="${DOT_PI_OVERLAY:-$HOME/.pi/dot-pi}"
 export DOT_PI_OVERLAY
 
 dotpi_relink "$DOT_PI_DIR" "$DOT_PI_OVERLAY"
+dotpi_install_browser_runtime_playwright
 dotpi_postinstall_path_hint
