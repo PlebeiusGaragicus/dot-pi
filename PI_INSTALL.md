@@ -4,7 +4,7 @@ This document records **what dot-pi is moving toward**, **how Pi’s package ins
 
 **Supported surface (target):** end users install and maintain dot-pi **only** through ordinary Pi **`pi install`** and **`pi update`**. The **curl `install`** path is **not** part of that surface and **will be removed** so the repo stays simple and aligned with Pi’s package manager.
 
-**Non-goals (target):** there is **no** reliance on **`dotpi sync`** (or any periodic merge job) for correct behavior. **`dotpi sync`** and **`dotpi doctor`** are **deprecated** and will be removed from the supported product surface. **`packages[]`** carries the **install/update lifecycle** for the Pi-managed dot-pi clone; **`dispatch-agent`** and **symlink-defined trees under each `agents/<name>/`** (extensions, skills, prompts, themes) carry the named-agent **runtime shape**. **`settings.json`** is for Pi preferences and package registration, **not** for enumerating every shipped extension/skill/prompt/theme path. **Workspace agents** (dated **`workspaces/`** dirs, **`WORKSPACE_AGENT`**, **`bootstrap.sh`** workspace mode) are **removed** from the target architecture—all agents run **in-situ** like ordinary Pi sessions, with **session files** stored under **`~/.pi/dot-pi/<agent>/sessions/`** or an equivalent per-cwd subtree under that overlay.
+**Non-goals (target):** there is **no** reliance on **`dotpi sync`** (or any periodic merge job) for correct behavior. **`dotpi sync`** is only a **narrow compatibility alias** for **`dotpi relink`** (postinstall-style wiring); **`dotpi doctor`** is **removed** from the CLI—use **`dotpi relink`** to repair local symlinks and overlay links. **`packages[]`** carries the **install/update lifecycle** for the Pi-managed dot-pi clone; **`dispatch-agent`** and **symlink-defined trees under each `agents/<name>/`** (extensions, skills, prompts, themes) carry the named-agent **runtime shape**. **`settings.json`** is for Pi preferences and package registration, **not** for enumerating every shipped extension/skill/prompt/theme path. **Workspace agents** (dated **`workspaces/`** dirs, **`WORKSPACE_AGENT`**, **`bootstrap.sh`** workspace mode) are **removed** from the target architecture—all agents run **in-situ** like ordinary Pi sessions, with **session files** stored under **`~/.pi/dot-pi/<agent>/sessions/`** or an equivalent per-cwd subtree under that overlay.
 
 ---
 
@@ -26,7 +26,7 @@ Illustrative layout on a machine where **`PI_CODING_AGENT_DIR`** defaults to **`
 │                   ├── package.json                 # "private": true, inert "pi" manifest, scripts.postinstall (PATH, overlay wiring)
 │                   ├── package-lock.json            # if npm deps exist
 │                   ├── dispatch-agent
-│                   ├── dotpi                          # legacy CLI; sync/doctor deprecated (see §8 checklist)
+│                   ├── dotpi                          # legacy CLI; sync = relink alias; doctor removed (see §8)
 │                   ├── VERSION
 │                   ├── AGENTS.md
 │                   ├── PI_INSTALL.md
@@ -35,8 +35,8 @@ Illustrative layout on a machine where **`PI_CODING_AGENT_DIR`** defaults to **`
 │                   │   │   ├── mas                  # → ../../dispatch-agent
 │                   │   │   ├── coder
 │                   │   │   ├── ask
-│                   │   │   └── dotpi                # optional symlink to ../../dotpi (sync/doctor deprecated)
-│                   │   ├── commands/                # dotpi subcommands (shrunken surface; sync.sh/doctor.sh gone)
+│                   │   │   └── dotpi                # optional symlink to ../../dotpi (sync = relink alias)
+│                   │   ├── commands/                # dotpi subcommands (shrunken surface; sync.sh = relink only)
 │                   │   ├── dispatch/                # dispatch-agent: PI_CODING_AGENT_DIR, --session-dir, DOT_PI_OVERLAY
 │                   │   └── tests/
 │                   │
@@ -333,7 +333,7 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
 
 - **[`core/commands/sync.sh`](core/commands/sync.sh)** — **Deprecated.** **`postinstall`** (and tracked in-repo symlinks where portable) replaces broad **`dotpi sync`** for **consumer** machines: **`core/bin`** on **`PATH`**, **`agents/<agent>/` → `shared/`** bundles as shipped, shared **`auth.json`** / **`models.json`** links to Pi-standard files, and **clone → overlay** symlinks recreated after **`git clean`**. **`agents/<name>/settings.json` must not symlink to `~/.pi/agent/settings.json`** if that vanilla file contains dot-pi’s package registration; runtime agent settings must not inherit dot-pi self-registration.
 
-- **`dotpi doctor`** — **Deprecated** (was coupled to sync-era assumptions).
+- **`dotpi doctor`** — **Removed** from the CLI (was coupled to sync-era assumptions). Use **`dotpi relink`**.
 
 - **`AGENTS.md`** — Should be updated so **`DOT_PI_OVERLAY`**, **`~/.pi/dot-pi/<agent>/sessions`**, **two-layer clone + overlay symlink model**, and deprecation of **workspace agents** / **`dotpi sync`** match this document.
 
@@ -351,7 +351,7 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
 
 5. **`dispatch-agent`** — Export **`DOT_PI_OVERLAY`** (default **`~/.pi/dot-pi`**); pass **`--session-dir`** to an overlay location (prefer a per-cwd subtree if preserving current list/resume behavior matters); remove workspace **`bootstrap.sh`** / **`WORKSPACE_AGENT`** flows and dated **`workspaces/`** trees.
 
-6. **Remove or narrow** **`dotpi sync`** and **`dotpi doctor`** from **`dotpi`** CLI and docs. If user-added overlay content needs relinking after install, keep a small relink command with a narrower contract and do not position it as a required periodic sync.
+6. **`dotpi doctor`** — **done** (removed). **`dotpi sync`** — narrowed to a **`relink`** alias only; do not position it as a required periodic merge. If user-added overlay content needs relinking after install, **`dotpi relink`** (and **`pi`** postinstall) carry that contract.
 
 7. **Document** in **[`docs/install.md`](docs/install.md)** and **this file**: normal install, **`PATH`**, **`DOT_PI_OVERLAY`**, two-layer model, session locations, inert root package manifest, and no workspaces.
 

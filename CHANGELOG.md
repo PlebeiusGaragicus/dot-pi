@@ -13,6 +13,10 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ## [Unreleased]
 
+### Removed
+
+- **`dotpi doctor`**: the deprecated stub command is gone; use **`dotpi relink`** to repair local wiring (**`PI_INSTALL.md`** updated).
+
 ## [0.8.2] — 2026-05-13
 
 ### Added

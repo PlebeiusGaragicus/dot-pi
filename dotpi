@@ -57,7 +57,6 @@ case "$cmd" in
   relink|sync)  source "$COMMANDS_DIR/sync.sh" "$@" ;;
   symlink-agents)
                 source "$COMMANDS_DIR/symlink-agents.sh" "$@" ;;
-  doctor)       echo "dotpi doctor is deprecated; use 'dotpi relink' to repair local wiring." >&2; exit 1 ;;
   version|--version|-v)
                 v="unknown"
                 [ -f "$DOT_PI_DIR/VERSION" ] && v="$(cat "$DOT_PI_DIR/VERSION")"
