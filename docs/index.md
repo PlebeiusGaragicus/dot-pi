@@ -28,11 +28,8 @@ To hack on dot-pi from a **git clone**, put **that clone’s** `core/bin` first 
 - Runtime sessions and user-owned files live under `$DOT_PI_OVERLAY`, defaulting to `~/.pi/dot-pi`.
 - The package root is inert for vanilla `pi`, so registering dot-pi does not load dot-pi resources into ordinary bare `pi` sessions.
 
-## Create Configurations
+## Create configurations
 
-```bash
-dotpi create my-research-mas
-dotpi create-agent my-agent
-```
+Add **`agents/<name>/`** trees by following **[Creating a new agent](reference/creating-a-new-agent.md)** in this docs site (repo path **`docs/reference/creating-a-new-agent.md`**). Run **`dotpi relink`** afterward. Optionally link the **`creating-a-new-agent`** shared skill into orchestrators that scaffold agents often.
 
 All top-level agents run in-situ in the current working directory. Workspace mode and the global `resume` picker have been removed.

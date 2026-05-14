@@ -43,7 +43,9 @@ Tool permissions, skills, model choices, context-file behavior, and safety postu
 
 ## Relationship To Prior Nested MAS
 
-Earlier dot-pi revisions shipped a nested **`agent-orchestrator`** that discovered workers under **`agents/<mas>/agents/`** and **`subagents/`**, with a separate **`extensions-subagents`** bundle wired by postinstall. That stack has been **removed**. Custom forks may still vendor a nested orchestrator, but **`dotpi create`** and postinstall no longer support it.
+Earlier dot-pi revisions shipped a nested **`agent-orchestrator`** that discovered workers under **`agents/<mas>/agents/`** and **`subagents/`**, with a separate **`extensions-subagents`** bundle wired by postinstall. That stack has been **removed**. Custom forks may still vendor a nested orchestrator, but postinstall no longer supports it.
+
+New orchestrator roots in-tree follow **[Creating a new agent](../reference/creating-a-new-agent.md)** (MAS checklist): **`top-level-agent-orchestrator`**, common bundle, shared symlinks, then **`dotpi relink`**.
 
 The **top-level-agent MAS** is the supported orchestration model in-tree:
 

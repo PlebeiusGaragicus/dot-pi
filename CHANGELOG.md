@@ -15,6 +15,11 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ## [0.8.3] — 2026-05-13
 
+### Added
+
+- **[`docs/reference/creating-a-new-agent.md`](docs/reference/creating-a-new-agent.md)** — canonical checklist for new standalone or MAS orchestrator roots under **`agents/<name>/`**, replacing removed scaffolds.
+- Shared skill **`creating-a-new-agent`** under **`shared/skills/creating-a-new-agent/`** — points agents at the reference doc; link with **`dotpi link-skill <agent> creating-a-new-agent`**.
+
 ### Changed
 
 - **`docs/architecture.md`**: expanded install model (Pi `packages[]`, clone lifecycle, nested-clone pitfall, clone+overlay symlinks); corrected MAS diagram for **`top-level-agent-orchestrator`** ([#23](https://github.com/PlebeiusGaragicus/dot-pi/issues/23)).
@@ -22,6 +27,7 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ### Removed
 
+- **`dotpi create`**, **`dotpi create-mas`**, and **`dotpi create-agent`**: removed from the **`dotpi`** CLI; **`core/commands/create.sh`** and **`core/commands/create-agent.sh`** removed. Scaffold new agents with **`docs/reference/creating-a-new-agent.md`** and the **`creating-a-new-agent`** skill, then run **`dotpi relink`**.
 - **`PI_INSTALL.md`** and the repo-root **`install`** stub: Pi-package architecture is documented in **`docs/architecture.md`** and **`docs/install.md`** ([#23](https://github.com/PlebeiusGaragicus/dot-pi/issues/23)).
 - **`dotpi doctor`**: the deprecated stub command is gone; use **`dotpi relink`** to repair local wiring.
 - **`dotpi sync`**: removed from the **`dotpi`** CLI; use **`dotpi relink`** (**[`core/commands/relink.sh`](core/commands/relink.sh)**).

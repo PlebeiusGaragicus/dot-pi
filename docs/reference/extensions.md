@@ -12,7 +12,7 @@ dot-pi separates extension implementation from default wiring:
 - `shared/extensions-common/` contains symlinks for extensions that every top-level interactive agent should load.
 - Agent-specific and workflow-specific extensions are linked explicitly into the relevant agent.
 
-Top-level MAS and standalone agents get the common bundle. `dotpi create`, `dotpi create-agent`, postinstall, and `dotpi relink` wire every entry in `shared/extensions-common/` into `agents/<name>/extensions/`.
+Top-level MAS and standalone agents get the common bundle. Postinstall and `dotpi relink` wire every entry in `shared/extensions-common/` into `agents/<name>/extensions/` (see [Creating a new agent](creating-a-new-agent.md) when scaffolding a new root).
 
 Current common extensions:
 

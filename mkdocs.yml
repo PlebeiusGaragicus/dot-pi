@@ -51,6 +51,7 @@ nav:
   - Agent Layout: agent-layout.md
   - Standalone Agents: standalone-agents.md
   - Reference:
+    - Creating a new agent: reference/creating-a-new-agent.md
     - Writing Extensions: reference/extensions.md
     - Workflow Writing Guide: workflow-writing-guide.md
     - Model Defaults: reference/model-defaults.md
