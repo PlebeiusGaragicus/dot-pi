@@ -16,6 +16,7 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 ### Removed
 
 - **`dotpi doctor`**: the deprecated stub command is gone; use **`dotpi relink`** to repair local wiring (**`PI_INSTALL.md`** updated).
+- **`dotpi sync`**: removed from the **`dotpi`** CLI; use **`dotpi relink`** (**[`core/commands/relink.sh`](core/commands/relink.sh)**). **`PI_INSTALL.md`** updated to match.
 
 ## [0.8.2] — 2026-05-13
 
@@ -107,8 +108,6 @@ _Pi package install and postinstall wiring; **`$DOT_PI_OVERLAY`** (`~/.pi/dot-pi
 - **Workspace-agent mode** (`WORKSPACE_AGENT`, **`core/dispatch/workspace.sh`**, dated
   **`workspaces/`** flows): all top-level agents run **in-situ** in the user’s cwd;
   sessions live under the overlay.
-- **`dotpi sync`** and **`dotpi doctor`** are deprecated on the supported product path
-  (see **`PI_INSTALL.md`**).
 
 ---
 

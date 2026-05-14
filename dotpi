@@ -54,7 +54,7 @@ case "$cmd" in
   list)         source "$COMMANDS_DIR/list.sh" "$@" ;;
   link-skill)   source "$COMMANDS_DIR/link-skill.sh" "$@" ;;
   link-auth)    source "$COMMANDS_DIR/link-auth.sh" "$@" ;;
-  relink|sync)  source "$COMMANDS_DIR/sync.sh" "$@" ;;
+  relink)       source "$COMMANDS_DIR/relink.sh" "$@" ;;
   symlink-agents)
                 source "$COMMANDS_DIR/symlink-agents.sh" "$@" ;;
   version|--version|-v)
