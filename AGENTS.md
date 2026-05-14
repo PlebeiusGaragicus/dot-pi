@@ -20,7 +20,7 @@ All top-level agents run **in-situ** in the user's current directory. Runtime se
 dot-pi/
 ├── AGENTS.md                 # This file
 ├── README.md                 # Human-facing overview
-├── dotpi                     # CLI: setup, create, create-agent, list, link-skill, link-auth
+├── dotpi                     # CLI: setup, list, link-skill, link-auth, relink, symlink-agents, …
 ├── dispatch-agent            # Symlink target in core/bin/ (dispatches commands to agents)
 ├── core/                     # Implementation internals
 │   ├── commands/             # Subcommand scripts (sourced by dotpi)
@@ -124,7 +124,7 @@ agents/<name>/
 2. **`pi-args`** (via `dispatch-agent`): plain text file with default CLI flags (e.g. `--model $DEFAULT_FAST_MODEL`, `--tools websearch`, `--no-tools`, `--no-skills`, `--no-context-files`), one per line. Model defaults come from **`$DOT_PI_OVERLAY/model-defaults`** and optional per-agent **`env.model`** under the overlay containing a raw `provider/model` id. Empty `--model $DEFAULT_*` values are skipped so pi falls back to `settings.json`. A missing final newline is tolerated. Non-coding agents and reusable subagents should usually include `--no-context-files` so they do not inherit project context unless intended.
 
  **`--tools` is an allowlist that filters extension tools too.** When `--tools` is present, pi only exposes tools whose names appear in the comma-separated list — this applies to built-in tools, extension-registered tools (`pi.registerTool()`), and SDK custom tools equally. If an agent loads an extension that registers a tool (e.g. `custom_lookup`) but the `pi-args` `--tools` line omits that name, the tool will not be available to the LLM and calls to it will return "Tool not found." To use extension tools alongside a restricted built-in set, list them explicitly: `--tools read,ls,bash,custom_lookup`. Omitting `--tools` entirely allows all tools (built-in defaults plus all extension tools). Use `--no-builtin-tools` instead if you want to suppress only the default built-ins (read, bash, edit, write) while keeping all extension tools enabled.
-3. **`AGENT.md`** (optional, legacy): YAML frontmatter sets `tools` and/or `model`; body appended to the system prompt. Requires symlink: `ln -sf ../../../shared/extensions/agent-prompt extensions/agent-prompt` — the `agent-prompt` shared extension reads `AGENT.md`. New `dotpi create-agent` scaffolds do not link this file by default.
+3. **`AGENT.md`** (optional, legacy): YAML frontmatter sets `tools` and/or `model`; body appended to the system prompt. Requires symlink: `ln -sf ../../../shared/extensions/agent-prompt extensions/agent-prompt` — the `agent-prompt` shared extension reads `AGENT.md`. The **`creating-a-new-agent`** checklist does not add this by default; link **`agent-prompt`** only if you want YAML-driven tools/model.
 
 ## Key Concepts
 
@@ -251,7 +251,7 @@ When editing prompt templates, keep delegation structural:
 **How it works:**
 
 - **Extension implementations**: Shared extension source lives in `shared/extensions/`. Do not move source into bundle directories.
-- **Common top-level extensions**: `shared/extensions-common/` contains symlinks for standard interactive/top-level agent extensions (`run-finish-notify`, `run-timer`, `startup-branding`, `say`, `save`, `model-default`). `dotpi create`, `dotpi create-agent`, postinstall, and `dotpi relink` link this bundle into top-level `agents/<name>/extensions/`.
+- **Common top-level extensions**: `shared/extensions-common/` contains symlinks for standard interactive/top-level agent extensions (`run-finish-notify`, `run-timer`, `startup-branding`, `say`, `save`, `model-default`). Postinstall and `dotpi relink` link this bundle into top-level `agents/<name>/extensions/` (see `docs/reference/creating-a-new-agent.md` when adding a new agent).
 - **MAS orchestrator**: Shipped MAS roots link **`top-level-agent-orchestrator`** (plus the common bundle). Other one-off extensions (`agent-prompt`, `tavily`, `personas`, `plan-mode`, etc.) are linked intentionally per agent as needed.
 - **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
 - **Themes**: Each theme JSON in `shared/themes/` is symlinked individually into `<dir>/themes/`.
@@ -274,19 +274,13 @@ All symlinks use relative paths (e.g. `../../../shared/extensions-common/...` fo
 
 ### Create a new MAS
 
-```bash
-dotpi create <mas-name>
-```
+Follow **`docs/reference/creating-a-new-agent.md`** (MAS orchestrator checklist): add **`agents/<mas-name>/`** with **`top-level-agent-orchestrator`**, common extension bundle, themes, shared symlinks, **`SYSTEM.md`**, **`USAGE.md`**, **`README.md`**, optional **`prompts/`** and **`pi-args`**. Run **`dotpi relink`**.
 
-Then: edit `SYSTEM.md` and `USAGE.md`, add prompt templates under `prompts/`, and link skills as needed. Delegation to workers uses the `subagent` tool and the shipped capability agents (`ask`, `scout`, `writer`, `coder`, `web`).
+Delegation uses the **`subagent`** tool and the shipped capability agents (`ask`, `scout`, `writer`, `coder`, `web`).
 
 ### Create a standalone agent
 
-```bash
-dotpi create-agent <agent-name>
-```
-
-**`dotpi create-agent`** writes **`SYSTEM.md`**, **`pi-args`**, **`README.md`**, and **`USAGE.md`**; it does **not** create **`AGENT.md`**. Customize **`SYSTEM.md`**, **`USAGE.md`** (launcher synopsis), **`pi-args`**, and/or your stub extension. Add **`AGENT.md`** + symlink **`agent-prompt.ts`** only if you want YAML-driven tools/model.
+Use the same reference doc (standalone checklist): **`agents/<agent-name>/extensions/<agent-name>/index.ts`**, common bundle, themes, **`SYSTEM.md`**, **`USAGE.md`**, **`README.md`**, **`pi-args`** as needed. Run **`dotpi relink`**. Link skills with **`dotpi link-skill <agent-name> <skill>`**.
 
 Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or lifecycle hooks.
 
@@ -327,7 +321,7 @@ If the command reports **permission denied**, the rc file may be **owned by root
 | `agents/*/APPEND_SYSTEM.md` | Yes | Appends to pi's default system prompt (pi-native) |
 | `agents/*/pi-args` | Yes | Default CLI flags (read by `dispatch-agent`) |
 | `agents/*/extensions/**/*.ts` | Yes | Custom agent extensions |
-| `dotpi` | Yes | CLI dispatcher (setup, create, list, link-skill, link-auth, symlink-agents) |
+| `dotpi` | Yes | CLI dispatcher (setup, list, link-skill, link-auth, relink, symlink-agents, …) |
 | `core/commands/*.sh` | Yes | Subcommand scripts (sourced by dotpi) |
 | `dispatch-agent` | Yes | Symlink target in core/bin/ (dispatches commands to agents) |
 | `core/dispatch/*.sh` | Yes | Focused launcher internals sourced by `dispatch-agent` |

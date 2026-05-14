@@ -59,14 +59,11 @@ Optional TypeScript check for shared extensions:
 
 The supported **consumer** flow remains **`pi install`** / **`pi update`** as in [Quick Start](#quick-start). See **`PI_INSTALL.md`** in this repo for architecture notes (including how this differs from the Pi-managed package tree).
 
-## Create Agents
+## Create agents
 
-```bash
-dotpi create my-research-mas
-dotpi create-agent my-agent
-```
+Add new top-level configs under **`agents/<name>/`** by following **[docs/reference/creating-a-new-agent.md](docs/reference/creating-a-new-agent.md)** (MkDocs: [Creating a new agent](https://PlebeiusGaragicus.github.io/dot-pi/reference/creating-a-new-agent/)). Then run **`dotpi relink`** so **`core/bin/<name>`** and symlinks match shipped conventions.
 
-Both create in-situ agents. Workspace mode has been removed; sessions are stored under `$DOT_PI_OVERLAY/<agent>/sessions/`.
+Sessions remain under **`$DOT_PI_OVERLAY/<agent>/sessions/`**.
 
 ## Docs
 

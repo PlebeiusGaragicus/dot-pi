@@ -61,13 +61,9 @@ ask ls
 
 Workspace mode and `resume` have been removed. To continue an old conversation, use Pi's normal session mechanics within the overlay-backed session directory.
 
-## Create A Custom MAS
+## Create a custom MAS
 
-```bash
-dotpi create docs-mas
-```
-
-This creates `agents/docs-mas/` with shared extensions, themes, prompts, auth/model/settings links, and **`top-level-agent-orchestrator`**. Edit `SYSTEM.md`, add workflow templates under `prompts/`, link skills as needed, then run:
+Follow **[Creating a new agent](reference/creating-a-new-agent.md)** (MAS orchestrator checklist) to add **`agents/docs-mas/`** (or any name) with **`top-level-agent-orchestrator`**, shared links, and starter **`SYSTEM.md`** / **`USAGE.md`**. Edit **`SYSTEM.md`**, add workflow templates under **`prompts/`**, link skills as needed, then run:
 
 ```bash
 dotpi relink
@@ -75,13 +71,9 @@ cd ~/projects/my-api
 docs-mas - "Write API reference docs for all endpoints in src/routes/"
 ```
 
-## Create A Standalone Agent
+## Create a standalone agent
 
-```bash
-dotpi create-agent my-agent
-```
-
-Edit `agents/my-agent/SYSTEM.md`, `USAGE.md`, `pi-args`, and the stub extension if needed.
+Use the same reference doc (standalone checklist) under **`agents/my-agent/`**, then **`dotpi relink`**. Edit **`SYSTEM.md`**, **`USAGE.md`**, **`pi-args`**, and the stub extension as needed.
 
 ## Local Defaults And Auth
 

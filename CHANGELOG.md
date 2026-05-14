@@ -13,8 +13,14 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ## [Unreleased]
 
+### Added
+
+- **[`docs/reference/creating-a-new-agent.md`](docs/reference/creating-a-new-agent.md)** — canonical checklist for new standalone or MAS orchestrator roots under **`agents/<name>/`**, replacing removed scaffolds.
+- Shared skill **`creating-a-new-agent`** under **`shared/skills/creating-a-new-agent/`** — points agents at the reference doc; link with **`dotpi link-skill <agent> creating-a-new-agent`**.
+
 ### Removed
 
+- **`dotpi create`**, **`dotpi create-mas`**, and **`dotpi create-agent`**: removed from the **`dotpi`** CLI; **`core/commands/create.sh`** and **`core/commands/create-agent.sh`** removed. Scaffold new agents with **`docs/reference/creating-a-new-agent.md`** and the **`creating-a-new-agent`** skill, then run **`dotpi relink`**.
 - **`dotpi doctor`**: the deprecated stub command is gone; use **`dotpi relink`** to repair local wiring (**`PI_INSTALL.md`** updated).
 - **`dotpi sync`**: removed from the **`dotpi`** CLI; use **`dotpi relink`** (**[`core/commands/relink.sh`](core/commands/relink.sh)**). **`PI_INSTALL.md`** updated to match.
 

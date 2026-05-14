@@ -17,7 +17,7 @@ for dir in "$DOT_PI_DIR"/agents/*/; do
   echo "  $name  ($prompt_count prompts, top-level MAS)"
 done
 if [ "$mas_found" -eq 0 ]; then
-  echo "  (none -- run 'dotpi create <name>' to create one)"
+  echo "  (none -- add agents/<name>/ per docs/reference/creating-a-new-agent.md, then dotpi relink)"
 fi
 
 echo ""
@@ -33,7 +33,7 @@ for dir in "$DOT_PI_DIR"/agents/*/; do
   echo "  $name  (extensions: $ext_count)"
 done
 if [ "$standalone_found" -eq 0 ]; then
-  echo "  (none -- run 'dotpi create-agent <name>' to create one)"
+  echo "  (none -- add agents/<name>/ per docs/reference/creating-a-new-agent.md, then dotpi relink)"
 fi
 
 echo ""

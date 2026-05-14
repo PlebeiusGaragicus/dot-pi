@@ -15,9 +15,6 @@ Usage: dotpi <command> [args]
 Commands:
   setup                                    Interactive setup wizard (API keys and models)
   model-defaults                           Configure local fallback model aliases
-  create <mas-name>                        Create a multi-agent system with an orchestrator and subagents
-  create-mas <mas-name>                    Alias for create
-  create-agent <agent-name>                Create a standalone agent directory with a stub extension
   list                                     List existing agent configs
   link-skill <agent> <skill> [...]         Symlink one or more shared skills into an agent config
   link-auth <src> <dst>                    Override auth.json symlink (src: agent name, file path, or "shared")
@@ -28,8 +25,6 @@ Commands:
 Examples:
   dotpi setup
   dotpi model-defaults
-  dotpi create research
-  dotpi create-agent twenty-questions
   dotpi list
   dotpi link-skill my-agent searxng
   dotpi link-auth shared blog             # point blog at shared/auth.json
@@ -48,9 +43,6 @@ case "$cmd" in
   setup)        source "$COMMANDS_DIR/setup.sh" "$@" ;;
   model-defaults)
                 source "$COMMANDS_DIR/model-defaults.sh" "$@" ;;
-  create|create-mas)
-                source "$COMMANDS_DIR/create.sh" "$@" ;;
-  create-agent) source "$COMMANDS_DIR/create-agent.sh" "$@" ;;
   list)         source "$COMMANDS_DIR/list.sh" "$@" ;;
   link-skill)   source "$COMMANDS_DIR/link-skill.sh" "$@" ;;
   link-auth)    source "$COMMANDS_DIR/link-auth.sh" "$@" ;;

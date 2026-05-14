@@ -49,15 +49,11 @@ The directory is a complete `PI_CODING_AGENT_DIR` root, just like a MAS director
 | `SYSTEM.md` | Orchestrator instructions | Standalone system prompt |
 | Custom extension | Optional (often only common bundle) | Core of the agent |
 
-## Creating a Standalone Agent
+## Creating a standalone agent
 
-### Scaffolding
+Follow **[Creating a new agent](reference/creating-a-new-agent.md)** (standalone checklist): add **`agents/<name>/`** with **`extensions/<name>/index.ts`**, the common extension bundle, themes, shared symlinks, **`SYSTEM.md`**, **`USAGE.md`**, optional **`pi-args`**, then run **`dotpi relink`**.
 
-```bash
-dotpi create-agent my-agent
-```
-
-This creates the directory structure with common extension bundle symlinks and a stub extension at `agents/my-agent/extensions/my-agent/index.ts`.
+That layout includes common extension bundle symlinks and a stub extension at **`agents/<name>/extensions/<name>/index.ts`** (adjust **`<name>`** to your agent directory).
 
 The common bundle includes `/model-default`, so top-level standalone agents can manage local model defaults while keeping agent policy in `pi-args`.
 
@@ -111,7 +107,7 @@ If `$DEFAULT_FAST_MODEL` is empty, `dispatch-agent` skips `--model` so pi falls 
 
 **Optional: `AGENT.md` (via manually linked `agent-prompt` extension)**
 
-YAML frontmatter + markdown body for extra prompt and model/tool configuration. **`dotpi create-agent` does not symlink `agent-prompt`.** To use it:
+YAML frontmatter + markdown body for extra prompt and model/tool configuration. The **`creating-a-new-agent`** checklist does not symlink **`agent-prompt`** by default. To use it:
 
 ```bash
 ln -sf ../../../shared/extensions/agent-prompt agents/<name>/extensions/agent-prompt

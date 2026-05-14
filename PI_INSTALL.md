@@ -36,7 +36,7 @@ Illustrative layout on a machine where **`PI_CODING_AGENT_DIR`** defaults to **`
 │                   │   │   ├── coder
 │                   │   │   ├── ask
 │                   │   │   └── dotpi                # optional symlink to ../../dotpi
-│                   │   ├── commands/                # dotpi subcommands (relink.sh, setup, create, …)
+│                   │   ├── commands/                # dotpi subcommands (relink.sh, setup, list, link-skill, …)
 │                   │   ├── dispatch/                # dispatch-agent: PI_CODING_AGENT_DIR, --session-dir, DOT_PI_OVERLAY
 │                   │   └── tests/
 │                   │
