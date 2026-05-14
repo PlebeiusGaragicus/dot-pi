@@ -13,6 +13,8 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ## [Unreleased]
 
+## [0.8.2] — 2026-05-13
+
 ### Added
 
 - **Postinstall** installs Playwright Chromium for **`core/utilities/browser-runtime`** (browser-control) after relink, unless **`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD`**, **`DOT_PI_SKIP_PLAYWRIGHT_INSTALL`**, or **`CI`** is set; install failures are warnings only so **`pi update`** still completes.
