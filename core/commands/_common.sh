@@ -14,7 +14,7 @@ link_extension_bundle() {
     [ -e "$ext" ] || [ -L "$ext" ] || continue
     name=$(basename "$ext")
     if [ -e "$target_dir/$name" ] && [ ! -L "$target_dir/$name" ]; then
-      echo "sync: keeping existing non-symlink extension $target_dir/$name" >&2
+      echo "relink: keeping existing non-symlink extension $target_dir/$name" >&2
       continue
     fi
     [ -L "$target_dir/$name" ] && rm "$target_dir/$name"

@@ -138,4 +138,4 @@ echo "  2. Add prompt templates under $mas_dir/prompts/ as needed"
 echo "  3. Link skills: dotpi link-skill $mas_name <skill>"
 echo "  4. Run: $mas_name \"your task\""
 
-source "$COMMANDS_DIR/sync.sh"
+source "$COMMANDS_DIR/relink.sh"

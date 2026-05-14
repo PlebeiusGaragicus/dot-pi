@@ -138,4 +138,4 @@ echo "  2. Edit $agent_dir/extensions/$agent_name/index.ts if you need custom to
 echo "  3. Link skills as needed: dotpi link-skill $agent_name <skill>"
 echo "  4. Run: $agent_name \"your task\""
 
-source "$COMMANDS_DIR/sync.sh"
+source "$COMMANDS_DIR/relink.sh"

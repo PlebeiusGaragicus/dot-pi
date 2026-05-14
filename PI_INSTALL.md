@@ -4,7 +4,7 @@ This document records **what dot-pi is moving toward**, **how Pi’s package ins
 
 **Supported surface (target):** end users install and maintain dot-pi **only** through ordinary Pi **`pi install`** and **`pi update`**. The **curl `install`** path is **not** part of that surface and **will be removed** so the repo stays simple and aligned with Pi’s package manager.
 
-**Non-goals (target):** there is **no** reliance on **`dotpi sync`** (or any periodic merge job) for correct behavior. **`dotpi sync`** and **`dotpi doctor`** are **deprecated** and will be removed from the supported product surface. **`packages[]`** carries the **install/update lifecycle** for the Pi-managed dot-pi clone; **`dispatch-agent`** and **symlink-defined trees under each `agents/<name>/`** (extensions, skills, prompts, themes) carry the named-agent **runtime shape**. **`settings.json`** is for Pi preferences and package registration, **not** for enumerating every shipped extension/skill/prompt/theme path. **Workspace agents** (dated **`workspaces/`** dirs, **`WORKSPACE_AGENT`**, **`bootstrap.sh`** workspace mode) are **removed** from the target architecture—all agents run **in-situ** like ordinary Pi sessions, with **session files** stored under **`~/.pi/dot-pi/<agent>/sessions/`** or an equivalent per-cwd subtree under that overlay.
+**Non-goals (target):** there is **no** reliance on any periodic merge job for correct behavior. **`postinstall`** (on **`pi install` / `pi update`**) and **`dotpi relink`** recreate clone-local symlinks and overlay wiring after **`git clean`**; they do not merge shipped resource inventory into **`settings.json`**. **`dotpi doctor`** is **removed** from the CLI—use **`dotpi relink`** to repair wiring manually when needed. **`packages[]`** carries the **install/update lifecycle** for the Pi-managed dot-pi clone; **`dispatch-agent`** and **symlink-defined trees under each `agents/<name>/`** (extensions, skills, prompts, themes) carry the named-agent **runtime shape**. **`settings.json`** is for Pi preferences and package registration, **not** for enumerating every shipped extension/skill/prompt/theme path. **Workspace agents** (dated **`workspaces/`** dirs, **`WORKSPACE_AGENT`**, **`bootstrap.sh`** workspace mode) are **removed** from the target architecture—all agents run **in-situ** like ordinary Pi sessions, with **session files** stored under **`~/.pi/dot-pi/<agent>/sessions/`** or an equivalent per-cwd subtree under that overlay.
 
 ---
 
@@ -26,7 +26,7 @@ Illustrative layout on a machine where **`PI_CODING_AGENT_DIR`** defaults to **`
 │                   ├── package.json                 # "private": true, inert "pi" manifest, scripts.postinstall (PATH, overlay wiring)
 │                   ├── package-lock.json            # if npm deps exist
 │                   ├── dispatch-agent
-│                   ├── dotpi                          # legacy CLI; sync/doctor deprecated (see §8 checklist)
+│                   ├── dotpi                          # management CLI (see §8)
 │                   ├── VERSION
 │                   ├── AGENTS.md
 │                   ├── PI_INSTALL.md
@@ -35,8 +35,8 @@ Illustrative layout on a machine where **`PI_CODING_AGENT_DIR`** defaults to **`
 │                   │   │   ├── mas                  # → ../../dispatch-agent
 │                   │   │   ├── coder
 │                   │   │   ├── ask
-│                   │   │   └── dotpi                # optional symlink to ../../dotpi (sync/doctor deprecated)
-│                   │   ├── commands/                # dotpi subcommands (shrunken surface; sync.sh/doctor.sh gone)
+│                   │   │   └── dotpi                # optional symlink to ../../dotpi
+│                   │   ├── commands/                # dotpi subcommands (relink.sh, setup, create, …)
 │                   │   ├── dispatch/                # dispatch-agent: PI_CODING_AGENT_DIR, --session-dir, DOT_PI_OVERLAY
 │                   │   └── tests/
 │                   │
@@ -247,9 +247,9 @@ It is **additive** by default: users add only what they need; shipped entries in
 - **Extensions** — Pi discovers extension files or one extension directory at a time. Link individual extension files/directories; do not rely on one parent symlink that contains many extension directories.
 - **Skills** — Pi recursively discovers skill entries, so a linked skill directory can work, but precedence and collisions should still be deterministic.
 
-**`git clean -fdx`** removes **untracked** symlinks in the clone, so **`postinstall`** must **recreate** overlay links on every **`pi install` / `pi update`**. If users add overlay content after install, support either a small relink command or explicit documentation for re-running the postinstall linker. Do not require the old broad **`dotpi sync`** behavior for correctness.
+**`git clean -fdx`** removes **untracked** symlinks in the clone, so **`postinstall`** must **recreate** overlay links on every **`pi install` / `pi update`**. If users add overlay content after install, document **`dotpi relink`** (same contract as **`postinstall`**) for rewiring without mutating existing overlay files.
 
-**No `dotpi sync` merge:** nothing in this model requires merging shipped resource inventory into **`settings.json`** arrays. Optional **`settings.json`** keys remain for Pi prefs and narrow user overrides only.
+**No `settings.json` inventory merge:** nothing in this model requires merging shipped resource inventory into **`settings.json`** arrays. Optional **`settings.json`** keys remain for Pi prefs and narrow user overrides only.
 
 **Extensions and scripts** that read **`env.exa`**, **`env.tts-wpm`**, **`model-defaults`**, **`env.model`**, etc., use **`$DOT_PI_OVERLAY`** only. They must not rely on the package clone for durable user state.
 
@@ -300,11 +300,11 @@ The key policy is that dot-pi’s root package manifest is inert for vanilla res
 | **Symlink-only `shared/`** (status quo) | Simple; one checkout. | No **`pi update`** for the **installed** Pi package story; upgrades = manual **`git pull`** in a dev checkout only. |
 | **Vanilla `pi install` git package** (target) | Minimal user story: ordinary **`pi install`**, ordinary **`pi update`**, Pi update notifications work. | Requires the root package manifest to stay inert so vanilla **`pi`** does not load dot-pi resources. |
 | **Dedicated install agent dir** | Keeps dot-pi out of **`~/.pi/agent/settings.json`** entirely. | Less minimal: updates require **`PI_CODING_AGENT_DIR=<install-dir> pi update`** or a wrapper, and the clone lands under that install dir. |
-| **`dotpi sync` merge after update** | Historically rebuilt symlink farms. | Deprecated; **`postinstall`** and a narrow relink command replace **consumer** reliance on broad **`dotpi sync`** for wiring after **`git clean`**. |
+| **Merge shipped inventory into `settings.json` after update** | Centralized JSON listing. | Rejected; **`postinstall`** and **`dotpi relink`** maintain **symlink-defined** trees; **`settings.json`** is prefs only. |
 | **Workspace agents** | Isolated dated dirs per run. | Removed; **`--session-dir`** under **`~/.pi/dot-pi/<agent>/sessions`** gives durable sessions without a second cwd discipline. |
 | **npm publish `@you/dot-pi`** | Same as git from Pi’s POV with `npm:`. | Publishing overhead. |
 
-Dot-pi’s direction: **named agents first-class** from the **Pi-managed package tree**; **`package.json` + `pi install` + `pi update`** as the **only** supported install/upgrade path for users; an inert root package manifest so vanilla **`pi`** stays behaviorally clean; **`postinstall`** for **`PATH`**, overlay skeleton dirs, shared config links, and **symlink rewiring** into **`$DOT_PI_OVERLAY`**; **symlink-defined `agents/<name>/` trees** for skills/extensions/prompts/themes; runtime **`settings.json`** for prefs only, not dot-pi self-registration or shipped resource inventory; **`DOT_PI_OVERLAY`** for **durable per-agent sessions and user content**; **no broad `dotpi sync`**; **no workspace mode**; **removal** of the **curl `install`** flow from the supported repo surface.
+Dot-pi’s direction: **named agents first-class** from the **Pi-managed package tree**; **`package.json` + `pi install` + `pi update`** as the **only** supported install/upgrade path for users; an inert root package manifest so vanilla **`pi`** stays behaviorally clean; **`postinstall`** for **`PATH`**, overlay skeleton dirs, shared config links, and **symlink rewiring** into **`$DOT_PI_OVERLAY`**; **symlink-defined `agents/<name>/` trees** for skills/extensions/prompts/themes; runtime **`settings.json`** for prefs only, not dot-pi self-registration or shipped resource inventory; **`DOT_PI_OVERLAY`** for **durable per-agent sessions and user content**; **no workspace mode**; **removal** of the **curl `install`** flow from the supported repo surface.
 
 ---
 
@@ -331,11 +331,11 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
 
 - **[`install`](install)** — **Unsupported** under this plan: the **curl-to-bash** installer will be **removed** (or reduced to a short message pointing at **`pi install`**). **[`docs/install.md`](docs/install.md)** should describe **`pi install` / `pi update`** only.
 
-- **[`core/commands/sync.sh`](core/commands/sync.sh)** — **Deprecated.** **`postinstall`** (and tracked in-repo symlinks where portable) replaces broad **`dotpi sync`** for **consumer** machines: **`core/bin`** on **`PATH`**, **`agents/<agent>/` → `shared/`** bundles as shipped, shared **`auth.json`** / **`models.json`** links to Pi-standard files, and **clone → overlay** symlinks recreated after **`git clean`**. **`agents/<name>/settings.json` must not symlink to `~/.pi/agent/settings.json`** if that vanilla file contains dot-pi’s package registration; runtime agent settings must not inherit dot-pi self-registration.
+- **[`core/commands/relink.sh`](core/commands/relink.sh)** — **`dotpi relink`** implementation: same wiring as **`postinstall`** (**`core/bin`** on **`PATH`**, **`agents/<agent>/` → `shared/`** bundles as shipped, shared **`auth.json`** / **`models.json`** links, **clone → overlay** symlinks after **`git clean`**). **`agents/<name>/settings.json` must not symlink to `~/.pi/agent/settings.json`** if that vanilla file contains dot-pi’s package registration; runtime agent settings must not inherit dot-pi self-registration.
 
-- **`dotpi doctor`** — **Deprecated** (was coupled to sync-era assumptions).
+- **`dotpi doctor`** — **Removed** from the CLI (legacy maintenance helper). Use **`dotpi relink`**.
 
-- **`AGENTS.md`** — Should be updated so **`DOT_PI_OVERLAY`**, **`~/.pi/dot-pi/<agent>/sessions`**, **two-layer clone + overlay symlink model**, and deprecation of **workspace agents** / **`dotpi sync`** match this document.
+- **`AGENTS.md`** — Should stay aligned with **`DOT_PI_OVERLAY`**, **`~/.pi/dot-pi/<agent>/sessions`**, the two-layer clone + overlay symlink model, and removal of **workspace agents** where this document still lags.
 
 ---
 
@@ -351,7 +351,7 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
 
 5. **`dispatch-agent`** — Export **`DOT_PI_OVERLAY`** (default **`~/.pi/dot-pi`**); pass **`--session-dir`** to an overlay location (prefer a per-cwd subtree if preserving current list/resume behavior matters); remove workspace **`bootstrap.sh`** / **`WORKSPACE_AGENT`** flows and dated **`workspaces/`** trees.
 
-6. **Remove or narrow** **`dotpi sync`** and **`dotpi doctor`** from **`dotpi`** CLI and docs. If user-added overlay content needs relinking after install, keep a small relink command with a narrower contract and do not position it as a required periodic sync.
+6. **`dotpi doctor`** — **done** (removed). **`dotpi relink`** (and **`pi`** **`postinstall`**) are the supported relink entrypoints; do not document periodic merge jobs for wiring.
 
 7. **Document** in **[`docs/install.md`](docs/install.md)** and **this file**: normal install, **`PATH`**, **`DOT_PI_OVERLAY`**, two-layer model, session locations, inert root package manifest, and no workspaces.
 
@@ -369,7 +369,7 @@ In **interactive** Pi, startup runs **`checkForAvailableUpdates()`** asynchronou
 | Where does shipped per-agent config live? | **`~/.pi/agent/git/<host>/<org>/dot-pi/agents/<agent>/{extensions,skills,prompts,themes}`** — tracked clone + **symlinks** into **`shared/`**. |
 | Where does user per-agent content live? | **`~/.pi/dot-pi/<agent>/{extensions,skills,prompts,themes}`** — **additive** by default; wired into Pi via **symlinks from the clone** maintained by **`postinstall`**. |
 | Where does git install land? | Under **`~/.pi/agent/git/<host>/<path>/`** (default). Holds **`dispatch-agent`**, **`agents/`**, **`core/bin/`**. |
-| How do users install dot-pi? | **`pi install`** (git or npm); **`pi update`** for upgrades. **No** curl **`install`**. **No `dotpi sync`**. |
+| How do users install dot-pi? | **`pi install`** (git or npm); **`pi update`** for upgrades. **No** curl **`install`**. Use **`dotpi relink`** when clone-local symlinks need repair outside **`pi update`**. |
 | How do **`coder` / `mas`** work? | **`PI_CODING_AGENT_DIR`** → **`agents/<name>/`** via **`dispatch-agent`** + **`core/bin`** on **`PATH`**; **`--session-dir`** → **`~/.pi/dot-pi/<name>/sessions`**. |
 | Workspaces? | **Removed** from target architecture. |
 | How does vanilla **`pi`** stay vanilla? | **`~/.pi/agent/settings.json`** may contain dot-pi’s package entry, but dot-pi’s root package manifest is inert, so vanilla **`pi`** loads no dot-pi extensions, skills, prompts, or themes. |

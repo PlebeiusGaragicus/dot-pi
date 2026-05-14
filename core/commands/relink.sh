@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# dotpi sync is retained as a narrow compatibility alias for postinstall-style
-# relinking. It must not merge settings or mutate user-owned overlay files.
+# Postinstall-style relink: clone-local symlinks and overlay wiring.
+# Does not merge settings or mutate user-owned overlay files.
 
 # shellcheck source=core/install/lib.sh
 source "$DOT_PI_DIR/core/install/lib.sh"
