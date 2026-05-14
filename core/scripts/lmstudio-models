@@ -3,7 +3,7 @@
 # models.json to stdout. Does not modify any files.
 #
 # Usage:
-#   scripts/lmstudio-models [--url URL] [--key KEY] [--name NAME]
+#   core/scripts/lmstudio-models [--url URL] [--key KEY] [--name NAME]
 #
 # Without flags, prompts interactively for URL, API key, and provider name.
 
