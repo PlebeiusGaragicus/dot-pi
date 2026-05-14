@@ -40,6 +40,9 @@ agents/*/workspaces/
 shared/bin/*
 !shared/bin/.gitkeep
 
+# MkDocs build output (local)
+site/
+
 # Typecheck node_modules (devDeps for extension type-checking)
 core/tests/node_modules/
 core/utilities/browser-runtime/node_modules/
