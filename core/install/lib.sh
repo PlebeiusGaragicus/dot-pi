@@ -99,7 +99,7 @@ dotpi_link_if_absent() {
 # at say.ts is skipped and extension flags such as --tts-enable are never registered.
 dotpi_link_shipped_common_extensions() {
   local shared_dir="$1" target_dir="$2"
-  local manifest="$shared_dir/shipped-common-extensions" raw line name impl link_ts link_legacy
+  local manifest="$shared_dir/shipped-common-extensions" raw line name impl link_ts
   if [ ! -f "$manifest" ]; then
     printf 'postinstall: missing shipped-common manifest %s\n' "$manifest" >&2
     return 0
@@ -113,7 +113,6 @@ dotpi_link_shipped_common_extensions() {
     name="$line"
     impl="$shared_dir/extensions/${name}.ts"
     link_ts="${name}.ts"
-    link_legacy="$name"
     if [ ! -f "$impl" ]; then
       printf 'postinstall: warning: shipped-common extension %s: missing %s\n' "$name" "$impl" >&2
       continue
@@ -122,10 +121,8 @@ dotpi_link_shipped_common_extensions() {
       printf 'postinstall: keeping existing non-symlink extension %s\n' "$target_dir/$link_ts" >&2
       continue
     fi
-    [ -L "$target_dir/$link_ts" ] && rm "$target_dir/$link_ts"
+    [ ! -L "$target_dir/$link_ts" ] || rm "$target_dir/$link_ts"
     ln -sf "../../../shared/extensions/${name}.ts" "$target_dir/$link_ts"
-    # Remove pre-0.8.5 basename-only symlink so pi discovers the .ts entry and extension flags work.
-    [ -L "$target_dir/$link_legacy" ] && rm "$target_dir/$link_legacy"
   done <"$manifest"
 }
 
@@ -184,6 +181,7 @@ dotpi_relink() {
 
   for d in "$dot_pi_dir"/agents/*/; do
     [ -d "$d" ] || continue
+    d="${d%/}"
     name=$(basename "$d")
     dotpi_ensure_overlay_skeleton "$overlay" "$name"
 
