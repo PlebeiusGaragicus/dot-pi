@@ -11,7 +11,7 @@ agents/mas/
 ├── SYSTEM.md
 ├── pi-args
 ├── extensions/
-│   ├── ...                    # extensions-common bundle
+│   ├── ...                    # shipped common extensions (see shared/shipped-common-extensions)
 │   └── top-level-agent-orchestrator -> ../../../shared/extensions/top-level-agent-orchestrator
 └── prompts/
     └── ...

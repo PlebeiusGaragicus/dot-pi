@@ -31,7 +31,7 @@ dot-pi/
 │
 ├── shared/                   # Reusable resources (never used as PI_CODING_AGENT_DIR directly)
 │   ├── extensions/           # Shared extension source code (*.ts files and directories)
-│   ├── extensions-common/    # Symlink bundle for standard top-level agent extensions
+│   ├── shipped-common-extensions  # Basenames linked into every shipped top-level agent (see docs)
 │   ├── skills/               # Shared skill definitions (each skill is a directory with SKILL.md)
 │   ├── themes/               # Shared themes (JSON)
 │   ├── bin/                  # Downloaded binaries (fd, rg) — gitignored contents
@@ -250,9 +250,9 @@ When editing prompt templates, keep delegation structural:
 
 **How it works:**
 
-- **Extension implementations**: Shared extension source lives in `shared/extensions/`. Do not move source into bundle directories.
-- **Common top-level extensions**: `shared/extensions-common/` contains symlinks for standard interactive/top-level agent extensions (`run-finish-notify`, `run-timer`, `startup-branding`, `say`, `save`, `model-default`). Postinstall and `dotpi relink` link this bundle into top-level `agents/<name>/extensions/` (see `docs/reference/creating-a-new-agent.md` when adding a new agent).
-- **MAS orchestrator**: Shipped MAS roots link **`top-level-agent-orchestrator`** (plus the common bundle). Other one-off extensions (`agent-prompt`, `tavily`, `personas`, `plan-mode`, etc.) are linked intentionally per agent as needed.
+- **Extension implementations**: Shared extension source lives in `shared/extensions/`. Do not move source into agent trees except via symlinks.
+- **Shipped common extensions**: [`shared/shipped-common-extensions`](shared/shipped-common-extensions) lists basename entries (`model-default`, `say`, …). Postinstall and `dotpi relink` symlink each to `agents/<name>/extensions/<basename>.ts → ../../../shared/extensions/<basename>.ts` for every shipped top-level agent (see `docs/reference/creating-a-new-agent.md` when adding a new root or changing the set).
+- **MAS orchestrator**: Shipped MAS roots link **`top-level-agent-orchestrator`** plus the shipped common extensions above. Other one-off extensions (`agent-prompt`, `tavily`, `personas`, `plan-mode`, etc.) are linked intentionally per agent as needed.
 - **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
 - **Themes**: Each theme JSON in `shared/themes/` is symlinked individually into `<dir>/themes/`.
 - **bin**: Agent roots link `bin → $DOT_PI_OVERLAY/<agent>/bin → ~/.pi/agent/bin` so dot-pi agents share downloaded helper binaries (`fd`, `rg`, etc.) with vanilla `pi`.
@@ -260,7 +260,7 @@ When editing prompt templates, keep delegation structural:
 - **settings.json**: A single file symlink (`settings.json → ../../shared/settings.json → $DOT_PI_OVERLAY/settings.json`). All dot-pi agents share overlay-owned preferences. Postinstall/relink may create a missing seed file but must not overwrite an existing one.
 - **auth.json**: A single file symlink (`auth.json → ../../shared/auth.json → $DOT_PI_OVERLAY/auth.json → ~/.pi/agent/auth.json`). All agent configs share one credential store. Edit `~/.pi/agent/auth.json` directly. Postinstall/relink creates or repairs the overlay, shared, and agent-level symlinks. Use `dotpi link-auth` only when an agent must point at a different `auth.json`.
 
-All symlinks use relative paths (e.g. `../../../shared/extensions-common/...` for common extensions under `agents/<name>/extensions/`).
+All symlinks use relative paths (e.g. `../../../shared/extensions/<name>.ts` for shipped common extensions under `agents/<name>/extensions/`).
 
 **Do not edit symlink targets at the agent root for models, settings, or auth** — edit the canonical files in `~/.pi/agent/` (or use `dotpi setup` for provider configuration) instead.
 
@@ -274,13 +274,13 @@ All symlinks use relative paths (e.g. `../../../shared/extensions-common/...` fo
 
 ### Create a new MAS
 
-Follow **`docs/reference/creating-a-new-agent.md`** (MAS orchestrator checklist): add **`agents/<mas-name>/`** with **`top-level-agent-orchestrator`**, common extension bundle, themes, shared symlinks, **`SYSTEM.md`**, **`USAGE.md`**, **`README.md`**, optional **`prompts/`** and **`pi-args`**. Run **`dotpi relink`**.
+Follow **`docs/reference/creating-a-new-agent.md`** (MAS orchestrator checklist): add **`agents/<mas-name>/`** with **`top-level-agent-orchestrator`**, shipped common extensions (manifest), themes, shared symlinks, **`SYSTEM.md`**, **`USAGE.md`**, **`README.md`**, optional **`prompts/`** and **`pi-args`**. Run **`dotpi relink`**.
 
 Delegation uses the **`subagent`** tool and the shipped capability agents (`ask`, `scout`, `writer`, `coder`, `web`).
 
 ### Create a standalone agent
 
-Use the same reference doc (standalone checklist): **`agents/<agent-name>/extensions/<agent-name>/index.ts`**, common bundle, themes, **`SYSTEM.md`**, **`USAGE.md`**, **`README.md`**, **`pi-args`** as needed. Run **`dotpi relink`**. Link skills with **`dotpi link-skill <agent-name> <skill>`**.
+Use the same reference doc (standalone checklist): **`agents/<agent-name>/extensions/<agent-name>/index.ts`**, shipped common extensions (manifest), themes, **`SYSTEM.md`**, **`USAGE.md`**, **`README.md`**, **`pi-args`** as needed. Run **`dotpi relink`**. Link skills with **`dotpi link-skill <agent-name> <skill>`**.
 
 Optionally edit `agents/<name>/extensions/<name>/index.ts` for custom tools or lifecycle hooks.
 
@@ -307,7 +307,7 @@ If the command reports **permission denied**, the rc file may be **owned by root
 | Path Pattern | Editable? | Notes |
 |-------------|-----------|-------|
 | `shared/extensions/**/*.ts` | Yes | Shared extension source code |
-| `shared/extensions-common/*` | Yes | Symlink bundle for standard top-level agent extensions |
+| `shared/shipped-common-extensions` | Yes | Canonical list of basenames wired into every shipped top-level agent by postinstall/relink |
 | `shared/skills/*/SKILL.md` | Yes | Shared skill definitions |
 | `shared/themes/*.json` | Yes | Shared themes |
 | `agents/*/agents/*/SYSTEM.md` | Yes | Optional nested worker prompts (not wired by postinstall) |

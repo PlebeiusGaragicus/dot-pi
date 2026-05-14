@@ -13,6 +13,20 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ## [Unreleased]
 
+### Fixed
+
+- **Shipped common extension symlinks** use **`extensions/<basename>.ts`** (not bare `<basename>`) so **pi**’s extension discovery picks them up; bare names pointed at `*.ts` targets but were skipped by `discoverExtensionsInDir`, so extensions such as **`say` never ran `registerFlag`** and CLI flags like **`--tts-enable`** failed with “Unknown option”. **`dotpi relink`** removes the legacy basename-only symlinks.
+
+## [0.8.4] — 2026-05-14
+
+### Changed
+
+- **Shipped common extensions** ([#29](https://github.com/PlebeiusGaragicus/dot-pi/issues/29)): `model-default`, `run-finish-notify`, `run-timer`, `save`, `say`, and `startup-branding` are implemented as **`shared/extensions/<name>.ts`**. Postinstall and **`dotpi relink`** read **`shared/shipped-common-extensions`** and symlink each basename into **`agents/<agent>/extensions/`**.
+
+### Removed
+
+- **`shared/extensions-common/`** (symlink bundle directory): replaced by **`shared/shipped-common-extensions`** plus direct symlinks to **`shared/extensions/<name>.ts`**.
+
 ## [0.8.3] — 2026-05-13
 
 ### Added

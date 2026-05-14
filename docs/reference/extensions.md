@@ -9,12 +9,10 @@ Source: `shared/extensions/` (shared implementations) or `agents/<name>/extensio
 dot-pi separates extension implementation from default wiring:
 
 - `shared/extensions/` contains the actual extension source code.
-- `shared/extensions-common/` contains symlinks for extensions that every top-level interactive agent should load.
+- **Shipped common extensions** — baseline UX (notifications, timer, branding, TTS, save, `/model-default`) for every **shipped** top-level agent — are listed in **`shared/shipped-common-extensions`** (basenames only). Postinstall and `dotpi relink` symlink each entry to `agents/<name>/extensions/<basename>.ts → ../../../shared/extensions/<basename>.ts` (the **`.ts` suffix on the link name** is required so pi discovers the entry). See [Creating a new agent](creating-a-new-agent.md#shipped-common-extensions) for the contract and how to add or omit them when scaffolding.
 - Agent-specific and workflow-specific extensions are linked explicitly into the relevant agent.
 
-Top-level MAS and standalone agents get the common bundle. Postinstall and `dotpi relink` wire every entry in `shared/extensions-common/` into `agents/<name>/extensions/` (see [Creating a new agent](creating-a-new-agent.md) when scaffolding a new root).
-
-Current common extensions:
+Current shipped common extensions (see manifest for the authoritative list):
 
 | Extension | Purpose |
 |-----------|---------|
@@ -315,7 +313,7 @@ Key patterns:
 
 A shared extension that hooks `agent_end` to send desktop notifications when the agent finishes. Demonstrates the `agent_end` hook with platform detection.
 
-Source: `shared/extensions/run-finish-notify/index.ts`
+Source: `shared/extensions/run-finish-notify.ts`
 
 Key patterns:
 
@@ -328,7 +326,7 @@ Key patterns:
 
 A shared extension that shows elapsed time for each agent turn in the TUI status line.
 
-Source: `shared/extensions/run-timer/index.ts`
+Source: `shared/extensions/run-timer.ts`
 
 Key patterns:
 
@@ -341,7 +339,7 @@ Key patterns:
 
 A shared extension that registers `/model-default` for top-level agents. It displays resolved `DEFAULT_*` aliases, writes agent-local **`env.model`** files as raw `provider/model` overrides, and can update repo-local `model-defaults` through global menu options.
 
-Source: `shared/extensions/model-default/index.ts`
+Source: `shared/extensions/model-default.ts`
 
 Key patterns:
 

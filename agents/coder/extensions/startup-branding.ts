@@ -1,0 +1,1 @@
+../../../shared/extensions/startup-branding.ts
