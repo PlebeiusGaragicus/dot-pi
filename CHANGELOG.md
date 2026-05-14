@@ -13,6 +13,10 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ## [Unreleased]
 
+### Fixed
+
+- **Shipped common extension symlinks** use **`extensions/<basename>.ts`** (not bare `<basename>`) so **pi**’s extension discovery picks them up; bare names pointed at `*.ts` targets but were skipped by `discoverExtensionsInDir`, so extensions such as **`say` never ran `registerFlag`** and CLI flags like **`--tts-enable`** failed with “Unknown option”. **`dotpi relink`** removes the legacy basename-only symlinks.
+
 ## [0.8.4] — 2026-05-14
 
 ### Changed

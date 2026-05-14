@@ -9,7 +9,7 @@ Source: `shared/extensions/` (shared implementations) or `agents/<name>/extensio
 dot-pi separates extension implementation from default wiring:
 
 - `shared/extensions/` contains the actual extension source code.
-- **Shipped common extensions** — baseline UX (notifications, timer, branding, TTS, save, `/model-default`) for every **shipped** top-level agent — are listed in **`shared/shipped-common-extensions`** (basenames only). Postinstall and `dotpi relink` symlink each entry to `agents/<name>/extensions/<basename> → ../../../shared/extensions/<basename>.ts`. See [Creating a new agent](creating-a-new-agent.md#shipped-common-extensions) for the contract and how to add or omit them when scaffolding.
+- **Shipped common extensions** — baseline UX (notifications, timer, branding, TTS, save, `/model-default`) for every **shipped** top-level agent — are listed in **`shared/shipped-common-extensions`** (basenames only). Postinstall and `dotpi relink` symlink each entry to `agents/<name>/extensions/<basename>.ts → ../../../shared/extensions/<basename>.ts` (the **`.ts` suffix on the link name** is required so pi discovers the entry). See [Creating a new agent](creating-a-new-agent.md#shipped-common-extensions) for the contract and how to add or omit them when scaffolding.
 - Agent-specific and workflow-specific extensions are linked explicitly into the relevant agent.
 
 Current shipped common extensions (see manifest for the authoritative list):

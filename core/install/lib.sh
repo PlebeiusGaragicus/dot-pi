@@ -91,11 +91,15 @@ dotpi_link_if_absent() {
   ln -s "$target" "$link"
 }
 
-# Symlink agents/<name>/extensions/<basename> -> ../../../shared/extensions/<basename>.ts
+# Symlink agents/<name>/extensions/<basename>.ts -> ../../../shared/extensions/<basename>.ts
 # for each non-empty, non-comment line in shared/shipped-common-extensions.
+#
+# The link basename MUST end in .ts so pi's extension discovery treats it as a file entry
+# (see discoverExtensionsInDir: isExtensionFile(entry.name)); a symlink named "say" pointing
+# at say.ts is skipped and extension flags such as --tts-enable are never registered.
 dotpi_link_shipped_common_extensions() {
   local shared_dir="$1" target_dir="$2"
-  local manifest="$shared_dir/shipped-common-extensions" raw line name impl
+  local manifest="$shared_dir/shipped-common-extensions" raw line name impl link_ts link_legacy
   if [ ! -f "$manifest" ]; then
     printf 'postinstall: missing shipped-common manifest %s\n' "$manifest" >&2
     return 0
@@ -108,16 +112,20 @@ dotpi_link_shipped_common_extensions() {
     [ -n "$line" ] || continue
     name="$line"
     impl="$shared_dir/extensions/${name}.ts"
+    link_ts="${name}.ts"
+    link_legacy="$name"
     if [ ! -f "$impl" ]; then
       printf 'postinstall: warning: shipped-common extension %s: missing %s\n' "$name" "$impl" >&2
       continue
     fi
-    if [ -e "$target_dir/$name" ] && [ ! -L "$target_dir/$name" ]; then
-      printf 'postinstall: keeping existing non-symlink extension %s\n' "$target_dir/$name" >&2
+    if [ -e "$target_dir/$link_ts" ] && [ ! -L "$target_dir/$link_ts" ]; then
+      printf 'postinstall: keeping existing non-symlink extension %s\n' "$target_dir/$link_ts" >&2
       continue
     fi
-    [ -L "$target_dir/$name" ] && rm "$target_dir/$name"
-    ln -sf "../../../shared/extensions/${name}.ts" "$target_dir/$name"
+    [ -L "$target_dir/$link_ts" ] && rm "$target_dir/$link_ts"
+    ln -sf "../../../shared/extensions/${name}.ts" "$target_dir/$link_ts"
+    # Remove pre-0.8.5 basename-only symlink so pi discovers the .ts entry and extension flags work.
+    [ -L "$target_dir/$link_legacy" ] && rm "$target_dir/$link_legacy"
   done <"$manifest"
 }
 

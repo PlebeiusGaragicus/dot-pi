@@ -47,7 +47,7 @@ Create **`$DOT_PI_DIR/agents/<name>/`** with at least:
 | Path | Purpose |
 |------|---------|
 | **`extensions/<name>/index.ts`** | Stub or real extension; default export **`(pi: ExtensionAPI) => void`**. See [Writing extensions](extensions.md). |
-| **`extensions/`** (shipped common) | For each basename in **`shared/shipped-common-extensions`**, symlink **`extensions/<basename> → ../../../shared/extensions/<basename>.ts`**. Easiest: run **`dotpi relink`** after the skeleton exists. |
+| **`extensions/`** (shipped common) | For each basename in **`shared/shipped-common-extensions`**, symlink **`extensions/<basename>.ts → ../../../shared/extensions/<basename>.ts`**. Easiest: run **`dotpi relink`** after the skeleton exists. |
 | **`prompts/`** | Optional slash templates. Symlink **`shared/prompts/introduction.md`** as **`prompts/introduction.md`** (**`../../../shared/prompts/introduction.md`**). |
 | **`skills/`** | Start empty; add skills with **`dotpi link-skill <name> <skill>`**. |
 | **`themes/`** | Symlink each **`shared/themes/*.json`** as **`../../../shared/themes/<file>.json`**. |

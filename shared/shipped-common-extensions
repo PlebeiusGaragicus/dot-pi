@@ -1,5 +1,6 @@
-# Basenames of shared/extensions/<name>.ts linked into every shipped top-level agent
-# by postinstall and dotpi relink. One name per line; blank lines and # comments ignored.
+# Basenames (without .ts) of shared/extensions/<name>.ts linked into every shipped top-level agent
+# by postinstall and dotpi relink as extensions/<name>.ts (basename must end in .ts for pi discovery).
+# One name per line; blank lines and # comments ignored.
 
 model-default
 run-finish-notify

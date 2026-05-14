@@ -251,7 +251,7 @@ When editing prompt templates, keep delegation structural:
 **How it works:**
 
 - **Extension implementations**: Shared extension source lives in `shared/extensions/`. Do not move source into agent trees except via symlinks.
-- **Shipped common extensions**: [`shared/shipped-common-extensions`](shared/shipped-common-extensions) lists basename entries (`model-default`, `say`, …). Postinstall and `dotpi relink` symlink each to `agents/<name>/extensions/<basename> → ../../../shared/extensions/<basename>.ts` for every shipped top-level agent (see `docs/reference/creating-a-new-agent.md` when adding a new root or changing the set).
+- **Shipped common extensions**: [`shared/shipped-common-extensions`](shared/shipped-common-extensions) lists basename entries (`model-default`, `say`, …). Postinstall and `dotpi relink` symlink each to `agents/<name>/extensions/<basename>.ts → ../../../shared/extensions/<basename>.ts` for every shipped top-level agent (see `docs/reference/creating-a-new-agent.md` when adding a new root or changing the set).
 - **MAS orchestrator**: Shipped MAS roots link **`top-level-agent-orchestrator`** plus the shipped common extensions above. Other one-off extensions (`agent-prompt`, `tavily`, `personas`, `plan-mode`, etc.) are linked intentionally per agent as needed.
 - **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
 - **Themes**: Each theme JSON in `shared/themes/` is symlinked individually into `<dir>/themes/`.
