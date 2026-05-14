@@ -20,12 +20,15 @@
  * - A new user prompt, `/stop-speaking`, `/tts-toggle off`, or pi exiting all cancel speech.
  *
  * Platform backends are selected inline. Currently: macOS `say`, Linux `espeak-ng`.
+ *
+ * Common-bundle note: kept as one file so pi’s loader resolves cleanly through symlinked agent
+ * `extensions/` trees. Linux needs `espeak-ng` on PATH (`apt install espeak-ng` on Debian/Ubuntu).
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
-import { ensureOverlayDir, overlayFile, overlayFirstFile } from "../lib/dotpi-paths.js";
+import { ensureOverlayDir, overlayFile, overlayFirstFile } from "./lib/dotpi-paths.js";
 
 interface TtsBackend {
 	name: string;

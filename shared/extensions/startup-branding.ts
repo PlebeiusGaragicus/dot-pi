@@ -1,19 +1,12 @@
 /**
- * Startup Branding — render a custom header from banner.txt.
+ * Startup branding — `banner.txt` header + `/tools` summary from `pi-args`.
  *
- * On session start, reads <agentDir>/banner.txt and replaces the
- * built-in header via ctx.ui.setHeader(). Works with quietStartup
- * (the empty built-in header gets swapped for the branded one).
- * Also sets the terminal title to the first user prompt, trimmed to
- * 30 characters, once that prompt is available.
+ * Reads `<agentDir>/banner.txt`: optional `---` splits accent (bold) art above from dim usage
+ * below; no separator → whole file accent. Works with `quietStartup`. Also sets terminal title
+ * from the first user prompt (trimmed). `figlet -f small "<name>" > banner.txt` then append `---`
+ * and help text is a typical workflow.
  *
- * File format (plain text, optional --- separator):
- *   - Everything above the first "---" line renders in accent color (bold).
- *   - Everything below renders in dim color.
- *   - If no separator exists, the entire file renders in accent color.
- *
- * Generate banner.txt with: figlet -f small "<name>" > banner.txt
- * Then append usage/description text below a "---" line.
+ * Hooks: `session_start`, `before_agent_start`. Command: `/tools`.
  */
 
 import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@mariozechner/pi-coding-agent";

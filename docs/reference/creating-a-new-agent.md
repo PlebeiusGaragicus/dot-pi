@@ -20,9 +20,25 @@ For background on layout and overlay behaviour, see [Agent layout](../agent-layo
 
 ---
 
+## Shipped common extensions
+
+dot-pi ships a **small fixed set** of shared extensions (TTS **`say`**, **`save`**, turn timer, finish notifications, **`startup-branding`**, **`/model-default`**, etc.) so every **top-level interactive agent** in this repo gets the same baseline UX. The canonical **basename list** lives in **`shared/shipped-common-extensions`** (one name per line; `#` comments and blank lines allowed).
+
+**Wiring:** **`dotpi relink`** and postinstall read that file and create, for each basename **`ext`**:
+
+```text
+ln -sf ../../../shared/extensions/ext.ts agents/<name>/extensions/ext
+```
+
+Implementations live only under **`shared/extensions/<basename>.ts`** (or larger trees under **`shared/extensions/<dir>/`** for extensions outside this set).
+
+**When adding a new top-level agent:** replicate the same symlinks (or run **`dotpi relink`** after the agent directory exists). **When adding a new common extension:** add the basename to **`shared/shipped-common-extensions`**, add **`shared/extensions/<basename>.ts`**, then relink. **When forking** an agent that should *not* load the full set, omit the corresponding symlinks in **`extensions/`** deliberately; do not edit other agents' trees.
+
+---
+
 ## Standalone agent checklist
 
-Use the shipped capability agents (for example **`agents/coder/`**) as a live reference for **`pi-args`**, extension bundle density, and optional hooks.
+Use the shipped capability agents (for example **`agents/coder/`**) as a live reference for **`pi-args`**, shipped common extensions, and optional hooks.
 
 ### 1. Directory skeleton
 
@@ -31,7 +47,7 @@ Create **`$DOT_PI_DIR/agents/<name>/`** with at least:
 | Path | Purpose |
 |------|---------|
 | **`extensions/<name>/index.ts`** | Stub or real extension; default export **`(pi: ExtensionAPI) => void`**. See [Writing extensions](extensions.md). |
-| **`extensions/`** (common bundle) | Symlink every entry in **`shared/extensions-common/`** into **`extensions/`** with relative prefix **`../../../shared/extensions-common/<ext>`**. |
+| **`extensions/`** (shipped common) | For each basename in **`shared/shipped-common-extensions`**, symlink **`extensions/<basename> → ../../../shared/extensions/<basename>.ts`**. Easiest: run **`dotpi relink`** after the skeleton exists. |
 | **`prompts/`** | Optional slash templates. Symlink **`shared/prompts/introduction.md`** as **`prompts/introduction.md`** (**`../../../shared/prompts/introduction.md`**). |
 | **`skills/`** | Start empty; add skills with **`dotpi link-skill <name> <skill>`**. |
 | **`themes/`** | Symlink each **`shared/themes/*.json`** as **`../../../shared/themes/<file>.json`**. |
@@ -74,7 +90,7 @@ Use **`agents/mas/`** as the reference tree (or compare to your new directory af
 
 ### 1. Extensions
 
-- Link the **same** **`shared/extensions-common/`** bundle as standalone agents (relative symlinks as above).
+- Link the **same** shipped common extensions as standalone agents (see [Shipped common extensions](#shipped-common-extensions)); **`dotpi relink`** applies **`shared/shipped-common-extensions`** automatically.
 - Add **`../../../shared/extensions/top-level-agent-orchestrator`** → **`extensions/top-level-agent-orchestrator`**.
 
 ### 2. Prompts, skills, themes, shared links

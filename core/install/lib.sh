@@ -91,20 +91,34 @@ dotpi_link_if_absent() {
   ln -s "$target" "$link"
 }
 
-dotpi_link_extension_bundle() {
-  local bundle_dir="$1" target_dir="$2" rel_prefix="$3" ext name
-  [ -d "$bundle_dir" ] || return 0
+# Symlink agents/<name>/extensions/<basename> -> ../../../shared/extensions/<basename>.ts
+# for each non-empty, non-comment line in shared/shipped-common-extensions.
+dotpi_link_shipped_common_extensions() {
+  local shared_dir="$1" target_dir="$2"
+  local manifest="$shared_dir/shipped-common-extensions" raw line name impl
+  if [ ! -f "$manifest" ]; then
+    printf 'postinstall: missing shipped-common manifest %s\n' "$manifest" >&2
+    return 0
+  fi
   mkdir -p "$target_dir"
-  for ext in "$bundle_dir"/*; do
-    [ -e "$ext" ] || [ -L "$ext" ] || continue
-    name=$(basename "$ext")
+  while IFS= read -r raw || [ -n "$raw" ]; do
+    line="${raw%%#*}"
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+    [ -n "$line" ] || continue
+    name="$line"
+    impl="$shared_dir/extensions/${name}.ts"
+    if [ ! -f "$impl" ]; then
+      printf 'postinstall: warning: shipped-common extension %s: missing %s\n' "$name" "$impl" >&2
+      continue
+    fi
     if [ -e "$target_dir/$name" ] && [ ! -L "$target_dir/$name" ]; then
       printf 'postinstall: keeping existing non-symlink extension %s\n' "$target_dir/$name" >&2
       continue
     fi
     [ -L "$target_dir/$name" ] && rm "$target_dir/$name"
-    ln -s "$rel_prefix/$name" "$target_dir/$name"
-  done
+    ln -sf "../../../shared/extensions/${name}.ts" "$target_dir/$name"
+  done <"$manifest"
 }
 
 dotpi_link_extension_helpers() {
@@ -172,7 +186,7 @@ dotpi_relink() {
     dotpi_link_force_symlink "../../shared/models.json" "$d/models.json"
     dotpi_link_force_symlink "../../shared/settings.json" "$d/settings.json"
     dotpi_link_force_symlink "$overlay/$name/bin" "$d/bin"
-    dotpi_link_extension_bundle "$shared_dir/extensions-common" "$d/extensions" "../../../shared/extensions-common"
+    dotpi_link_shipped_common_extensions "$shared_dir" "$d/extensions"
     dotpi_link_extension_helpers "$d/extensions" "../../../shared/extensions"
 
     dotpi_link_overlay_entries "$overlay" "$d" "$name"

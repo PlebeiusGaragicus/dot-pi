@@ -6,22 +6,6 @@ SHARED_DIR="$DOT_PI_DIR/shared"
 DOT_PI_OVERLAY="${DOT_PI_OVERLAY:-$HOME/.pi/dot-pi}"
 export DOT_PI_OVERLAY
 
-link_extension_bundle() {
-  local bundle_dir="$1" target_dir="$2" rel_prefix="$3" ext name
-  [ -d "$bundle_dir" ] || return 0
-  mkdir -p "$target_dir"
-  for ext in "$bundle_dir"/*; do
-    [ -e "$ext" ] || [ -L "$ext" ] || continue
-    name=$(basename "$ext")
-    if [ -e "$target_dir/$name" ] && [ ! -L "$target_dir/$name" ]; then
-      echo "relink: keeping existing non-symlink extension $target_dir/$name" >&2
-      continue
-    fi
-    [ -L "$target_dir/$name" ] && rm "$target_dir/$name"
-    ln -s "$rel_prefix/$name" "$target_dir/$name"
-  done
-}
-
 write_model_defaults_file() {
   local path="$1"
   [ -e "$path" ] && return 0

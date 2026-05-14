@@ -1,8 +1,18 @@
+/**
+ * `/model-default` — view or override model aliases for this agent.
+ *
+ * Commands: `/model-default` (menu), `/model-default agentic|fast|vlm`, `/model-default global …`,
+ * `/model-default show`, `/model-default reset`.
+ *
+ * Agent-local overrides live in **`env.model`** under **`$DOT_PI_OVERLAY/<agent>/`** (gitignored).
+ * Global fallbacks live in **`$DOT_PI_OVERLAY/model-defaults`**.
+ */
+
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { agentOverlayFile, agentOverlayFirstFile, ensureOverlayDir, overlayFile, overlayFirstFile } from "../lib/dotpi-paths.js";
+import { agentOverlayFile, agentOverlayFirstFile, ensureOverlayDir, overlayFile, overlayFirstFile } from "./lib/dotpi-paths.js";
 
 const MODEL_FILE = "env.model";
 const DEFAULTS_FILE = "model-defaults";

@@ -13,6 +13,16 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ## [Unreleased]
 
+## [0.8.4] — 2026-05-14
+
+### Changed
+
+- **Shipped common extensions** ([#29](https://github.com/PlebeiusGaragicus/dot-pi/issues/29)): `model-default`, `run-finish-notify`, `run-timer`, `save`, `say`, and `startup-branding` are implemented as **`shared/extensions/<name>.ts`**. Postinstall and **`dotpi relink`** read **`shared/shipped-common-extensions`** and symlink each basename into **`agents/<agent>/extensions/`**.
+
+### Removed
+
+- **`shared/extensions-common/`** (symlink bundle directory): replaced by **`shared/shipped-common-extensions`** plus direct symlinks to **`shared/extensions/<name>.ts`**.
+
 ## [0.8.3] — 2026-05-13
 
 ### Added

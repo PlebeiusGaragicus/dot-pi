@@ -1,8 +1,8 @@
 /**
- * Save — write the last assistant reply to a markdown file.
+ * Save — `/save` writes the last assistant reply to a markdown file.
  *
- * `/save` prompts for a filename and destination directory, then writes
- * the raw markdown text of the most recent assistant message to disk.
+ * Prompts for filename (appends `.md`), then directory: cwd, `~/Downloads`, or `~/`.
+ * Gated on `ctx.hasUI`. No hooks.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";

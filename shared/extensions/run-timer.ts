@@ -1,8 +1,8 @@
 /**
- * Run Timer — live elapsed time for each agent turn.
+ * Run timer — live elapsed time for each agent turn in the TUI status line.
  *
- * Shows a status segment while the agent is running, then leaves the final
- * trajectory time visible after the turn completes.
+ * Hooks: `before_agent_start` (start 1s ticker, show `Running: MM:SS`), `agent_end` (show
+ * `Trajectory time: …`). Uses `HH:MM:SS` when over one hour. No-op without `ctx.hasUI`.
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";

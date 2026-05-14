@@ -1,12 +1,11 @@
 /**
- * Run Finish Notification Extension
+ * Run finish notification — desktop + in-TUI when the agent finishes a turn.
  *
- * Sends a notification when the pi agent finishes processing.
- * Works across multiple platforms:
- * - macOS: Uses AppleScript (osascript) for native notifications
- * - Linux: Uses notify-send if available, falls back to OSC sequences
- * - Windows: Uses PowerShell toast notifications in Windows Terminal
- * - Terminals supporting OSC 777/99: Uses escape sequences
+ * Platforms: macOS `osascript`, Linux `notify-send`, Windows PowerShell toast (only when
+ * `WT_SESSION` is set), else Kitty OSC 99 or OSC 777 when stdout is a TTY. Skipped when
+ * `process.stdout.isTTY` is false.
+ *
+ * On `agent_end`: `ctx.ui.notify` plus system notification; body reflects whether tools ran.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -33,16 +32,16 @@ function notifyLinux(title: string, body: string): void {
  */
 function notifyWindows(title: string, body: string): void {
 	if (!process.env.WT_SESSION) return;
-	
+
 	const script = [
 		`$type = "Windows.UI.Notifications"`,
 		`$mgr = [$type.ToastNotificationManager, $type, ContentType = WindowsRuntime]`,
-		`$template = [$type.ToastTemplateType]::ToastText01`, 
+		`$template = [$type.ToastTemplateType]::ToastText01`,
 		`$xml = [$type.ToastNotificationManager]::GetTemplateContent($template)`,
 		`$xml.GetElementsByTagName('text')[0].AppendChild($xml.CreateTextNode('${body}')) > $null`,
 		`[$type.ToastNotificationManager]::CreateToastNotifier('${title}').Show([$type.ToastNotification]::new($xml))`,
 	].join("; ");
-	
+
 	const { execFile } = require("child_process");
 	execFile("powershell.exe", ["-NoProfile", "-Command", script]);
 }
@@ -109,7 +108,7 @@ export default function (pi: ExtensionAPI) {
 		// Determine if there were tool calls in this run
 		const messages = event.messages;
 		let hadToolCalls = false;
-		
+
 		for (const msg of messages) {
 			if (msg.role === "assistant" && msg.content) {
 				for (const part of msg.content) {
@@ -121,18 +120,18 @@ export default function (pi: ExtensionAPI) {
 			} else if (msg.role === "toolResult") {
 				hadToolCalls = true;
 			}
-			
+
 			if (hadToolCalls) break;
 		}
-		
+
 		// Create notification message
-		const notificationBody = hadToolCalls 
+		const notificationBody = hadToolCalls
 			? "Run completed with tool calls"
 			: "Run completed - ready for input";
-		
+
 		// Show in-app notification via TUI
 		ctx.ui.notify("Pi Agent", "info");
-		
+
 		// Send system notification
 		notify("Pi Agent", notificationBody);
 	});

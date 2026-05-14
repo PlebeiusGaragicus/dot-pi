@@ -19,12 +19,12 @@ agents/<name>/
 ├── extensions/
 │   ├── <name>/               # Your custom extension
 │   │   └── index.ts
-│   ├── run-finish-notify     # Common extension bundle symlink
-│   ├── run-timer             # Common extension bundle symlink
-│   ├── startup-branding      # Common extension bundle symlink
-│   ├── say                   # Common extension bundle symlink
-│   ├── save                  # Common extension bundle symlink
-│   └── model-default         # Common extension bundle symlink
+│   ├── run-finish-notify     # -> ../../../shared/extensions/run-finish-notify.ts (shipped common)
+│   ├── run-timer             # -> ../../../shared/extensions/run-timer.ts (shipped common)
+│   ├── startup-branding      # -> ../../../shared/extensions/startup-branding.ts (shipped common)
+│   ├── say                   # -> ../../../shared/extensions/say.ts (shipped common)
+│   ├── save                  # -> ../../../shared/extensions/save.ts (shipped common)
+│   └── model-default         # -> ../../../shared/extensions/model-default.ts (shipped common)
 ├── AGENT.md                  # (optional) Requires agent-prompt.ts symlink — see below
 ├── SYSTEM.md                 # (optional) Replaces pi's default system prompt
 ├── APPEND_SYSTEM.md          # (optional) Appends to pi's default system prompt
