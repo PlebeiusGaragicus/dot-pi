@@ -54,13 +54,12 @@ These files are **never tracked**. They're created locally by the installer or `
 
 | File | Source | Purpose |
 |------|--------|---------|
-| `$DOT_PI_OVERLAY/model-defaults` | Created by postinstall/relink or `dotpi model-defaults` when needed | Global fallback model aliases (`DEFAULT_AGENTIC_MODEL`, `DEFAULT_FAST_MODEL`, `DEFAULT_VLM_MODEL`). Loaded at agent launch time. |
 | `shared/models.json` | Symlink → `$DOT_PI_OVERLAY/models.json` → `~/.pi/agent/models.json` (created by postinstall/relink) | Multi-provider model config shared with system pi. `dotpi setup` edits the system file. |
-| `shared/settings.json` | Symlink → `$DOT_PI_OVERLAY/settings.json` (created by postinstall/relink) | Shared dot-pi agent preferences. User-owned; install/update scripts must not overwrite existing overlay settings. |
+| `shared/settings.json` | Symlink → `$DOT_PI_OVERLAY/settings.json` (created by postinstall/relink) | Shared dot-pi agent preferences (including pi’s default model when updated in-session). User-owned; install/update scripts must not overwrite existing overlay settings. |
 | `shared/auth.json` | Symlink → `$DOT_PI_OVERLAY/auth.json` → `~/.pi/agent/auth.json` (created by postinstall/relink) | API credentials. Edit `~/.pi/agent/auth.json` directly. |
 | `*/auth.json` (under `agents/<name>/`) | Symlink → `../../shared/auth.json` (created by postinstall/relink / scaffolds) | Same credential file for every top-level agent; edit `~/.pi/agent/auth.json`. Override with `dotpi link-auth` if needed. |
 | `env.exa`, `env.tavily`, `env.ntfy` | `/exa-api-key`, `/tavily-api-key`, manual keys, or `NTFY_*` for ntfy | API keys / ntfy URL under **`$DOT_PI_OVERLAY`** only (never the Pi-managed package clone). |
-| **`$DOT_PI_OVERLAY/`** | Created by postinstall/relink as needed; default **`~/.pi/dot-pi`** when unset | Overlay root for shared **`settings.json`**, **`model-defaults`**, **`env.*`** credential/prefs files, **`env.tts-wpm`**, optional **`env.ssh`** (text file), and per-agent **`sessions/`**, **`prompts/`**, **`skills/`**, **`extensions/`**, **`themes/`**. User-owned; install/update scripts must not overwrite existing files. |
+| **`$DOT_PI_OVERLAY/`** | Created by postinstall/relink as needed; default **`~/.pi/dot-pi`** when unset | Overlay root for shared **`settings.json`**, **`env.*`** credential/prefs files, **`env.tts-wpm`**, optional **`env.ssh`** (text file), and per-agent **`sessions/`**, **`prompts/`**, **`skills/`**, **`extensions/`**, **`themes/`**. User-owned; install/update scripts must not overwrite existing files. |
 | `env.tts-wpm` | Say extension / `/tts-wpm` | TTS speed; store under **`$DOT_PI_OVERLAY`** for Pi-package installs. |
 | `env.ssh` | Optional tooling | If used, keep under **`$DOT_PI_OVERLAY/env.ssh`** (single text file) so material is not deleted by **`git clean`** in the package tree. **Not** a replacement for the user’s **`~/.ssh`**. |
 | `REFERENCES/*` | Optional manual `git clone`s; see REFERENCE-REPOS.md` | Sibling project source for agents to read. |
@@ -99,7 +98,7 @@ agents/<name>/
 ├── extensions/
 │   ├── <name>/               # Custom extension (index.ts)
 │   ├── say                   # Common bundle: TTS / say tool
-│   ├── run-finish-notify, run-timer, startup-branding, model-default  # Common bundle
+│   ├── run-finish-notify, run-timer, startup-branding  # Common bundle
 │   └── ...                   # Optional: e.g. agent-prompt.ts — symlink manually if you use AGENT.md
 ├── AGENT.md                  # (optional, not scaffolded) YAML + body — symlink agent-prompt.ts to load
 ├── README.md                 # Human-facing overview and design notes
@@ -121,7 +120,7 @@ agents/<name>/
 **Prompt and tool customization** (combine as needed):
 
 1. **`SYSTEM.md` / `APPEND_SYSTEM.md`** (pi-native): `SYSTEM.md` replaces pi's default system prompt entirely; `APPEND_SYSTEM.md` appends to it. No extension needed — pi discovers these from `PI_CODING_AGENT_DIR` at startup.
-2. **`pi-args`** (via `dispatch-agent`): plain text file with default CLI flags (e.g. `--model $DEFAULT_FAST_MODEL`, `--tools websearch`, `--no-tools`, `--no-skills`, `--no-context-files`), one per line. Model defaults come from **`$DOT_PI_OVERLAY/model-defaults`** and optional per-agent **`env.model`** under the overlay containing a raw `provider/model` id. Empty `--model $DEFAULT_*` values are skipped so pi falls back to `settings.json`. A missing final newline is tolerated. Non-coding agents and reusable subagents should usually include `--no-context-files` so they do not inherit project context unless intended.
+2. **`pi-args`** (via `dispatch-agent`): plain text file with default CLI flags (e.g. `--tools websearch`, `--no-tools`, `--no-skills`, `--no-context-files`), one per line. Omit **`--model`** so pi uses the active default from **`settings.json`** (pi updates this when the user changes the model). Pass **`--model provider/id`** only when an agent must pin a model. A missing final newline is tolerated. Non-coding agents and reusable subagents should usually include `--no-context-files` so they do not inherit project context unless intended.
 
  **`--tools` is an allowlist that filters extension tools too.** When `--tools` is present, pi only exposes tools whose names appear in the comma-separated list — this applies to built-in tools, extension-registered tools (`pi.registerTool()`), and SDK custom tools equally. If an agent loads an extension that registers a tool (e.g. `custom_lookup`) but the `pi-args` `--tools` line omits that name, the tool will not be available to the LLM and calls to it will return "Tool not found." To use extension tools alongside a restricted built-in set, list them explicitly: `--tools read,ls,bash,custom_lookup`. Omitting `--tools` entirely allows all tools (built-in defaults plus all extension tools). Use `--no-builtin-tools` instead if you want to suppress only the default built-ins (read, bash, edit, write) while keeping all extension tools enabled.
 3. **`AGENT.md`** (optional, legacy): YAML frontmatter sets `tools` and/or `model`; body appended to the system prompt. Requires symlink: `ln -sf ../../../shared/extensions/agent-prompt extensions/agent-prompt` — the `agent-prompt` shared extension reads `AGENT.md`. The **`creating-a-new-agent`** checklist does not add this by default; link **`agent-prompt`** only if you want YAML-driven tools/model.
@@ -251,7 +250,7 @@ When editing prompt templates, keep delegation structural:
 **How it works:**
 
 - **Extension implementations**: Shared extension source lives in `shared/extensions/`. Do not move source into agent trees except via symlinks.
-- **Shipped common extensions**: [`shared/shipped-common-extensions`](shared/shipped-common-extensions) lists basename entries (`model-default`, `say`, …). Postinstall and `dotpi relink` symlink each to `agents/<name>/extensions/<basename>.ts → ../../../shared/extensions/<basename>.ts` for every shipped top-level agent (see `docs/reference/creating-a-new-agent.md` when adding a new root or changing the set).
+- **Shipped common extensions**: [`shared/shipped-common-extensions`](shared/shipped-common-extensions) lists basename entries (`say`, `run-timer`, …). Postinstall and `dotpi relink` symlink each to `agents/<name>/extensions/<basename>.ts → ../../../shared/extensions/<basename>.ts` for every shipped top-level agent (see `docs/reference/creating-a-new-agent.md` when adding a new root or changing the set).
 - **MAS orchestrator**: Shipped MAS roots link **`top-level-agent-orchestrator`** plus the shipped common extensions above. Other one-off extensions (`agent-prompt`, `tavily`, `personas`, `plan-mode`, etc.) are linked intentionally per agent as needed.
 - **Skills**: `skills/` starts empty. Add symlinks with `dotpi link-skill <agent> <skill> [<skill> ...]` or `ln -sf ../../../shared/skills/<name> <dir>/skills/<name>`. Remove a symlink to exclude a skill.
 - **Themes**: Each theme JSON in `shared/themes/` is symlinked individually into `<dir>/themes/`.
@@ -337,8 +336,6 @@ If the command reports **permission denied**, the rc file may be **owned by root
 | `*/settings.json` (in agent configs) | **No** | Symlink chain → `shared/settings.json` → `$DOT_PI_OVERLAY/settings.json`; install/update must not overwrite existing overlay settings |
 | `*/auth.json` | **No** | Symlink chain → `shared/auth.json` → `$DOT_PI_OVERLAY/auth.json` → `~/.pi/agent/auth.json` |
 | `REFERENCES/**` | **No** | Local-only sibling checkouts; gitignored. Cloned manually for agent context (see `REFERENCE-REPOS.md`). |
-| `$DOT_PI_OVERLAY/model-defaults` | Local | Per-machine global fallback model aliases. Created by postinstall/relink or `dotpi model-defaults`, loaded at agent launch time. |
-| `agents/*/env.model`, `agents/*/agents/*/env.model` | Local | Per-agent raw `provider/model` overrides written by `/model-default`; gitignored (resolved under **`$DOT_PI_OVERLAY`**). |
 | `shared/settings.json` | **No** | Symlink → `$DOT_PI_OVERLAY/settings.json`. Edit the overlay file directly; do not point runtime agents at vanilla `~/.pi/agent/settings.json`. |
 | `env.exa`, `env.tavily`, `env.ntfy` | Local | **`$DOT_PI_OVERLAY/`** only; gitignored. |
 | **`$DOT_PI_OVERLAY/**` | Local | User overlay outside repo; not tracked. |

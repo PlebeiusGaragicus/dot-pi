@@ -14,10 +14,9 @@ import type { Message } from "@mariozechner/pi-ai";
 import { type ExtensionAPI, getAgentDir, getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
 import { Type } from "typebox";
-import { agentOverlayDir, agentOverlayFirstFile, dotPiOverlay, overlayFirstFile } from "../lib/dotpi-paths.js";
+import { agentOverlayDir, dotPiOverlay } from "../lib/dotpi-paths.js";
 
 const CORE_AGENT_NAMES = ["ask", "scout", "writer", "coder", "web"] as const;
-const MODEL_DEFAULT_ALIASES = ["DEFAULT_AGENTIC_MODEL", "DEFAULT_FAST_MODEL", "DEFAULT_VLM_MODEL"] as const;
 const MAX_PARALLEL_TASKS = 10;
 
 /** Max concurrent child `pi` workers hitting lmstudio/ollama (raise when local hardware allows). */
@@ -186,90 +185,26 @@ function getPiInvocation(args: string[]): { command: string; args: string[] } {
 	return { command: "pi", args };
 }
 
-function loadEnvFile(filePath: string, env: Record<string, string>): void {
-	if (!fs.existsSync(filePath)) return;
-	for (const rawLine of fs.readFileSync(filePath, "utf-8").split(/\r?\n/)) {
-		const line = rawLine.trim();
-		if (!line || line.startsWith("#")) continue;
-		const match = line.match(/^export\s+([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-		if (!match) continue;
-		const [, name, rawValue] = match;
-		if (!name) continue;
-		const fallback = rawValue.match(/^"\$\{([A-Za-z_][A-Za-z0-9_]*):-([^}]*)\}"$/);
-		if (fallback) {
-			const fallbackValue = fallback[2] ?? "";
-			if (!env[name]) env[name] = fallbackValue;
-			continue;
-		}
-		if (!env[name]) env[name] = rawValue.replace(/^"(.*)"$/, "$1");
-	}
-}
-
-function modelEnvForAgent(): Record<string, string> {
-	const env = { ...process.env } as Record<string, string>;
-	loadEnvFile(overlayFirstFile("model-defaults"), env);
-	return env;
-}
-
-function inlineDefaultAliases(): Set<string> {
-	return new Set(MODEL_DEFAULT_ALIASES.filter((name) => process.env[name]));
-}
-
-function readAgentModel(agentDir: string): string {
-	const modelPath = agentOverlayFirstFile(agentDir, "env.model");
-	if (!fs.existsSync(modelPath)) return "";
-	for (const rawLine of fs.readFileSync(modelPath, "utf-8").split(/\r?\n/)) {
-		const line = rawLine.trim();
-		if (!line || line.startsWith("#")) continue;
-		return line;
-	}
-	return "";
-}
-
 function expandEnvVars(value: string, env: Record<string, string>): string {
 	return value.replace(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g, (_match, name: string) => env[name] ?? "");
 }
 
-function filterModelFlags(args: string[], agentModel: string, inlineAliases: Set<string>): string[] {
-	const out: string[] = [];
-	for (let i = 0; i < args.length; i++) {
-		const arg = args[i];
-		if (arg !== "--model") {
-			out.push(arg);
-			continue;
-		}
-		const value = args[i + 1];
-		if (!value || value.startsWith("--")) continue;
-		i++;
-		const alias = value.match(/^__DOTPI_MODEL_ALIAS__:([^:]+):(.*)$/);
-		if (alias) {
-			const [, name, expandedValue = ""] = alias;
-			const resolvedValue = agentModel && name && !inlineAliases.has(name) ? agentModel : expandedValue;
-			if (resolvedValue) out.push(arg, resolvedValue);
-			continue;
-		}
-		out.push(arg, value);
-	}
-	return out;
-}
-
+/** Read worker `pi-args` the same way dispatch does: lines, optional env expansion, no model-defaults / env.model. */
 function readPiArgs(agentDir: string): string[] {
 	const piArgsPath = path.join(agentDir, "pi-args");
 	if (!fs.existsSync(piArgsPath)) return [];
 
 	const args: string[] = [];
 	try {
-		const env = modelEnvForAgent();
-		const inlineAliases = inlineDefaultAliases();
+		const env = { ...process.env } as Record<string, string>;
 		const lines = fs.readFileSync(piArgsPath, "utf-8").split(/\r?\n/);
 		for (const rawLine of lines) {
 			const trimmed = rawLine.trim();
-			const alias = trimmed.match(/^\$?\{?(DEFAULT_(?:AGENTIC|FAST|VLM)_MODEL)\}?$/);
-			const line = alias ? `__DOTPI_MODEL_ALIAS__:${alias[1]}:${expandEnvVars(trimmed, env)}` : expandEnvVars(trimmed, env);
+			const line = expandEnvVars(trimmed, env);
 			if (!line || line.startsWith("#")) continue;
 			args.push(...line.split(/\s+/).filter(Boolean));
 		}
-		return filterModelFlags(args, readAgentModel(agentDir), inlineAliases);
+		return args;
 	} catch {
 		return [];
 	}

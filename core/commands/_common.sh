@@ -6,24 +6,6 @@ SHARED_DIR="$DOT_PI_DIR/shared"
 DOT_PI_OVERLAY="${DOT_PI_OVERLAY:-$HOME/.pi/dot-pi}"
 export DOT_PI_OVERLAY
 
-write_model_defaults_file() {
-  local path="$1"
-  [ -e "$path" ] && return 0
-  mkdir -p "$(dirname "$path")"
-  cat > "$path" <<'EOF'
-# Local fallback model aliases used by pi-args files.
-# Leave a value empty to let pi fall back to its settings.json default.
-export DEFAULT_AGENTIC_MODEL="${DEFAULT_AGENTIC_MODEL:-}"
-export DEFAULT_FAST_MODEL="${DEFAULT_FAST_MODEL:-}"
-export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
-EOF
-}
-
-resolve_model_defaults_file() {
-  mkdir -p "$DOT_PI_OVERLAY"
-  echo "$DOT_PI_OVERLAY/model-defaults"
-}
-
 resolve_models_file() {
   local dotpi_models="$SHARED_DIR/models.json"
   local system_models="$HOME/.pi/agent/models.json"

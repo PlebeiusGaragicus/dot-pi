@@ -75,20 +75,10 @@ ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/coder"
 ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/lm"
 ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/browser"
 
-cat > "$OVERLAY/model-defaults" <<'EOF'
-export DEFAULT_AGENTIC_MODEL="${DEFAULT_AGENTIC_MODEL:-}"
-export DEFAULT_FAST_MODEL="${DEFAULT_FAST_MODEL:-}"
-export DEFAULT_VLM_MODEL="${DEFAULT_VLM_MODEL:-}"
-EOF
-
-cat > "$FIXTURE/agents/coder/pi-args" <<'EOF'
---model
-$DEFAULT_AGENTIC_MODEL
-EOF
+# coder: no pi-args (no --model)
+touch "$FIXTURE/agents/coder/pi-args"
 
 cat > "$FIXTURE/agents/lm/pi-args" <<'EOF'
---model
-$DEFAULT_FAST_MODEL
 --thinking
 off
 --no-tools
@@ -97,8 +87,6 @@ off
 EOF
 
 cat > "$FIXTURE/agents/browser/pi-args" <<'EOF'
---model
-$DEFAULT_FAST_MODEL
 --tools
 read,ls,bash
 --no-context-files
@@ -108,7 +96,7 @@ run_capture "coder no args" "$FIXTURE/core/bin/coder"
 assert_contains "$CAPTURE_OUT" "PI_CODING_AGENT_DIR=$FIXTURE/agents/coder" "coder no args"
 assert_contains "$CAPTURE_OUT" "ARGV" "coder no args"
 assert_contains "$CAPTURE_OUT" $'\t--session-dir\t'"$(cwd_session_dir coder)" "coder session dir"
-assert_not_contains "$CAPTURE_OUT" $'\t--model' "coder model fall-through"
+assert_not_contains "$CAPTURE_OUT" $'\t--model' "coder no --model in argv"
 
 run_capture "lm interactive prompt" "$FIXTURE/core/bin/lm" - hi there
 assert_contains "$CAPTURE_OUT" $'\t--thinking\toff' "lm interactive prompt"
@@ -145,8 +133,6 @@ mkdir -p "$FIXTURE/agents/searcher/skills/test-skill/scripts"
 ln -s "$ROOT/dispatch-agent" "$FIXTURE/core/bin/searcher"
 
 cat > "$FIXTURE/agents/searcher/pi-args" <<'EOF'
---model
-$DEFAULT_FAST_MODEL
 --no-context-files
 EOF
 

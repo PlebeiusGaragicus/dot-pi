@@ -24,7 +24,6 @@ agents/<name>/
 │   ├── startup-branding      # -> ../../../shared/extensions/startup-branding.ts (shipped common)
 │   ├── say                   # -> ../../../shared/extensions/say.ts (shipped common)
 │   ├── save                  # -> ../../../shared/extensions/save.ts (shipped common)
-│   └── model-default         # -> ../../../shared/extensions/model-default.ts (shipped common)
 ├── AGENT.md                  # (optional) Requires agent-prompt.ts symlink — see below
 ├── SYSTEM.md                 # (optional) Replaces pi's default system prompt
 ├── APPEND_SYSTEM.md          # (optional) Appends to pi's default system prompt
@@ -55,8 +54,6 @@ Follow **[Creating a new agent](reference/creating-a-new-agent.md)** (standalone
 
 That layout includes common extension bundle symlinks and a stub extension at **`agents/<name>/extensions/<name>/index.ts`** (adjust **`<name>`** to your agent directory).
 
-The common bundle includes `/model-default`, so top-level standalone agents can manage local model defaults while keeping agent policy in `pi-args`.
-
 ### Customizing the Prompt and Tools
 
 **Preferred (pi-native): `SYSTEM.md` / `APPEND_SYSTEM.md` + `pi-args`**
@@ -71,14 +68,13 @@ For tool restriction, use a **`pi-args`** file with CLI flags:
 ```
 # pi-args — default CLI flags, one per line
 --tools websearch
---model $DEFAULT_FAST_MODEL
 --no-skills
 --no-context-files
 ```
 
 The `dispatch-agent` script reads this file and prepends the flags to every `pi` invocation. Lines starting with `#` are comments.
 
-Available flags include `--tools <list>` (allowlist), `--no-tools` (disable all tools), `--no-builtin-tools` (disable built-in tools but keep extension tools), `--no-skills`, `--no-prompt-templates`, `--no-context-files`, `--model <provider/id>`, etc. See `pi --help` for the full list.
+Available flags include `--tools <list>` (allowlist), `--no-tools` (disable all tools), `--no-builtin-tools` (disable built-in tools but keep extension tools), `--no-skills`, `--no-prompt-templates`, `--no-context-files`, `--model <provider/id>`, etc. See `pi --help` for the full list. Omit **`--model`** so pi uses the default in **`settings.json`** (pi updates it when the user changes the model in the UI).
 
 !!! warning "`--tools` gates extension tools too"
 
@@ -94,16 +90,7 @@ Available flags include `--tools <list>` (allowlist), `--no-tools` (disable all 
 
 Use `--no-context-files` for non-coding agents and workspace agents that should not inherit repository instructions such as `AGENTS.md` from parent directories. Omit it only when the agent is meant to work inside codebases and should read project guidance, such as the `coder` agent.
 
-For model and thinking policy, use `pi-args` with repo-local defaults:
-
-```text
---model
-$DEFAULT_FAST_MODEL
---thinking
-off
-```
-
-If `$DEFAULT_FAST_MODEL` is empty, `dispatch-agent` skips `--model` so pi falls back to its `settings.json` default. Use `/model-default` to persist an agent-local **`env.model`** override containing a raw `provider/model` id.
+For thinking policy, use `pi-args` with flags such as **`--thinking off`** when needed.
 
 **Optional: `AGENT.md` (via manually linked `agent-prompt` extension)**
 

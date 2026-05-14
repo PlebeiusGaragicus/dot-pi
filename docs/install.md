@@ -64,7 +64,6 @@ Mutable dot-pi state lives outside the Pi-managed clone:
 ```text
 $DOT_PI_OVERLAY/
 ├── settings.json
-├── model-defaults
 ├── env.exa
 ├── env.tavily
 ├── env.ntfy
@@ -179,18 +178,6 @@ For a non-interactive merge, generate `$GEN` using the `--url`, `--key`, and `--
 If you pass `--key`, the printed JSON includes an `apiKey` field inside that provider — do not commit or share that output; redact before pasting into docs or tickets.
 
 For other cloud providers and interactive editing, use **`dotpi setup`** as above.
-
-Global model aliases are stored at:
-
-```text
-$DOT_PI_OVERLAY/model-defaults
-```
-
-Configure them with:
-
-```bash
-dotpi model-defaults
-```
 
 ## Repair Local Links
 

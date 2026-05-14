@@ -1,5 +1,3 @@
---model
-$DEFAULT_FAST_MODEL
 --no-tools
 --no-skills
 --no-context-files

@@ -1,5 +1,3 @@
---model
-$DEFAULT_AGENTIC_MODEL
 --tools
 ls,find,grep,read,subagent,questionnaire
 --no-context-files

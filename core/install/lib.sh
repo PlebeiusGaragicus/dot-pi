@@ -124,6 +124,10 @@ dotpi_link_shipped_common_extensions() {
     [ ! -L "$target_dir/$link_ts" ] || rm "$target_dir/$link_ts"
     ln -sf "../../../shared/extensions/${name}.ts" "$target_dir/$link_ts"
   done <"$manifest"
+  # Shipped extension removed: drop stale symlinks from older relinks.
+  for legacy in model-default model-default.ts; do
+    [ ! -L "$target_dir/$legacy" ] || rm "$target_dir/$legacy"
+  done
 }
 
 dotpi_link_extension_helpers() {

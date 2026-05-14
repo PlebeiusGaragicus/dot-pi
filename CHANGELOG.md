@@ -13,6 +13,10 @@ Version lines use **`[MAJOR.MINOR.PATCH] — YYYY-MM-DD`**. New entries go under
 
 ## [Unreleased]
 
+### Removed
+
+- **Model defaults feature** ([#31](https://github.com/PlebeiusGaragicus/dot-pi/issues/31)): removed **`shared/extensions/model-default.ts`**, **`dotpi model-defaults`**, overlay **`model-defaults`** / **`env.model`** wiring in **`dispatch-agent`**, and **`DEFAULT_*`** handling in **`top-level-agent-orchestrator`**. Shipped **`pi-args`** no longer pass **`--model`**; agents and MAS workers use pi’s current default from **`settings.json`** (pi updates it when the user changes the model). Pin a model only by adding **`--model provider/id`** to **`pi-args`** when needed.
+
 ### Fixed
 
 - **Shipped common extension symlinks** use **`extensions/<basename>.ts`** (not bare `<basename>`) so **pi**’s extension discovery picks them up; bare names pointed at `*.ts` targets but were skipped by `discoverExtensionsInDir`, so extensions such as **`say` never ran `registerFlag`** and CLI flags like **`--tts-enable`** failed with “Unknown option”.

@@ -22,12 +22,12 @@ For background on layout and overlay behaviour, see [Agent layout](../agent-layo
 
 ## Shipped common extensions
 
-dot-pi ships a **small fixed set** of shared extensions (TTS **`say`**, **`save`**, turn timer, finish notifications, **`startup-branding`**, **`/model-default`**, etc.) so every **top-level interactive agent** in this repo gets the same baseline UX. The canonical **basename list** lives in **`shared/shipped-common-extensions`** (one name per line; `#` comments and blank lines allowed).
+dot-pi ships a **small fixed set** of shared extensions (TTS **`say`**, **`save`**, turn timer, finish notifications, **`startup-branding`**, etc.) so every **top-level interactive agent** in this repo gets the same baseline UX. The canonical **basename list** lives in **`shared/shipped-common-extensions`** (one name per line; `#` comments and blank lines allowed).
 
 **Wiring:** **`dotpi relink`** and postinstall read that file and create, for each basename **`ext`**:
 
 ```text
-ln -sf ../../../shared/extensions/ext.ts agents/<name>/extensions/ext
+ln -sf ../../../shared/extensions/ext.ts agents/<name>/extensions/ext.ts
 ```
 
 Implementations live only under **`shared/extensions/<basename>.ts`** (or larger trees under **`shared/extensions/<dir>/`** for extensions outside this set).
@@ -60,7 +60,7 @@ Create **`$DOT_PI_DIR/agents/<name>/`** with at least:
 | **`USAGE.md`** | Man-style launcher help for **`<name> help`** / **`-h`**. |
 | **`SYSTEM.md`** | Replaces pi’s default system prompt for this agent (unless you use **`APPEND_SYSTEM.md`** only). |
 | **`APPEND_SYSTEM.md`** | Optional; appends to pi’s default prompt. |
-| **`pi-args`** | Optional; one CLI flag per line (comments with **`#`**). Model aliases like **`$DEFAULT_AGENTIC_MODEL`** resolve from **`$DOT_PI_OVERLAY/model-defaults`**. |
+| **`pi-args`** | Optional; one CLI flag per line (comments with **`#`**). Omit **`--model`** so pi uses **`settings.json`** (pi updates the default when the user changes the model). Add **`--model provider/id`** only to pin a model. |
 | **`banner.txt`** | Optional startup branding (ASCII). |
 
 ### 3. Shared config symlinks (agent root)

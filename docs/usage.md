@@ -83,14 +83,6 @@ Configure providers:
 dotpi setup
 ```
 
-Configure fallback model aliases:
-
-```bash
-dotpi model-defaults
-```
-
-These aliases are stored in `$DOT_PI_OVERLAY/model-defaults`. Agent-local **`env.model`** overrides are stored under the overlay as well.
-
 Auth and model provider catalogs use Pi's standard files:
 
 ```text

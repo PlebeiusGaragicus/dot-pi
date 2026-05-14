@@ -32,7 +32,7 @@ Most agents use only a subset of these files.
 
 `SYSTEM.md` replaces Pi's system prompt. `APPEND_SYSTEM.md` appends to Pi's default system prompt.
 
-`pi-args` contains default CLI flags, one per line. Model aliases such as `$DEFAULT_AGENTIC_MODEL` are loaded from **`$DOT_PI_OVERLAY/model-defaults`** only.
+`pi-args` contains default CLI flags, one per line. Omit **`--model`** so pi uses **`settings.json`** (pi updates the default when the user changes the model). Add **`--model provider/id`** only when an agent must pin a model.
 
 `bootstrap.sh`, when present, is an in-situ launch hook. It is sourced before pi starts and receives `DOT_PI_DIR`, `DOT_PI_OVERLAY`, `AGENT_NAME`, `AGENT_DIR`, `DOTPI_BOOTSTRAP_PHASE`, and `BOOTSTRAP_LOG`. Workspace mode has been removed; `WORKSPACE_AGENT` and `WORKSPACE_DIR` are not part of the supported runtime contract.
 
@@ -83,4 +83,4 @@ MAS roots use **`top-level-agent-orchestrator`**: workers are separate top-level
 
 Agent-root `bin` links are repaired to `$DOT_PI_OVERLAY/<agent>/bin`, and that overlay link points at vanilla Pi's `~/.pi/agent/bin`. This lets dot-pi agents share downloaded binaries such as `fd` and `rg` with bare `pi`.
 
-`$DOT_PI_OVERLAY/model-defaults`, **`env.exa`** / **`env.tavily`** / **`env.ntfy`** API files, **`env.tts-wpm`**, and optional **`env.ssh`** live only under the overlay. Durable user state must not rely on the Pi-managed package tree.
+**`env.exa`** / **`env.tavily`** / **`env.ntfy`** API files, **`env.tts-wpm`**, and optional **`env.ssh`** live only under the overlay. Durable user state must not rely on the Pi-managed package tree.
